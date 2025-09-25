@@ -22,6 +22,7 @@ class Material(Base):
     __tablename__ = "materiais"
     
     id = Column(Integer, primary_key=True, index=True)
+    codigo_material  =Column(String, unique=True,index=True,nullable=False)
     nome = Column(String,unique=True, index=True,nullable=False)
     unidade_medida = Column(String, default='Kg')
     
@@ -43,6 +44,7 @@ class EntradaMaterial(Base):
     __tablename__ = "entradas_material"
     
     id = Column(Integer, primary_key=True, index=True)
+    codigo_lote = Column(String, unique=True, index=True, nullable=False)
     quantidade = Column(Float, nullable=False)
     data_entrada = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -59,6 +61,7 @@ class Venda(Base):
     __tablename__ = "vendas"
     
     id = Column(Integer, primary_key=True,index=True)
+    codigo_venda = Column(String, unique=True, index=True, nullable=False)
     data_venda = Column(DateTime(timezone=True) , server_default=func.now())
     
     id_comprador = Column(Integer, ForeignKey("compradores.id"), nullable=False)
