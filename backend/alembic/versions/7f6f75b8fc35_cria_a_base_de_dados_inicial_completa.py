@@ -1,8 +1,8 @@
-"""Cria a estrutura inicial de tabelas do projeto
+"""Cria a base de dados inicial completa
 
-Revision ID: adc53b33bc7a
+Revision ID: 7f6f75b8fc35
 Revises: 
-Create Date: 2025-09-17 17:15:29.389266
+Create Date: 2025-10-14 15:41:24.875258
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'adc53b33bc7a'
+revision: str = '7f6f75b8fc35'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,6 +26,7 @@ def upgrade() -> None:
     sa.Column('nome', sa.String(), nullable=False),
     sa.Column('lider', sa.String(), nullable=True),
     sa.Column('telefone', sa.String(), nullable=True),
+    sa.Column('status', sa.Boolean(), server_default='true', nullable=False),
     sa.Column('data_cadastro', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('cnpj', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
@@ -43,14 +44,19 @@ def upgrade() -> None:
     op.create_index(op.f('ix_compradores_nome'), 'compradores', ['nome'], unique=True)
     op.create_table('materiais',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo_material', sa.String(), nullable=True),
     sa.Column('nome', sa.String(), nullable=False),
+    sa.Column('categoria', sa.String(), nullable=True),
     sa.Column('unidade_medida', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_materiais_categoria'), 'materiais', ['categoria'], unique=False)
+    op.create_index(op.f('ix_materiais_codigo_material'), 'materiais', ['codigo_material'], unique=True)
     op.create_index(op.f('ix_materiais_id'), 'materiais', ['id'], unique=False)
     op.create_index(op.f('ix_materiais_nome'), 'materiais', ['nome'], unique=True)
     op.create_table('entradas_material',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo_lote', sa.String(), nullable=False),
     sa.Column('quantidade', sa.Float(), nullable=False),
     sa.Column('data_entrada', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('id_material', sa.Integer(), nullable=False),
@@ -59,14 +65,17 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['id_material'], ['materiais.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_entradas_material_codigo_lote'), 'entradas_material', ['codigo_lote'], unique=True)
     op.create_index(op.f('ix_entradas_material_id'), 'entradas_material', ['id'], unique=False)
     op.create_table('vendas',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo_venda', sa.String(), nullable=False),
     sa.Column('data_venda', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('id_comprador', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['id_comprador'], ['compradores.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_vendas_codigo_venda'), 'vendas', ['codigo_venda'], unique=True)
     op.create_index(op.f('ix_vendas_id'), 'vendas', ['id'], unique=False)
     op.create_table('itens_venda',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -88,11 +97,15 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_itens_venda_id'), table_name='itens_venda')
     op.drop_table('itens_venda')
     op.drop_index(op.f('ix_vendas_id'), table_name='vendas')
+    op.drop_index(op.f('ix_vendas_codigo_venda'), table_name='vendas')
     op.drop_table('vendas')
     op.drop_index(op.f('ix_entradas_material_id'), table_name='entradas_material')
+    op.drop_index(op.f('ix_entradas_material_codigo_lote'), table_name='entradas_material')
     op.drop_table('entradas_material')
     op.drop_index(op.f('ix_materiais_nome'), table_name='materiais')
     op.drop_index(op.f('ix_materiais_id'), table_name='materiais')
+    op.drop_index(op.f('ix_materiais_codigo_material'), table_name='materiais')
+    op.drop_index(op.f('ix_materiais_categoria'), table_name='materiais')
     op.drop_table('materiais')
     op.drop_index(op.f('ix_compradores_nome'), table_name='compradores')
     op.drop_index(op.f('ix_compradores_id'), table_name='compradores')

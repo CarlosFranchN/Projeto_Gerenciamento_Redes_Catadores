@@ -14,11 +14,11 @@ router = APIRouter(
 @router.post("/", response_model=schemas.EntradaMaterial)
 def create_entrada_material(entrada: schemas.EntradaMaterialCreate, db: Session = Depends(get_db)):
     # Validação extra: verificar se o material e a associação existem antes de criar a entrada
-    material = crud.get_material(db, material_id=entrada.id_material)
+    material = crud.get_material(db, id_material=entrada.id_material)
     if not material:
         raise HTTPException(status_code=404, detail=f"Material com id {entrada.id_material} não encontrado.")
     
-    associacao = crud.get_associacao(db, associacao_id=entrada.id_associacao)
+    associacao = crud.get_associacao(db, id_associacao=entrada.id_associacao)
     if not associacao:
         raise HTTPException(status_code=404, detail=f"Associação com id {entrada.id_associacao} não encontrada.")
 

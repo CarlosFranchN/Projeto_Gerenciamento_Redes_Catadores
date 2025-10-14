@@ -1,4 +1,4 @@
-from sqlalchemy import (Column,Integer,String,Float,DateTime,ForeignKey)
+from sqlalchemy import (Column,Integer,String,Float,DateTime,ForeignKey,Boolean)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -10,6 +10,7 @@ class Associacao(Base):
     nome = Column(String, index=True, nullable=False)
     lider = Column(String, nullable=True)
     telefone = Column(String,nullable=True)
+    status = Column(Boolean, server_default='true', nullable=False)
     data_cadastro = Column(DateTime(timezone=True), server_default=func.now())
     cnpj = Column(String,index=True,nullable=True)
     
@@ -22,8 +23,9 @@ class Material(Base):
     __tablename__ = "materiais"
     
     id = Column(Integer, primary_key=True, index=True)
-    codigo_material  =Column(String, unique=True,index=True,nullable=False)
+    codigo_material  =Column(String, unique=True,index=True,nullable=True)
     nome = Column(String,unique=True, index=True,nullable=False)
+    categoria = Column(String, index=True, nullable=True)
     unidade_medida = Column(String, default='Kg')
     
     def __repr__(self):
@@ -51,6 +53,8 @@ class EntradaMaterial(Base):
     id_material = Column(Integer, ForeignKey("materiais.id") , nullable=False)
     id_associacao = Column(Integer, ForeignKey("associacoes.id"), nullable=False)
     
+    
+    
     associacao = relationship("Associacao" , back_populates="entradas")
     material = relationship("Material")
 
@@ -61,7 +65,7 @@ class Venda(Base):
     __tablename__ = "vendas"
     
     id = Column(Integer, primary_key=True,index=True)
-    codigo_venda = Column(String, unique=True, index=True, nullable=False)
+    codigo = Column(String, unique=True, index=True, nullable=False)
     data_venda = Column(DateTime(timezone=True) , server_default=func.now())
     
     id_comprador = Column(Integer, ForeignKey("compradores.id"), nullable=False)

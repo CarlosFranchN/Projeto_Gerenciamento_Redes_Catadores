@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app import models, schemas
 from datetime import date
-
+from sqlalchemy.orm import joinedload
 
 
 def get_associacao(db: Session, id_associacao: int):
@@ -9,7 +9,8 @@ def get_associacao(db: Session, id_associacao: int):
     return query
 
 def get_all_associacoes(db: Session, skip: int = 0 , limit: int = 100):
-    query = db.query(models.Associacao).offset(skip).limit(limit).all()
+    # query = db.query(models.Associacao).offset(skip).limit(limit).all()
+    query = db.query(models.Associacao).filter(models.Associacao.status).offset(skip).limit(limit).all()
     return query
 
 def create_associacao(db: Session, associacao: schemas.AssociacaoCreate):
@@ -38,23 +39,22 @@ def get_all_material(db: Session, skip: int = 0 , limit: int = 100):
     return query
 
 def create_material(db: Session, material: schemas.MaterialCreate):
+    
     db_material = models.Material(
         nome = material.nome,
+        categoria = material.categoria,
         unidade_medida = material.unidade_medida
     )
     db.add(db_material)
-    
-    db.flush()
+    db.commit()
     db.refresh(db_material)
     
-    codigo_gerado = f"MAT-{db_material.id:04d}"
-    db_material.codigo_material = codigo_gerado
+    cod_gerado = f"{db_material.id:04d}"
+    db_material.codigo_material = cod_gerado
     
     db.commit()
     db.refresh(db_material)
     return db_material
-
-
 # =================================================================
 # Funções CRUD para Comprador
 # =================================================================
@@ -86,12 +86,17 @@ def create_entrada_material(db: Session, entrada: schemas.EntradaMaterialCreate)
     prefixo_codigo = f"E-{hoje.strftime('%Y%m%d')}-"
     
 
-    vendas_de_hoje = db.query(models.Venda).filter(models.Venda.codigo.startswith(prefixo_codigo)).count()
-    sequencial = vendas_de_hoje + 1
+    # vendas_de_hoje = db.query(models.Venda).filter(models.Venda.codigo.startswith(prefixo_codigo)).count()
+    entradas_de_hoje = db.query(models.EntradaMaterial).filter(models.EntradaMaterial.codigo_lote.startswith(prefixo_codigo)).count()
+    sequencial = entradas_de_hoje + 1
     codigo_gerado = f"{prefixo_codigo}{sequencial:03d}" # Ex: V-20250925-001
     
     
-    db_entrada = models.EntradaMaterial(**entrada.dict(), codigo_lote = codigo_gerado)
+    db_entrada = models.EntradaMaterial(
+        **entrada.dict(), 
+        codigo_lote=codigo_gerado
+    )
+
     # db_entrada.
     db.add(db_entrada)
     db.commit()
@@ -100,7 +105,17 @@ def create_entrada_material(db: Session, entrada: schemas.EntradaMaterialCreate)
 
 def get_entradas_material(db: Session, skip: int = 0, limit: int = 100):
     """Lista todas as entradas de material."""
-    return db.query(models.EntradaMaterial).offset(skip).limit(limit).all()
+    # return db.query(models.EntradaMaterial).offset(skip).limit(limit).all()
+    return (
+        db.query(models.EntradaMaterial)
+        .options(
+            joinedload(models.EntradaMaterial.material), 
+            joinedload(models.EntradaMaterial.associacao)
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 # =================================================================
 # Funções CRUD para Venda e ItemVenda
@@ -113,12 +128,12 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
     hoje = date.today()
     prefixo_codigo = f"V-{hoje.strftime('%Y%m%d')}-"
     
-
+    # Esta linha agora funciona porque a coluna se chama 'codigo'
     vendas_de_hoje = db.query(models.Venda).filter(models.Venda.codigo.startswith(prefixo_codigo)).count()
     sequencial = vendas_de_hoje + 1
-    codigo_gerado = f"{prefixo_codigo}{sequencial:03d}" # Ex: V-20250925-001
+    codigo_gerado = f"{prefixo_codigo}{sequencial:03d}"
 
-    # Cria o objeto principal da Venda, agora já com o código
+    # Esta linha também funciona
     db_venda = models.Venda(
         id_comprador=venda.id_comprador,
         codigo=codigo_gerado

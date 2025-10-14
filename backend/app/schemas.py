@@ -5,6 +5,7 @@ from typing import List,Optional
 
 class MaterialBase(BaseModel):
     nome:str
+    categoria: Optional[str] = None
     unidade_medida: str = 'Kg'
     
 class MaterialCreate(MaterialBase):
@@ -12,6 +13,7 @@ class MaterialCreate(MaterialBase):
 
 class Material(MaterialBase):
     id : int
+    codigo_material : Optional[str]
     
     class Config:
         orm_mode = True
@@ -35,6 +37,7 @@ class AssociacaoBase(BaseModel):
     lider: Optional[str] = None
     telefone: Optional[str] = None
     cnpj: Optional[str] = None
+    status: bool = True
 
 class AssociacaoCreate(AssociacaoBase):
     pass
@@ -51,6 +54,10 @@ class EntradaMaterialBase(BaseModel):
     quantidade: float
     id_material: int
     id_associacao: int
+    material: Material
+    associacao:Associacao
+    class Config:
+        orm_mode = True
 
 class EntradaMaterialCreate(EntradaMaterialBase):
     pass
