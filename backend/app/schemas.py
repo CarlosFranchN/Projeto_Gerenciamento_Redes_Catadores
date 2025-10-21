@@ -40,7 +40,7 @@ class AssociacaoBase(BaseModel):
     lider: Optional[str] = None
     telefone: Optional[str] = None
     cnpj: Optional[str] = None
-    status: bool = True
+    ativo: bool = True
 
 class AssociacaoCreate(AssociacaoBase):
     pass

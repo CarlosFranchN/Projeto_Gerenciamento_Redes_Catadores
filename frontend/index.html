@@ -200,20 +200,54 @@
         );
       }
 
-      function MateriaisView({ data, onCreate, onDelete }) {
+      function MateriaisView({ data, onCreate, onUpdate , onDelete }) {
         const [open, setOpen] = useState(false);
         const [nome, setNome] = useState(""), [categoria, setCategoria] = useState(""), [unidade, setUnidade] = useState("kg");
         const [busy, setBusy] = useState(false);
-
-        const submit = async (e) => {
-            e.preventDefault(); 
-            setBusy(true); 
-            await new Promise(r=>setTimeout(r,200)); // Simulação de delay
-            // 👇 AQUI, INCLUA 'categoria' NO OBJETO 👇
-            onCreate({ nome, categoria, unidade }); 
-            setNome(""); setCategoria(""); setUnidade("kg"); setOpen(false); setBusy(false);
+        const [editingId, setEditingId] = useState(null);
+      
+        const handleCloseDrawer = () => {
+            setOpen(false);
+            setBusy(false);
+            // Limpa os campos
+            setNome("");
+            setCategoria("");
+            setUnidade("kg"); // Reset para o padrão
+            setEditingId(null); // Limpa o ID em edição!
         };
+        const submit = async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            // Monta o payload com os dados atuais do formulário
+            const payload = { nome, categoria, unidade };
+            let success = false;
 
+            try {
+                if (editingId) {
+                    // Chama onUpdate se estiver editando
+                    success = await onUpdate(editingId, payload);
+                } else {
+                    // Chama onCreate se estiver criando
+                    success = await onCreate(payload);
+                }
+
+                if (success) {
+                    handleCloseDrawer();
+                }
+            } catch(error) {
+                console.error("Falha no submit de material:", error);
+            } finally {
+                setBusy(false);
+            }
+        };
+        const handleEdit = (materialParaEditar) => {
+            setEditingId(materialParaEditar.id); // Guarda o ID
+            // Preenche os estados do formulário
+            setNome(materialParaEditar.nome || "");
+            setCategoria(materialParaEditar.categoria || "");
+            setUnidade(materialParaEditar.unidade_medida || "kg"); // Pega 'unidade_medida' da API
+            setOpen(true); // Abre o Drawer
+        };
         return (
           <section>
             <Toolbar>
@@ -235,12 +269,22 @@
                         // e a unidade_medida
                         `${estoque !== null && estoque !== undefined ? estoque.toFixed(1) : '-'} ${row.unidade_medida || 'un'}` 
                 },
-                { key: "actions", header: "Ações", render: (_, row) => (
-                  <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={()=>onDelete(row.id)} title="Remover material">
-                    🗑️ Remover
-                  </button>
-                )},
+                {
+                    key: "actions", header: "Ações", render: (_, row) => (
+                        <div className="flex gap-2"> {/* Agrupa os botões */}
+                            {/* Botão Editar */}
+                            <button
+                                className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                onClick={() => handleEdit(row)} // Chama a função de edição
+                                title="Editar material"
+                            >
+                                ✏️ Editar
+                            </button>
+                            {/* Botão Remover (se você decidir reativar) */}
+                            {/* <button className="..." onClick={()=>onDelete(row.id)} title="Remover material">🗑️ Remover</button> */}
+                        </div>
+                    )
+                },
               ]}
               data={data}
               emptyLabel="Nenhum material cadastrado"
@@ -261,19 +305,63 @@
         );
       }
 
-      function AssociacoesView({ data, onCreate, onDelete }) {
+      function AssociacoesView({ data, onCreate, onUpdate , onDelete }) {
         const [open, setOpen] = useState(false);
         //const [nome, setNome] = useState(""), [cnpj, setCnpj] = useState(""), [contato, setContato] = useState("");
         const [nome, setNome] = useState(""), [cnpj, setCnpj] = useState("");
         const [lider, setLider] = useState(""), [telefone, setTelefone] = useState("");
+        const [ativo, setAtivo] = useState(true);
         const [busy, setBusy] = useState(false);
+        const [editingId, setEditingId] = useState(null);
+        
+      const submit = async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          // Monta o payload com os dados atuais do formulário
+          const payload = { nome, cnpj, lider, telefone, ativo }; 
+          let success = false;
 
-        const submit = async (e) => {
-          e.preventDefault(); setBusy(true); await new Promise(r=>setTimeout(r,200));
-          onCreate({ nome, cnpj, lider, telefone }); // Passa os novos campos
-          setNome(""); setCnpj(""); setLider(""); setTelefone(""); // Limpa os novos estados
-          setOpen(false); setBusy(false);
-        };
+          try {
+              if (editingId) {
+                  // Se estamos editando, chama onUpdate
+                  success = await onUpdate(editingId, payload); 
+              } else {
+                  // Se não, chama onCreate
+                  success = await onCreate(payload); 
+              }
+
+              if (success) { // Só fecha se a operação na App foi bem sucedida
+                  handleCloseDrawer();
+              }
+          } catch(error) {
+              // O erro já foi mostrado pelo alert na App
+              console.error("Falha no submit:", error);
+          } finally {
+              setBusy(false);
+          }
+      };
+
+      const handleEdit = (associacaoParaEditar) => {
+          setEditingId(associacaoParaEditar.id); // Guarda o ID que estamos editando
+          // Preenche os estados do formulário com os dados atuais
+          setNome(associacaoParaEditar.nome);
+          setLider(associacaoParaEditar.lider || ""); // Usa || "" para evitar undefined
+          setTelefone(associacaoParaEditar.telefone || "");
+          setCnpj(associacaoParaEditar.cnpj || "");
+          setAtivo(associacaoParaEditar.ativo === true || associacaoParaEditar.ativo === 'true'); // Define o estado booleano
+          setOpen(true);
+      };
+      const handleCloseDrawer = () => {
+          setOpen(false);
+          setBusy(false);
+          // Limpa todos os campos
+          setNome("");
+          setLider("");
+          setTelefone("");
+          setCnpj("");
+          setAtivo(true); 
+          setEditingId(null); // Limpa o ID em edição!
+      };
 
         return (
           <section>
@@ -289,12 +377,40 @@
                 { key: "cnpj", header: "CNPJ" },
                 { key: "lider", header: "Líder" },
                 { key: "telefone", header: "Telefone" },
-                { key: "actions", header: "Ações", render: (_, row) => (
-                  <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={()=>onDelete(row.id)} title="Remover associação">
-                    🗑️ Remover
-                  </button>
-                )},
+                { 
+                    key: "actions", header: "Ações", render: (_, row) => (
+                        <div className="flex gap-2"> {/* Agrupa os botões */}
+                            {/* Botão Editar */}
+                            <button 
+                                className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                onClick={() => handleEdit(row)} // Chama a função para abrir o form de edição
+                                title="Editar associação"
+                            >
+                                ✏️ Editar
+                            </button>
+                            {/* Botão Remover (Inativar) */}
+                            <button 
+                                className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => onDelete(row.id)} // Chama a função delete passada pela App
+                                title="Inativar associação"
+                            >
+                                🗑️ Inativar
+                            </button>
+                        </div>
+                    )
+                },
+                {
+                    key: "ativo", // Usa a chave 'ativo'
+                    header: "Status",
+                    render: (isAtivo) => ( // Recebe o boolean
+                        <span className={cls(
+                            "px-2 py-0.5 rounded-full text-xs font-medium",
+                            isAtivo ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                        )}>
+                            {isAtivo ? "Ativa" : "Inativa"} {/* Mostra o texto com base no boolean */}
+                        </span>
+                    )
+                },
               ]}
               data={data}
               emptyLabel="Nenhuma associação cadastrada"
@@ -304,6 +420,16 @@
               <form onSubmit={submit} className="space-y-3">
                 <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: Associação Central" required />
                 <TextInput label="CNPJ" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
+                <Select
+                    label="Status"
+                    value={ativo} // Ligado ao estado 'ativo'
+                    onChange={(value) => setAtivo(value === 'true')} // Converte string 'true'/'false' para boolean
+                    options={[
+                        { value: true, label: "Ativa" }, // Valor é boolean true
+                        { value: false, label: "Inativa" } // Valor é boolean false
+                    ]}
+                    required
+                />
                 <TextInput label="Nome do Líder/Responsável" value={lider} onChange={setLider} placeholder="Ex: João Silva" />
                 <TextInput label="Telefone" value={telefone} onChange={setTelefone} placeholder="(85) 9...." />
                 <div className="flex justify-end gap-2 pt-2">
@@ -1001,29 +1127,53 @@
         const deleteMaterial = async (id) => {
             if (!confirm("Remover MATERIAL? Esta ação não pode ser desfeita.")) return;
             try {
-                const response = await fetch(`${API_URL}/materiais/${id}`, { method: 'DELETE' }); // Supondo que você crie o endpoint de DELETE
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || "Falha ao remover material");
-                }
-                // Se a remoção no backend deu certo, removemos do estado local
-                setStore(s => ({
-                    ...s,
-                    materiais: s.materiais.filter(m => m.id !== id)
-                }));
-            } catch (error) {
-                console.error("Erro ao remover material:", error);
-                alert(`Erro: ${error.message}`);
-            }
-        };
-        const deleteAssociacao = (id) => {
-          if (!confirm("Remover ASSOCIAÇÃO e seus recebimentos?")) return;
-          setStore(s => ({
-            ...s,
-            associacoes: s.associacoes.filter(a => a.id !== id),
-            recebimentos: s.recebimentos.filter(r => r.associacaoId !== id),
-          }));
-        };
+                        const response = await fetch(`${API_URL}/materiais/${id}`, { method: 'DELETE' }); // Supondo que você crie o endpoint de DELETE
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || "Falha ao remover material");
+                        }
+                        // Se a remoção no backend deu certo, removemos do estado local
+                        setStore(s => ({
+                            ...s,
+                            materiais: s.materiais.filter(m => m.id !== id)
+                        }));
+                    } catch (error) {
+                        console.error("Erro ao remover material:", error);
+                        alert(`Erro: ${error.message}`);
+                    }
+                };
+                const deleteAssociacao = async (id) => {
+          // A confirmação agora fica aqui, antes da chamada da API
+              if (!confirm("Tem certeza que deseja INATIVAR esta associação? Ela não aparecerá mais nas listas, mas o histórico será mantido.")) {
+                  return false; // Usuário cancelou
+              }
+
+              try {
+                  const response = await fetch(`${API_URL}/associacoes/${id}`, { 
+                      method: 'DELETE' 
+                  });
+                  
+                  // Verifica se a resposta foi 204 No Content (sucesso) ou outro erro
+                  if (response.status === 204) {
+                      // Se a inativação no backend deu certo, removemos do estado local
+                      // pois a lista principal (get_all_associacoes) só retorna ativos
+                      setStore(s => ({
+                          ...s,
+                          associacoes: s.associacoes.filter(a => a.id !== id) 
+                      }));
+                      return true; // Sucesso
+                  } else {
+                      // Se deu erro (404, 500, etc.)
+                      const errorData = await response.json();
+                      throw new Error(errorData.detail || "Falha ao inativar associação");
+                  }
+
+              } catch (error) {
+                  console.error("Erro ao inativar associação:", error);
+                  alert(`Erro: ${error.message}`);
+                  return false; // Falha
+              }
+          };
         const deleteRecebimento = (id) => {
           if (!confirm("Remover este RECEBIMENTO?")) return;
           setStore(s => ({ ...s, recebimentos: s.recebimentos.filter(r => r.id !== id) }));
@@ -1038,6 +1188,71 @@
             recebimentos: s.recebimentos.filter(r => !inRange(r.data, start, end)),
             vendas: s.vendas.filter(v => !inRange(v.data, start, end)),
           }));
+        };
+        const updateAssociacao = async (id, payload) => {
+              // Monta o payload para a API (já deve estar correto vindo da AssociacoesView)
+              const payloadParaAPI = { ...payload }; 
+
+              try {
+                  const response = await fetch(`${API_URL}/associacoes/${id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(payloadParaAPI)
+                  });
+                  if (!response.ok) {
+                      const errorData = await response.json();
+                      throw new Error(errorData.detail || "Falha ao atualizar associação");
+                  }
+                  const associacaoAtualizada = await response.json();
+                  
+                  // Atualiza o estado local substituindo o item antigo pelo novo
+                  setStore(s => ({ 
+                      ...s, 
+                      associacoes: s.associacoes.map(a => a.id === id ? associacaoAtualizada : a) 
+                  }));
+                  
+                  // Retorna sucesso (opcional, mas útil para o submit)
+                  return true; 
+
+              } catch (error) {
+                  console.error("Erro ao atualizar associação:", error);
+                  alert(`Erro: ${error.message}`);
+                  return false; // Retorna falha
+              }
+        };
+        const updateMaterial = async (id, payload) => {
+            // Monta o payload para a API traduzindo 'unidade' para 'unidade_medida'
+            const payloadParaAPI = {
+                nome: payload.nome,
+                categoria: payload.categoria,
+                unidade_medida: payload.unidade // Tradução
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/materiais/${id}`, { // Usa o ID na URL
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadParaAPI)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || "Falha ao atualizar material");
+                }
+                const materialAtualizado = await response.json();
+
+                // Atualiza o estado local substituindo o item antigo pelo novo
+                setStore(s => ({
+                    ...s,
+                    materiais: s.materiais.map(m => m.id === id ? materialAtualizado : m)
+                }));
+
+                return true; // Indica sucesso
+
+            } catch (error) {
+                console.error("Erro ao atualizar material:", error);
+                alert(`Erro: ${error.message}`);
+                return false; // Indica falha
+            }
         };
 
         return (
@@ -1078,6 +1293,7 @@
                   <MateriaisView
                     data={store.materiais}
                     onCreate={createMaterial}
+                    onUpdate={updateMaterial}
                     onDelete={deleteMaterial}
                   />
                 )}
@@ -1085,6 +1301,7 @@
                   <AssociacoesView
                     data={store.associacoes}
                     onCreate={createAssociacao}
+                    onUpdate={updateAssociacao}
                     onDelete={deleteAssociacao}
                   />
                 )}

@@ -13,7 +13,7 @@ def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100):
     """Lista todas as associações ATIVAS com paginação."""
     return (
         db.query(models.Associacao)
-        .filter(models.Associacao.status == "true") # 👈 GARANTA QUE ESTE FILTRO EXISTE
+        .filter(models.Associacao.ativo == True) # 👈 GARANTA QUE ESTE FILTRO EXISTE
         .offset(skip)
         .limit(limit)
         .all()
@@ -49,23 +49,15 @@ def update_associacao(db: Session, associacao_id: int, associacao_update: schema
     return db_associacao
 
 def delete_associacao(db: Session, associacao_id: int):
-    """Marca uma associação como inativa (soft delete)."""
-
+    """Marca uma associação como inativa."""
     db_associacao = get_associacao(db, id_associacao=associacao_id)
+    if not db_associacao: return None
+    if not db_associacao.ativo: return db_associacao # Já inativo
 
-    if not db_associacao:
-        return None # Associação não encontrada
-
-    # Verifica se já está inativa
-    if db_associacao.status == "false":
-         return db_associacao # Já está inativa
-
-    # Marca como inativa
-    db_associacao.status = "false"
-
+    db_associacao.ativo = False # <--- USE 'ativo' e 'False'
+    
     db.commit()
     db.refresh(db_associacao)
-
     return db_associacao
 # =================================================
 # Funções para Materiais

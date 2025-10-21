@@ -45,6 +45,35 @@ def read_associacao(
             detail="Associação não encontrada")
     return db_associacao
 
+@router.put(
+    "/{associacao_id}",
+    response_model=schemas.Associacao,
+    summary="Atualiza uma associação existente"
+)
+def update_associacao_endpoint(
+    associacao_id: int,
+    associacao_update: schemas.AssociacaoUpdate, # Dados vêm no corpo
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza os dados de uma associação específica (identificada pelo ID).
+    Envie o objeto completo com as novas informações no corpo da requisição.
+    """
+    updated_associacao = crud.update_associacao(
+        db=db,
+        associacao_id=associacao_id,
+        associacao_update=associacao_update
+    )
+
+    if updated_associacao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Associação não encontrada"
+        )
+
+    return updated_associacao
+
+
 @router.delete(
     "/{associacao_id}", 
     status_code=status.HTTP_204_NO_CONTENT, 

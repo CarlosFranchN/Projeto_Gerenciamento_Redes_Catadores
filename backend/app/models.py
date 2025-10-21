@@ -10,7 +10,7 @@ class Associacao(Base):
     nome = Column(String, index=True, nullable=False)
     lider = Column(String, nullable=True)
     telefone = Column(String,nullable=True)
-    status = Column(Boolean, server_default='true', nullable=False)
+    
     data_cadastro = Column(DateTime(timezone=True), server_default=func.now())
     cnpj = Column(String,index=True,nullable=True)
     
