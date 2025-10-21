@@ -52,6 +52,8 @@ class EntradaMaterial(Base):
     quantidade = Column(Float, nullable=False)
     data_entrada = Column(DateTime(timezone=True), server_default=func.now())
     
+    status = Column(String, default="Confirmada", server_default="Confirmada", nullable=False)
+    
     id_material = Column(Integer, ForeignKey("materiais.id") , nullable=False)
     id_associacao = Column(Integer, ForeignKey("associacoes.id"), nullable=False)
     
@@ -70,6 +72,8 @@ class Venda(Base):
     codigo = Column(String, unique=True, index=True, nullable=False)
     data_venda = Column(DateTime(timezone=True) , server_default=func.now())
     comprador = Column(String, nullable=False)
+    
+    concluida = Column(Boolean, default='true' , server_default='true' ,nullable=False)
     
     itens = relationship("ItemVenda" , back_populates="venda")
     

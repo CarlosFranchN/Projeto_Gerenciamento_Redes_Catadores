@@ -37,7 +37,7 @@ def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
     # Monta a resposta usando o schema definido
     return schemas.EstoqueGeralResponseItem(
         id=material.id, # Corrigido para id em vez de material_id
-        codigo=material.codigo,
+        codigo=material.codigo_material,
         nome=material.nome,
         categoria=material.categoria,
         estoque_atual=estoque,

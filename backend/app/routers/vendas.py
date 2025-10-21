@@ -1,5 +1,5 @@
 # app/routers/vendas.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,status, Response
 from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, schemas
@@ -31,3 +31,23 @@ def read_venda(venda_id: int, db: Session = Depends(get_db)):
     if db_venda is None:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     return db_venda
+
+@router.delete(
+    "/{venda_id}", 
+    status_code=status.HTTP_204_NO_CONTENT, 
+    summary="Marca uma venda como não concluída/cancelada (Soft Delete)" # Atualizar descrição
+)
+def cancel_venda_endpoint(
+    venda_id: int, 
+    db: Session = Depends(get_db)
+):
+    """
+    Marca uma venda específica como não concluída (concluida = False).
+    O registro não é excluído e o estoque será recalculado.
+    """
+    cancelled_venda = crud.cancel_venda(db=db, venda_id=venda_id) # Chama a função correta
+    
+    if cancelled_venda is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venda não encontrada")
+        
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -95,6 +95,7 @@ class ItemVenda(ItemVendaBase):
 
 class VendaBase(BaseModel):
     comprador: str
+    concluida : bool = True
 
 class VendaCreate(VendaBase):
     itens: List[ItemVendaCreate] # Para criar uma venda, passamos uma lista de itens

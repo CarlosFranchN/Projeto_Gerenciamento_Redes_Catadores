@@ -1,5 +1,5 @@
 # app/routers/entradas_material.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends,status, HTTPException,Response
 from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, schemas
@@ -28,3 +28,23 @@ def create_entrada_material(entrada: schemas.EntradaMaterialCreate, db: Session 
 def read_entradas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     entradas = crud.get_entradas_material(db, skip=skip, limit=limit)
     return entradas
+
+@router.delete(
+    "/{entrada_id}", 
+    status_code=status.HTTP_204_NO_CONTENT, 
+    summary="Cancela uma entrada de material (Soft Delete)"
+)
+def cancel_entrada_material_endpoint(
+    entrada_id: int, 
+    db: Session = Depends(get_db)
+):
+    """
+    Marca uma entrada de material específica como 'Cancelada'.
+    O registro não é excluído e o estoque será recalculado.
+    """
+    cancelled_entrada = crud.cancel_entrada_material(db=db, entrada_id=entrada_id)
+
+    if cancelled_entrada is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entrada de material não encontrada")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

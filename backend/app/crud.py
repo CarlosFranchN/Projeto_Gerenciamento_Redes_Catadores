@@ -70,12 +70,14 @@ def calcular_estoque_material(db: Session, material_id: int) -> float:
     total_entradas = (
         db.query(func.sum(models.EntradaMaterial.quantidade))
         .filter(models.EntradaMaterial.id_material == material_id)
+        .filter(models.EntradaMaterial.status == "Confirmada")
         .scalar() 
     ) or 0.0 
 
     total_vendido = (
         db.query(func.sum(models.ItemVenda.quantidade_vendida))
         .filter(models.ItemVenda.id_material == material_id)
+        .filter(models.Venda.concluida == True)
         .scalar()
     ) or 0.0
 
@@ -204,11 +206,29 @@ def get_entradas_material(db: Session, skip: int = 0, limit: int = 100):
             joinedload(models.EntradaMaterial.material), 
             joinedload(models.EntradaMaterial.associacao)
         )
+        .filter(models.EntradaMaterial.status == "Confirmada")
         .offset(skip)
         .limit(limit)
         .all()
     )
 
+def cancel_entrada_material(db: Session, entrada_id: int):
+    """Marca uma entrada de material como 'Cancelada'."""
+
+    db_entrada = db.query(models.EntradaMaterial).filter(models.EntradaMaterial.id == entrada_id).first()
+
+    if not db_entrada:
+        return None # Entrada não encontrada
+
+    if db_entrada.status == "Cancelada":
+         return db_entrada # Já está cancelada
+
+    db_entrada.status = "Cancelada"
+
+    db.commit()
+    db.refresh(db_entrada)
+
+    return db_entrada
 # =================================================================
 # Funções CRUD para Venda e ItemVenda
 # =================================================================
@@ -249,7 +269,8 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
     codigo_gerado = f"{prefixo_codigo}{sequencial:03d}"
 
     db_venda = models.Venda(
-        nome_comprador=venda.nome_comprador,
+        comprador=venda.comprador,
+        concluida = venda.concluida,
         codigo=codigo_gerado
     )
     db.add(db_venda)
@@ -285,5 +306,29 @@ def get_venda(db: Session, venda_id: int):
     return db.query(models.Venda).filter(models.Venda.id == venda_id).first()
 
 def get_vendas(db: Session, skip: int = 0, limit: int = 100):
-    """Lista todas as vendas."""
-    return db.query(models.Venda).offset(skip).limit(limit).all()
+    """Lista todas as vendas CONCLUÍDAS (concluida=True)."""
+    return (
+        db.query(models.Venda)
+        # 👇 ALTERE AQUI 👇
+        .filter(models.Venda.concluida == True) 
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+def cancel_venda(db: Session, venda_id: int):
+    """Marca uma venda como não concluída/cancelada (concluida=False)."""
+    db_venda = get_venda(db, venda_id=venda_id) # Busca a venda
+    if not db_venda: 
+        return None # Venda não encontrada
+
+    # Verifica se já está cancelada (concluida == False)
+    if not db_venda.concluida: 
+        return db_venda # Já está cancelada
+
+    # 👇 ALTERE AQUI 👇
+    db_venda.concluida = False # Marca como não concluída/cancelada
+
+    db.commit()
+    db.refresh(db_venda)
+    return db_venda
