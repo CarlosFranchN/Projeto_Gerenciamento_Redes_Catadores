@@ -81,7 +81,8 @@ def calcular_estoque_material(db: Session, material_id: int) -> float:
         .scalar()
     ) or 0.0
 
-    estoque_atual = total_entradas - total_vendido
+    estoque_calculado = total_entradas - total_vendido
+    estoque_atual = max(0.0, estoque_calculado)
     return estoque_atual
 
 def get_estoque_todos_materiais(db: Session) -> List[dict]:

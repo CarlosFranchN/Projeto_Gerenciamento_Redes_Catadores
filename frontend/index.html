@@ -534,7 +534,7 @@
         );
       }
 
-      function VendasView({ store, setActive, onCreate, onDelete }) {
+      function VendasView({ store, setActive, onCreate, onCancel }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [dataVenda, setDataVenda] = useState(todayISO());
@@ -1383,7 +1383,7 @@
                     store={store}
                     setActive={setActive}
                     onCreate={createVenda}
-                    onDelete={cancelVenda}
+                    onCancel={cancelVenda}
                   />
                 )}
                 {active === "relatorios" && (
