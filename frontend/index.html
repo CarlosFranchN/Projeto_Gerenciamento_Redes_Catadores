@@ -226,7 +226,15 @@
                 { key: "id", header: "ID" },
                 { key: "nome", header: "Nome" },
                 { key: "categoria", header: "Categoria" },
-                { key: "unidade", header: "Unidade" },
+                { 
+                    key: "estoque_atual",        // Acessa o novo campo vindo da API
+                    header: "Estoque Atual",     // Novo título da coluna
+                    // Função para formatar a exibição do estoque + unidade
+                    render: (estoque, row) => 
+                        // Mostra o estoque com 1 casa decimal (ou '-' se nulo/zero) 
+                        // e a unidade_medida
+                        `${estoque !== null && estoque !== undefined ? estoque.toFixed(1) : '-'} ${row.unidade_medida || 'un'}` 
+                },
                 { key: "actions", header: "Ações", render: (_, row) => (
                   <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
                           onClick={()=>onDelete(row.id)} title="Remover material">
@@ -325,7 +333,9 @@
           if (!store.associacoes.length) { alert("Cadastre associações primeiro."); setActive("associacoes"); return; }
           setBusy(true); await new Promise(r=>setTimeout(r,200));
           onCreate({
-            data, materialId: Number(materialId), associacaoId: Number(associacaoId),
+            
+            materialId: Number(materialId),
+            associacaoId: Number(associacaoId),
             quantidade: parseFloat(quantidade || "0"),
           });
           setData(todayISO()); setMaterialId(""); setAssociacaoId(""); setQuantidade(""); setOpen(false); setBusy(false);
@@ -365,7 +375,7 @@
                  { key: "material", header: "Material", render: (_, row) => row.material.nome },
                 { key: "associacao", header: "Associação", render: (_, row) => row.associacao.nome },
                 
-                { key: "quantidade", header: "Quantidade", render: (v,row) => `${v} ${getMat(row.materialId)?.unidade || ""}` },
+                { key: "quantidade", header: "Quantidade", render: (v, row) => `${v} ${row.material?.unidade_medida || ""}` },
                 { key: "actions", header: "Ações", render: (_, row) => (
                   <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
                           onClick={()=>onDelete(row.id)} title="Remover recebimento">
@@ -394,77 +404,264 @@
       }
 
       function VendasView({ store, setActive, onCreate, onDelete }) {
-        const [open, setOpen] = useState(false);
-        const [data, setData] = useState(todayISO());
-        const [materialId, setMaterialId] = useState("");
-        const [quantidade, setQuantidade] = useState("");
-        const [precoUnit, setPrecoUnit] = useState("");
-        const [busy, setBusy] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [dataVenda, setDataVenda] = useState(todayISO());
+    const [comprador, setComprador] = useState("");
+    const [itemAtualMaterialId, setItemAtualMaterialId] = useState("");
+    const [itemAtualQuantidade, setItemAtualQuantidade] = useState("");
+    const [itemAtualPrecoUnit, setItemAtualPrecoUnit] = useState("");
+    const [estoqueDisponivel, setEstoqueDisponivel] = useState(null);
+    const [itens, setItens] = useState([]);
 
-        const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
+    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
 
-        const onSubmit = async (e) => {
-          e.preventDefault();
-          if (!store.materiais.length) { alert("Cadastre materiais primeiro."); setActive("materiais"); return; }
-          setBusy(true); await new Promise(r=>setTimeout(r,200));
-          onCreate({
-            data, materialId: Number(materialId),
-            quantidade: parseFloat(quantidade || "0"),
-            precoUnit: parseFloat(precoUnit || "0"),
-          });
-          setData(todayISO()); setMaterialId(""); setQuantidade(""); setPrecoUnit(""); setOpen(false); setBusy(false);
+
+    const getMat = (id) => store.materiais.find(m => m.id === Number(id));
+
+    useEffect(() => {
+        const fetchEstoque = async () => {
+            if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
+                try {
+                    setEstoqueDisponivel(null);
+                    const response = await fetch(`${API_URL}/estoque/${itemAtualMaterialId}`);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Falha ao buscar estoque');
+                    }
+                    const data = await response.json();
+                    setEstoqueDisponivel(data);
+                } catch (error) {
+                    console.error("Erro ao buscar estoque:", error.message);
+                    setEstoqueDisponivel(null);
+                }
+            } else {
+                setEstoqueDisponivel(null);
+            }
         };
+        fetchEstoque();
+    }, [itemAtualMaterialId]);
 
-        const getMat = (id) => store.materiais.find(m => m.id === id);
-        const totalQtd = store.vendas.reduce((s,x)=> s + Number(x.quantidade||0), 0);
-        const receita = store.vendas.reduce((s,x)=> s + Number(x.quantidade||0)*Number(x.precoUnit||0), 0);
+    useEffect(() => {
+        if (store.vendas && store.vendas.length > 0) {
+            console.log("--- Estrutura de store.vendas recebida da API ---");
+            console.log(JSON.stringify(store.vendas, null, 2));
+        } else {
+            console.log("store.vendas ainda está vazio ou não definido.");
+        }
+    }, [store.vendas]);
 
-        return (
-          <section>
+    const handleAddItem = () => {
+        if (!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit) {
+            alert("Preencha Material, Quantidade e Preço Unitário para adicionar.");
+            return;
+        }
+        const qtdNum = parseFloat(itemAtualQuantidade || "0");
+        const precoNum = parseFloat(itemAtualPrecoUnit || "0");
+        if (isNaN(qtdNum) || qtdNum <= 0 || isNaN(precoNum) || precoNum <= 0) {
+            alert("Quantidade e Preço Unitário devem ser números positivos.");
+            return;
+        }
+        if (estoqueDisponivel && qtdNum > estoqueDisponivel.estoque_atual) {
+            alert(`Estoque insuficiente. Disponível: ${estoqueDisponivel.estoque_atual} ${estoqueDisponivel.unidade_medida}`);
+            return;
+        }
+
+        const novoItem = {
+            id_material: Number(itemAtualMaterialId),
+            quantidade_vendida: qtdNum,
+            valor_unitario: precoNum
+        };
+        setItens(listaAnterior => [...listaAnterior, novoItem]);
+
+        setItemAtualMaterialId("");
+        setItemAtualQuantidade("");
+        setItemAtualPrecoUnit("");
+        setEstoqueDisponivel(null);
+    };
+
+    const handleRemoveItem = (indexParaRemover) => {
+        setItens(listaAnterior => listaAnterior.filter((_, index) => index !== indexParaRemover));
+    };
+
+    const handleCloseDrawer = () => {
+        setOpen(false);
+        setBusy(false);
+        setDataVenda(todayISO());
+        setComprador(""); // Correção
+        setItens([]);
+        setItemAtualMaterialId("");
+        setItemAtualQuantidade("");
+        setItemAtualPrecoUnit("");
+        setEstoqueDisponivel(null);
+    };
+
+    const handleSubmitVenda = async () => {
+        if (!comprador) {
+            alert("Informe o nome do comprador.");
+            return;
+        }
+        if (itens.length === 0) {
+            alert("Adicione pelo menos um item à venda.");
+            return;
+        }
+
+        setBusy(true);
+        try {
+            await onCreate({
+                nomeComprador: comprador, // Correção: Envia 'nomeComprador'
+                itens: itens
+            });
+            handleCloseDrawer();
+        } catch (error) {
+           // O erro já é tratado na função `createVenda` da App
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const totalQtdVendida = store.vendas.reduce((totalVendas, venda) =>
+        totalVendas + venda.itens.reduce((totalItens, item) =>
+            totalItens + Number(item.quantidade_vendida || 0), 0),
+    0);
+
+    const receitaTotal = store.vendas.reduce((totalVendas, venda) =>
+        totalVendas + venda.itens.reduce((totalItens, item) =>
+            totalItens + (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0)), 0),
+    0);
+
+    const itensVendidosData = useMemo(() => {
+        return store.vendas.flatMap(venda =>
+            venda.itens.map(item => ({
+                ...item,
+                venda_id: venda.id,
+                data_venda: venda.data_venda,
+                codigo: venda.id, // Correção
+                comprador: venda.comprador, // Correção
+            }))
+        ).sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda));
+    }, [store.vendas]);
+
+    return (
+        <section>
             <Toolbar>
-              <h2 className="text-xl font-semibold">Vendas</h2>
-              <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={()=>setOpen(true)}>+ Nova venda</button>
+                <h2 className="text-xl font-semibold">Vendas</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={()=>setOpen(true)}>+ Nova venda</button>
             </Toolbar>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <StatCard title="Vendas registradas" value={store.vendas.length} />
-              <StatCard title="Quantidade vendida" value={`${totalQtd} ${store.materiais[0]?.unidade || "un"}`} />
-              <StatCard title="Receita total" value={money(receita)} />
+                <StatCard title="Vendas registradas" value={store.vendas.length} />
+                <StatCard title="Quantidade vendida (Total)" value={`${totalQtdVendida.toFixed(2)} un`} />
+                <StatCard title="Receita total" value={money(receitaTotal)} />
             </div>
 
             <Table
-              columns={[
-                { key: "data", header: "Data", render: v => fmtDateBR(v) },
-                { key: "materialId", header: "Material", render: v => getMat(v)?.nome || "-" },
-                { key: "quantidade", header: "Quantidade", render: (v,row) => `${v} ${getMat(row.materialId)?.unidade || ""}` },
-                { key: "precoUnit", header: "Preço Unit.", render: v => money(v) },
-                { key: "total", header: "Total", render: (_,row)=> money(Number(row.quantidade||0)*Number(row.precoUnit||0)) },
-                { key: "actions", header: "Ações", render: (_, row) => (
-                  <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={()=>onDelete(row.id)} title="Remover venda">
-                    🗑️ Remover
-                  </button>
-                )},
-              ]}
-              data={store.vendas}
-              emptyLabel="Nenhuma venda cadastrado"
+                columns={[
+                    { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
+                    { key: "codigo", header: "Cód. Venda" },
+                    { key: "comprador", header: "Comprador" }, // Correção
+                    { key: "material", header: "Material", render: (mat) => mat?.nome || "-" },
+                    { key: "quantidade_vendida", header: "Quantidade", render: (v, row) => `${v} ${row.material?.unidade_medida || "un"}` },
+                    { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
+                    { key: "total", header: "Total Item", render: (_, row) => money(Number(row.quantidade_vendida || 0) * Number(row.valor_unitario || 0)) },
+                    { key: "actions", header: "Ações", render: (_, row) => (
+                        <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => onDelete(row.venda_id)}
+                                title="Remover venda completa">
+                            🗑️ Remover Venda
+                        </button>
+                    )},
+                ]}
+                data={itensVendidosData}
+                emptyLabel="Nenhuma venda registrada"
             />
 
-            <Drawer open={open} onClose={()=>setOpen(false)} title="Adicionar Venda">
-              <form onSubmit={onSubmit} className="space-y-3">
-                <TextInput label="Data" type="date" value={data} onChange={setData} required />
-                <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
-                <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 50" required />
-                <TextInput label="Preço Unitário (R$)" type="number" value={precoUnit} onChange={setPrecoUnit} placeholder="Ex: 2.5" required />
-                <div className="flex justify-end gap-2 pt-2">
-                  <button type="button" className="px-4 py-2 rounded-xl border" onClick={()=>setOpen(false)}>Cancelar</button>
-                  <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
+            <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Venda">
+                <div className="space-y-4">
+                    <TextInput label="Data" type="date" value={dataVenda} onChange={setDataVenda} required />
+                    <TextInput label="Nome do Comprador" value={comprador} onChange={setComprador} placeholder="Ex: Recicla Brasil Ltda" required />
+                    <hr className="my-4"/>
+                    <h4 className="font-medium text-neutral-700">Adicionar Item</h4>
+                    <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg bg-neutral-50">
+                        <div className="col-span-3">
+                            <Select
+                                label="Material"
+                                value={itemAtualMaterialId}
+                                onChange={setItemAtualMaterialId}
+                                options={materiaisOpts}
+                                required={itens.length === 0}
+                            />
+                            {estoqueDisponivel && (
+                                <p className="text-xs text-emerald-700 mt-1">
+                                    Disponível: {estoqueDisponivel.estoque_atual} {estoqueDisponivel.unidade_medida}
+                                </p>
+                            )}
+                            {!itemAtualMaterialId && <p className="text-xs text-neutral-400 mt-1">Selecione um material para ver o estoque.</p>}
+                        </div>
+                        <TextInput
+                            label="Qtd" type="number" value={itemAtualQuantidade}
+                            onChange={(value) => setItemAtualQuantidade(value)}
+                            placeholder="Kg" required={itens.length === 0}
+                        />
+                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0}/>
+                        <div className="flex items-end">
+                            <button
+                                type="button"
+                                onClick={handleAddItem}
+                                disabled={!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit || parseFloat(itemAtualQuantidade || '0') <= 0 || parseFloat(itemAtualPrecoUnit || '0') <= 0 || (estoqueDisponivel === null && itemAtualMaterialId !== "") || (estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual)}
+                                className="w-full px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                + Adicionar
+                            </button>
+                        </div>
+                        {estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual && (
+                            <p className="text-xs text-red-600 col-span-3 mt-1">
+                                Quantidade maior que o estoque disponível!
+                            </p>
+                        )}
+                    </div>
+                    <hr className="my-4"/>
+                    <h4 className="font-medium text-neutral-700">Itens da Venda ({itens.length})</h4>
+                    {itens.length === 0 ? (
+                        <p className="text-sm text-neutral-500 text-center py-4">Nenhum item adicionado ainda.</p>
+                    ) : (
+                        <ul className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-neutral-50">
+                            {itens.map((item, index) => {
+                                const materialInfo = getMat(item.id_material);
+                                return (
+                                    <li key={index} className="flex justify-between items-center text-sm p-2 bg-white rounded shadow-sm">
+                                        <span>
+                                            {item.quantidade_vendida} {materialInfo?.unidade_medida || 'un'} de {materialInfo?.nome || '?'}
+                                            @ {money(item.valor_unitario)}
+                                        </span>
+                                        <button
+                                            onClick={() => handleRemoveItem(index)}
+                                            className="text-red-500 hover:text-red-700 font-bold"
+                                            title="Remover Item"
+                                        >
+                                            &times;
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button
+                            type="button"
+                            onClick={handleSubmitVenda}
+                            disabled={busy || itens.length === 0 || !comprador}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60"
+                        >
+                            {busy ? "Salvando..." : "Finalizar Venda"}
+                        </button>
+                    </div>
                 </div>
-              </form>
             </Drawer>
-          </section>
-        );
-      }
+        </section>
+    );
+}
 
       function RelatoriosView({ store, onRemoveRange }) {
         const [start, setStart] = useState("");
@@ -642,24 +839,28 @@
 
             try{
               // Fazemos todas as chamadas de listagem em paralelo para ser mais rápido
-            const [materiaisResponse, associacoesResponse, entradasResponse] = await Promise.all([
-                fetch(`${API_URL}/materiais/`),
+            const [estoqueMaterialResponse, associacoesResponse, entradasResponse,vendasResponse] = await Promise.all([
+                //fetch(`${API_URL}/materiais/`),
+                fetch(`${API_URL}/estoque/`),
                 fetch(`${API_URL}/associacoes/`),
-                fetch(`${API_URL}/entradas_material/`)
+                fetch(`${API_URL}/entradas_material/`),
+                fetch(`${API_URL}/vendas/`)
                 // Adicione aqui o fetch para /vendas/ quando o endpoint estiver pronto
             ]);
 
             // Convertemos as respostas para JSON
-            const materiaisData = await materiaisResponse.json();
+            const estoqueMateriaisData = await estoqueMaterialResponse.json();
             const associacoesData = await associacoesResponse.json();
             const entradasData = await entradasResponse.json();
+            const vendasData = await vendasResponse.json()
 
             // ATUALIZAMOS O ESTADO com os dados recebidos da API
             setStore(currentState => ({
                 ...currentState, // Mantém o que já estava no store (ex: vendas, se não foi buscado)
-                materiais: materiaisData,
+                materiais: estoqueMateriaisData,
                 associacoes: associacoesData,
                 recebimentos: entradasData,
+                vendas: vendasData
             }));
             console.log("Dados carregados com sucesso!");
             }
@@ -739,7 +940,7 @@
           id_material: payload.materialId,
           id_associacao: payload.associacaoId
       };
-
+      console.log("Enviando para API:", JSON.stringify(payloadParaAPI, null, 2));
       try {
           const response = await fetch(`${API_URL}/entradas_material/`, {
               method: 'POST',
@@ -762,15 +963,11 @@
       // AJUSTE CRÍTICO: O frontend envia uma venda simples, o backend espera uma complexa.
       // Vamos montar o objeto que o backend espera.
       const payloadParaAPI = {
-          id_comprador: 1, // ATENÇÃO: Usando comprador com ID 1 fixo por enquanto.
-          itens: [
-              {
-                  id_material: payload.materialId,
-                  quantidade_vendida: payload.quantidade,
-                  valor_unitario: payload.precoUnit
-              }
-          ]
+          comprador: payload.comprador, // ATENÇÃO: Usando comprador com ID 1 fixo por enquanto.
+          itens : payload.itens
       };
+      console.log("Enviando para API:", JSON.stringify(payloadParaAPI, null, 2));
+
 
       try {
           const response = await fetch(`${API_URL}/vendas/`, {

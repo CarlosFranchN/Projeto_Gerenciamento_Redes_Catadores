@@ -14,8 +14,12 @@ router = APIRouter(
 def create_venda(venda: schemas.VendaCreate, db: Session = Depends(get_db)):
     # A lógica complexa de transação está escondida no crud.create_venda
     # O router apenas orquestra a chamada.
-    return crud.create_venda(db=db, venda=venda)
-
+    # return crud.create_venda(db=db, venda=venda)
+    try:
+        nova_venda = crud.create_venda(db=db, venda=venda)
+        return nova_venda
+    except ValueError as e: # Captura o erro de estoque!
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 @router.get("/", response_model=List[schemas.Venda])
 def read_vendas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     vendas = crud.get_vendas(db, skip=skip, limit=limit)

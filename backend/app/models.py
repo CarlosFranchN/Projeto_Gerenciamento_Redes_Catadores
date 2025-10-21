@@ -14,6 +14,8 @@ class Associacao(Base):
     data_cadastro = Column(DateTime(timezone=True), server_default=func.now())
     cnpj = Column(String,index=True,nullable=True)
     
+    ativo = Column(Boolean, server_default='true' , nullable=False)
+    
     entradas = relationship("EntradaMaterial", back_populates="associacao")
     
     def __repr__(self):
@@ -31,15 +33,15 @@ class Material(Base):
     def __repr__(self):
         return f"<Material(nome='{self.nome}')>"
     
-class Comprador(Base):
-    __tablename__ = "compradores"
+# class Comprador(Base):
+#     __tablename__ = "compradores"
     
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, unique=True, index=True, nullable=False)
-    contato = Column(String, nullable=True)
+#     id = Column(Integer, primary_key=True, index=True)
+#     nome = Column(String, unique=True, index=True, nullable=False)
+#     contato = Column(String, nullable=True)
     
-    def __repr__(self):
-        return f"<Comprador(nome='{self.nome}')>"
+#     def __repr__(self):
+#         return f"<Comprador(nome='{self.nome}')>"
     
 # --- Tabelas de Operações! (evento q acontecem).... tende a mudar ainda ---
 class EntradaMaterial(Base):
@@ -67,14 +69,12 @@ class Venda(Base):
     id = Column(Integer, primary_key=True,index=True)
     codigo = Column(String, unique=True, index=True, nullable=False)
     data_venda = Column(DateTime(timezone=True) , server_default=func.now())
+    comprador = Column(String, nullable=False)
     
-    id_comprador = Column(Integer, ForeignKey("compradores.id"), nullable=False)
-    
-    comprador = relationship("Comprador")
     itens = relationship("ItemVenda" , back_populates="venda")
     
     def __repr__(self):
-        return f"<Venda(id={self.id}, data='{self.data_venda.strftime('%Y-%m-%d')}')>"
+        return f"<Venda(id={self.id}, comprador='{self.nome_comprador}')>"
     
 class ItemVenda(Base):
     __tablename__ = "itens_venda"

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends,HTTPException, status
+from fastapi import APIRouter, Depends,HTTPException, status,Body
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -56,3 +56,23 @@ def read_material_nome(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Material não encontrado")
     return db_material
+
+@router.put(
+    "/{material_id}", 
+    response_model=schemas.Material, 
+    summary="Atualiza um material existente"
+)
+def update_material_endpoint(
+    material_id: int, 
+    material_update: schemas.MaterialUpdate, # Recebe os novos dados no corpo da requisição 
+    db: Session = Depends(get_db)
+):
+    
+    
+    updated_material = crud.update_material(db=db, material_id=material_id, material_update=material_update)
+
+    if updated_material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material não encontrado")
+
+    return updated_material
+

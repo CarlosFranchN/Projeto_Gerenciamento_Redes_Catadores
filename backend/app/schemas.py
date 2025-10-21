@@ -11,6 +11,9 @@ class MaterialBase(BaseModel):
 class MaterialCreate(MaterialBase):
     pass
 
+class MaterialUpdate(MaterialBase):
+    pass
+
 class Material(MaterialBase):
     id : int
     codigo_material : Optional[str]
@@ -42,6 +45,8 @@ class AssociacaoBase(BaseModel):
 class AssociacaoCreate(AssociacaoBase):
     pass
 
+class AssociacaoUpdate(AssociacaoBase):
+    pass
 class Associacao(AssociacaoBase):
     id: int
     data_cadastro: datetime
@@ -49,13 +54,13 @@ class Associacao(AssociacaoBase):
     class Config:
         orm_mode = True
 
+
 # --- Schemas para Entrada de Material (com relacionamentos) ---
 class EntradaMaterialBase(BaseModel):
     quantidade: float
     id_material: int
     id_associacao: int
-    material: Material
-    associacao:Associacao
+
     class Config:
         orm_mode = True
 
@@ -89,7 +94,7 @@ class ItemVenda(ItemVendaBase):
         orm_mode = True
 
 class VendaBase(BaseModel):
-    id_comprador: int
+    comprador: str
 
 class VendaCreate(VendaBase):
     itens: List[ItemVendaCreate] # Para criar uma venda, passamos uma lista de itens
@@ -97,8 +102,22 @@ class VendaCreate(VendaBase):
 class Venda(VendaBase):
     id: int
     data_venda: datetime
-    comprador: Comprador
+    # comprador: Comprador
     itens: List[ItemVenda] = [] # A resposta da venda incluirá a lista de itens vendidos
 
     class Config:
         orm_mode = True
+        
+class EstoqueGeralResponseItem(BaseModel):
+    
+    id: int
+    codigo: Optional[str] = None
+    nome: str
+    categoria: Optional[str] = None
+    unidade_medida: str
+    
+    estoque_atual: float
+
+    
+    class Config:
+         orm_mode = True
