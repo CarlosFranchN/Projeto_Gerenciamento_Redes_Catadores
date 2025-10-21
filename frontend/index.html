@@ -796,161 +796,188 @@
     );
 }
 
-      function RelatoriosView({ store, onRemoveRange }) {
+    function RelatoriosView({ store }) { // Removi onRemoveRange por enquanto
         const [start, setStart] = useState("");
         const [end, setEnd] = useState("");
-        const recFiltrados = store.recebimentos.filter(r => inRange(r.data, start, end));
-        const venFiltradas = store.vendas.filter(v => inRange(v.data, start, end));
 
-        const getMat = (id) => store.materiais.find(m => m.id === id);
-        const getAsc = (id) => store.associacoes.find(a => a.id === id);
+        // --- Estados para guardar os dados da API ---
+        const [summaryData, setSummaryData] = useState({ total_recebido: 0, total_vendido: 0, receita_periodo: 0 });
+        const [porMaterialData, setPorMaterialData] = useState([]);
+        const [porAssociacaoData, setPorAssociacaoData] = useState([]);
+        const [loading, setLoading] = useState(false); // Estado de carregamento
 
-        const porMaterial = useMemo(() => {
-          const map = new Map();
-          for (const r of recFiltrados) {
-            const key = r.materialId;
-            const cur = map.get(key) || { recebido:0, vendido:0, receita:0 };
-            cur.recebido += Number(r.quantidade||0);
-            map.set(key, cur);
-          }
-          for (const v of venFiltradas) {
-            const key = v.materialId;
-            const cur = map.get(key) || { recebido:0, vendido:0, receita:0 };
-            cur.vendido += Number(v.quantidade||0);
-            cur.receita += Number(v.quantidade||0)*Number(v.precoUnit||0);
-            map.set(key, cur);
-          }
-          return Array.from(map.entries()).map(([materialId, vals]) => ({
-            materialId, nome: getMat(materialId)?.nome || `ID ${materialId}`,
-            unidade: getMat(materialId)?.unidade || "un",
-            ...vals, saldo: vals.recebido - vals.vendido
-          })).sort((a,b)=> a.nome.localeCompare(b.nome));
-        }, [recFiltrados, venFiltradas, store.materiais]);
+        //const API_URL = "http://127.0.0.1:8000"; // Confirme se está acessível
 
-        const porAssociacao = useMemo(() => {
-          const map = new Map();
-          for (const r of recFiltrados) {
-            const key = r.associacaoId;
-            const cur = map.get(key) || 0;
-            map.set(key, cur + Number(r.quantidade||0));
-          }
-          return Array.from(map.entries()).map(([associacaoId, qtd]) => ({
-            associacaoId, nome: getAsc(associacaoId)?.nome || `ID ${associacaoId}`, quantidade:qtd
-          })).sort((a,b)=> b.quantidade - a.quantidade);
-        }, [recFiltrados, store.associacoes]);
+        // --- useEffect para buscar dados quando as datas mudam ---
+        useEffect(() => {
+            const fetchDataForReports = async () => {
+                setLoading(true);
+                console.log(`Buscando relatórios para período: ${start || 'inicio'} a ${end || 'fim'}`);
+                try {
+                    const params = new URLSearchParams();
+                    if (start) params.append('start_date', start);
+                    if (end) params.append('end_date', end);
+                    const queryString = params.toString();
 
-        const totRecebido = recFiltrados.reduce((s,x)=> s + Number(x.quantidade||0), 0);
-        const totVendido = venFiltradas.reduce((s,x)=> s + Number(x.quantidade||0), 0);
-        const receita = venFiltradas.reduce((s,x)=> s + Number(x.quantidade||0)*Number(x.precoUnit||0), 0);
+                    const [summaryRes, porMaterialRes, porAssocRes] = await Promise.all([
+                        fetch(`${API_URL}/relatorio/relatorio?${queryString}`),
+                        fetch(`${API_URL}/relatorio/por-material?${queryString}`),
+                        fetch(`${API_URL}/relatorio/por-associacao?${queryString}`)
+                    ]);
 
-        // Gráficos
+                    // Tratamento de erro mais robusto
+                    if (!summaryRes.ok) { throw new Error(`Erro Sumário: ${summaryRes.statusText}`); }
+                    if (!porMaterialRes.ok) { throw new Error(`Erro Por Material: ${porMaterialRes.statusText}`); }
+                    if (!porAssocRes.ok) { throw new Error(`Erro Por Associação: ${porAssocRes.statusText}`); }
+
+                    const summaryJson = await summaryRes.json();
+                    const porMaterialJson = await porMaterialRes.json();
+                    const porAssocJson = await porAssocRes.json();
+
+                    console.log("Dados recebidos (Sumário):", summaryJson);
+                    console.log("Dados recebidos (Por Material):", porMaterialJson);
+                    console.log("Dados recebidos (Por Associação):", porAssocJson);
+
+                    setSummaryData(summaryJson);
+                    setPorMaterialData(porMaterialJson);
+                    setPorAssociacaoData(porAssocJson);
+
+                } catch (error) {
+                    console.error("Erro ao buscar dados dos relatórios:", error);
+                    alert(`Erro ao carregar relatórios: ${error.message}. Verifique o console e o backend.`);
+                    // Limpa os dados em caso de erro para evitar mostrar dados antigos
+                    setSummaryData({ total_recebido: 0, total_vendido: 0, receita_periodo: 0 });
+                    setPorMaterialData([]);
+                    setPorAssociacaoData([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchDataForReports();
+        }, [start, end]); // Depende das datas
+
+        // --- Lógica dos Gráficos (usa os dados do estado) ---
         const recChartRef = useRef(null), recChartInstance = useRef(null);
         const revChartRef = useRef(null), revChartInstance = useRef(null);
 
         useEffect(() => {
-          if (!window.Chart) return;
-          const recLabels = porMaterial.map(m => m.nome);
-          const recData = porMaterial.map(m => m.recebido);
-          const revLabels = porMaterial.map(m => m.nome);
-          const revData = porMaterial.map(m => m.receita);
+            if (!window.Chart || porMaterialData.length === 0) return; // Só roda se tiver Chart e dados
 
-          if (recChartInstance.current) recChartInstance.current.destroy();
-          if (recChartRef.current) {
-            recChartInstance.current = new Chart(recChartRef.current, {
-              type: "bar",
-              data: { labels: recLabels, datasets: [{ label: "Recebido", data: recData }] },
-              options: { responsive: true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
-            });
-          }
+            const recLabels = porMaterialData.map(m => m.nome);
+            const recData = porMaterialData.map(m => m.recebido);
+            const revLabels = porMaterialData.map(m => m.nome);
+            const revData = porMaterialData.map(m => m.receita);
 
-          if (revChartInstance.current) revChartInstance.current.destroy();
-          if (revChartRef.current) {
-            revChartInstance.current = new Chart(revChartRef.current, {
-              type: "bar",
-              data: { labels: revLabels, datasets: [{ label: "Receita (R$)", data: revData }] },
-              options: { responsive: true, plugins:{ legend:{display:false} },
-                scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=> money(v) } } } }
-            });
-          }
-
-          return () => {
+            // Destroi gráficos antigos antes de criar novos
             if (recChartInstance.current) recChartInstance.current.destroy();
             if (revChartInstance.current) revChartInstance.current.destroy();
-          };
-        }, [start, end, store.recebimentos, store.vendas]);
 
-        const removePeriodo = () => {
-          if (!start && !end) { alert("Defina pelo menos uma data (Início ou Fim) para remover o período."); return; }
-          const ok = confirm("Remover TODAS as VENDAS e RECEBIMENTOS no período filtrado? Esta ação não pode ser desfeita.");
-          if (ok) onRemoveRange(start, end);
-        };
+            if (recChartRef.current) {
+                recChartInstance.current = new Chart(recChartRef.current, {
+                    type: "bar",
+                    data: { labels: recLabels, datasets: [{ label: "Recebido (Kg)", data: recData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }] }, // Exemplo de cor
+                    options: { responsive: true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+                });
+            }
+            if (revChartRef.current) {
+                revChartInstance.current = new Chart(revChartRef.current, {
+                    type: "bar",
+                    data: { labels: revLabels, datasets: [{ label: "Receita (R$)", data: revData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, // Exemplo de cor
+                    options: { responsive: true, plugins:{ legend:{display:false} },
+                        scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=> money(v) } } } }
+                });
+            }
+            // Função de limpeza para destruir os gráficos quando o componente desmontar ou os dados mudarem
+            return () => {
+                if (recChartInstance.current) recChartInstance.current.destroy();
+                if (revChartInstance.current) revChartInstance.current.destroy();
+            };
+        }, [porMaterialData]); // Depende apenas dos dados por material
+
+
+        // (Função removePeriodo removida/comentada por enquanto)
+        // const removePeriodo = () => { /* ... lógica futura ... */ };
 
         return (
-          <section>
-            <Toolbar>
-              <h2 className="text-xl font-semibold">Relatórios</h2>
-              <div className="flex gap-2 items-end">
-                <TextInput label="Início" type="date" value={start} onChange={setStart}/>
-                <TextInput label="Fim" type="date" value={end} onChange={setEnd}/>
-                <button className="px-3 py-2 rounded-xl border" onClick={()=>{ setStart(""); setEnd(""); }}>Limpar</button>
-                <button className="px-3 py-2 rounded-xl border text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
-                        onClick={removePeriodo} title="Remover dados do período">
-                  🗑️ Remover período
-                </button>
-              </div>
-            </Toolbar>
+            <section>
+                <Toolbar>
+                    <h2 className="text-xl font-semibold">Relatórios</h2>
+                    <div className="flex flex-wrap gap-2 items-end"> {/* Use flex-wrap */}
+                        <TextInput label="Início" type="date" value={start} onChange={setStart}/>
+                        <TextInput label="Fim" type="date" value={end} onChange={setEnd}/>
+                        <button className="px-3 py-2 rounded-xl border bg-white" onClick={()=>{ setStart(""); setEnd(""); }}>Limpar Datas</button>
+                        {/* Botão Remover período comentado/removido
+                        <button className="..." onClick={removePeriodo} title="Remover dados do período">
+                            🗑️ Remover período
+                        </button>
+                        */}
+                    </div>
+                </Toolbar>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <StatCard title="Total recebido" value={`${totRecebido} ${store.materiais[0]?.unidade || "un"}`} />
-              <StatCard title="Total vendido" value={`${totVendido} ${store.materiais[0]?.unidade || "un"}`} />
-              <StatCard title="Receita no período" value={money(receita)} />
-            </div>
+                {/* Indicador de Carregamento */}
+                {loading && <div className="text-center p-4 text-emerald-600">Carregando relatórios...</div>}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <Card className="p-6">
-                <div className="text-sm text-neutral-500 mb-2">Recebidos por Material</div>
-                <canvas ref={recChartRef} height="140"></canvas>
-                {porMaterial.length === 0 && <div className="text-neutral-400 text-sm mt-4">Sem dados no período.</div>}
-              </Card>
-              <Card className="p-6">
-                <div className="text-sm text-neutral-500 mb-2">Receita por Material</div>
-                <canvas ref={revChartRef} height="140"></canvas>
-                {porMaterial.length === 0 && <div className="text-neutral-400 text-sm mt-4">Sem dados no período.</div>}
-              </Card>
-            </div>
+                {/* Cards de Resumo (usam summaryData) */}
+                {!loading && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <StatCard title="Total recebido" value={`${summaryData.total_recebido.toFixed(1)} Kg`} subtitle="No período selecionado"/>
+                        <StatCard title="Total vendido" value={`${summaryData.total_vendido.toFixed(1)} Kg`} subtitle="No período selecionado"/>
+                        <StatCard title="Receita no período" value={money(summaryData.receita_periodo)} />
+                    </div>
+                )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="p-6">
-                <div className="text-sm text-neutral-500 mb-3">Resumo por Material</div>
-                <Table
-                  columns={[
-                    { key: "nome", header: "Material" },
-                    { key: "recebido", header: "Recebido" , render:(v,row)=> `${v} ${row.unidade}` },
-                    { key: "vendido", header: "Vendido" , render:(v,row)=> `${v} ${row.unidade}` },
-                    { key: "saldo", header: "Saldo" , render:(v,row)=> `${v} ${row.unidade}` },
-                    { key: "receita", header: "Receita" , render: v => money(v) },
-                  ]}
-                  data={porMaterial}
-                  emptyLabel="Sem dados para resumir"
-                />
-              </Card>
+                {/* Gráficos */}
+                {!loading && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <Card className="p-6">
+                            <div className="text-sm text-neutral-500 mb-2">Recebidos por Material (Kg)</div>
+                            <canvas ref={recChartRef} height="140"></canvas>
+                            {porMaterialData.length === 0 && !loading && <div className="text-neutral-400 text-sm mt-4 text-center">Sem dados de recebimento no período.</div>}
+                        </Card>
+                        <Card className="p-6">
+                            <div className="text-sm text-neutral-500 mb-2">Receita por Material (R$)</div>
+                            <canvas ref={revChartRef} height="140"></canvas>
+                            {porMaterialData.length === 0 && !loading && <div className="text-neutral-400 text-sm mt-4 text-center">Sem dados de receita no período.</div>}
+                        </Card>
+                    </div>
+                )}
 
-              <Card className="p-6">
-                <div className="text-sm text-neutral-500 mb-3">Recebido por Associação</div>
-                <Table
-                  columns={[
-                    { key: "nome", header: "Associação" },
-                    { key: "quantidade", header: "Quantidade", render: (v)=> v },
-                  ]}
-                  data={porAssociacao}
-                  emptyLabel="Sem recebimentos no período"
-                />
-              </Card>
-            </div>
-          </section>
+                {/* Tabelas */}
+                {!loading && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Tabela Resumo por Material (usa porMaterialData) */}
+                        <Card className="p-6">
+                            <div className="text-sm text-neutral-500 mb-3">Resumo por Material</div>
+                            <Table
+                                columns={[
+                                    { key: "nome", header: "Material" },
+                                    { key: "recebido", header: "Recebido" , render:(v,row)=> `${v.toFixed(1)} ${row.unidade_medida}` },
+                                    { key: "vendido", header: "Vendido" , render:(v,row)=> `${v.toFixed(1)} ${row.unidade_medida}` },
+                                    { key: "saldo", header: "Saldo" , render:(v,row)=> `${v.toFixed(1)} ${row.unidade_medida}` },
+                                    { key: "receita", header: "Receita" , render: v => money(v) },
+                                ]}
+                                data={porMaterialData}
+                                emptyLabel="Sem dados no período"
+                            />
+                        </Card>
+                        {/* Tabela Recebido por Associação (usa porAssociacaoData) */}
+                        <Card className="p-6">
+                            <div className="text-sm text-neutral-500 mb-3">Recebido por Associação (Kg)</div>
+                            <Table
+                                columns={[
+                                    { key: "nome", header: "Associação" },
+                                    { key: "quantidade", header: "Quantidade Total", render: (v)=> v.toFixed(1) + ' Kg' },
+                                ]}
+                                data={porAssociacaoData}
+                                emptyLabel="Sem recebimentos no período"
+                            />
+                        </Card>
+                    </div>
+                )}
+            </section>
         );
-      }
-
+    }
       // ========== App ==========
       function App() {
         const API_URL = "http://127.0.0.1:8000"
