@@ -70,6 +70,7 @@ class EntradaMaterialCreate(EntradaMaterialBase):
 class EntradaMaterial(EntradaMaterialBase):
     id: int
     data_entrada: datetime
+    codigo_lote: Optional[str] = None
     # Aqui mostramos os dados completos das entidades relacionadas
     material: Material
     associacao: Associacao
@@ -102,6 +103,7 @@ class VendaCreate(VendaBase):
 
 class Venda(VendaBase):
     id: int
+    codigo: Optional[str] = None
     data_venda: datetime
     # comprador: Comprador
     itens: List[ItemVenda] = [] # A resposta da venda incluirá a lista de itens vendidos
