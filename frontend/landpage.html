@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Associação COOPMARES</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Favicon -->
+  <link rel="icon" href="logo.png" />
+</head>
+
+<body class="bg-green-50 text-gray-800">
+  <!-- NAVBAR -->
+  <header class="bg-green-700 text-white shadow-md sticky top-0 z-50">
+    <nav class="max-w-7xl mx-auto flex justify-between items-center p-4">
+      <div class="flex items-center gap-2">
+        <!-- Logo da associação -->
+        <img src="logo.png" alt="Logo" class="w-9 h-9">
+        <h1 class="font-bold text-xl">Associação de Catadores de Resíduos Sólidos</h1>
+      </div>
+      <ul class="flex gap-6 font-medium">
+        <li><a href="#sobre" class="hover:text-yellow-300">Sobre</a></li>
+        <li><a href="#projetos" class="hover:text-yellow-300">Projetos</a></li>
+        <li><a href="#contato" class="hover:text-yellow-300">Contato</a></li>
+        <li><button id="btnLogin" class="hover:text-yellow-300">Login</button></li>
+        <li><button class="cursor-not-allowed opacity-60">Afiliados</button></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="bg-gradient-to-br from-green-800 to-green-600 text-white">
+    <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 items-center py-20 px-6">
+      <div class="text-center md:text-left">
+        <h2 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">Transforme o lixo em esperança 🌎</h2>
+        <p class="text-lg md:text-xl mb-6 max-w-xl">Junte-se à Rede dos Catadores/as do Ceará para promover reciclagem, renda e preservação ambiental.</p>
+        <a href="#projetos" class="inline-block bg-yellow-400 hover:bg-yellow-300 text-green-900 font-semibold px-6 py-3 rounded-full transition">Conheça nossos projetos</a>
+      </div>
+      <div class="flex justify-center md:justify-end">
+        <!-- Logo grande -->
+        <img src="logo.png" alt="Logo Rede de Catadores" class="w-[360px] h-[360px] drop-shadow-2xl">
+      </div>
+    </div>
+  </section>
+
+  <!-- SOBRE -->
+  <section id="sobre" class="max-w-6xl mx-auto py-20 px-6">
+    <h2 class="text-3xl font-bold text-center text-green-800 mb-8">Quem Somos</h2>
+    <div class="grid md:grid-cols-2 gap-10 items-center">
+      <img src="https://images.unsplash.com/photo-1565372918675-6c9c3db4bca7" alt="Equipe de reciclagem" class="rounded-2xl shadow-lg">
+      <div>
+        <p class="mb-4 text-lg leading-relaxed">
+          A <strong>COOPMARES</strong> é uma organização sem fins lucrativos dedicada à coleta seletiva, reciclagem e educação ambiental.
+          Atuamos em comunidades locais, promovendo sustentabilidade e inclusão social por meio do trabalho dos catadores.
+        </p>
+        <p class="text-lg leading-relaxed">
+          Nosso objetivo é reduzir o impacto ambiental e transformar resíduos recicláveis em oportunidades de vida.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJETOS -->
+  <section id="projetos" class="bg-green-100 py-20 px-6">
+    <h2 class="text-3xl font-bold text-center text-green-800 mb-12">Nossos Projetos</h2>
+    <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
+        <img src="https://images.unsplash.com/photo-1604328698692-59728eaf1c90" alt="Coleta Seletiva" class="rounded-xl mb-4">
+        <h3 class="text-xl font-semibold mb-2 text-green-700">Coleta Seletiva</h3>
+        <p class="text-gray-700">Promovemos a coleta seletiva em bairros e escolas, incentivando a separação correta dos materiais recicláveis.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
+        <img src="https://images.unsplash.com/photo-1595974465563-e5c856f8d30c" alt="Oficinas Educativas" class="rounded-xl mb-4">
+        <h3 class="text-xl font-semibold mb-2 text-green-700">Oficinas Educativas</h3>
+        <p class="text-gray-700">Capacitamos jovens e adultos em práticas de reciclagem e reutilização de materiais.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
+        <img src="https://images.unsplash.com/photo-1560179707-f14e90ef3623" alt="Artesanato Sustentável" class="rounded-xl mb-4">
+        <h3 class="text-xl font-semibold mb-2 text-green-700">Artesanato Sustentável</h3>
+        <p class="text-gray-700">Transformamos resíduos em arte, criando produtos reciclados que geram renda e consciência ambiental.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section id="contato" class="max-w-4xl mx-auto py-20 px-6 text-center">
+    <h2 class="text-3xl font-bold text-green-800 mb-6">Entre em Contato</h2>
+    <p class="text-lg mb-6">Quer ser voluntário ou parceiro? Fale conosco!</p>
+    <form class="space-y-4 max-w-md mx-auto">
+      <input type="text" placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600">
+      <input type="email" placeholder="Seu e-mail" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600">
+      <textarea placeholder="Sua mensagem" rows="4" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600"></textarea>
+      <button type="submit" class="bg-green-700 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-800 transition">Enviar Mensagem</button>
+    </form>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-green-700 text-white py-6 text-center">
+    <p>&copy; 2025 Associação COOPMARES. Todos os direitos reservados.</p>
+    <p class="text-sm mt-1">Feito com ♻️ e amor pelo meio ambiente.</p>
+  </footer>
+
+  <!-- MODAL LOGIN -->
+  <div id="modalLogin" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-8 w-80 text-center shadow-lg">
+      <h3 class="text-2xl font-semibold text-green-700 mb-4">Login da Associação</h3>
+      <input type="text" placeholder="Usuário" class="w-full mb-3 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
+      <input type="password" placeholder="Senha" class="w-full mb-4 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
+      <button class="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 w-full">Entrar</button>
+      <button id="closeLogin" class="mt-4 text-sm text-gray-600 hover:text-red-600">✖ Fechar</button>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    const modalLogin = document.getElementById('modalLogin');
+    const btnLogin = document.getElementById('btnLogin');
+    const closeLogin = document.getElementById('closeLogin');
+
+    // Abrir modal
+    btnLogin.onclick = () => modalLogin.classList.remove('hidden');
+
+    // Fechar modal
+    closeLogin.onclick = () => modalLogin.classList.add('hidden');
+
+    // Credenciais fixas (demo)
+    const USERNAME = "admin";
+    const PASSWORD = "12345";
+
+    // Login da Associação
+    modalLogin.querySelector("button.bg-green-700").onclick = () => {
+      const user = modalLogin.querySelector("input[type='text']").value.trim();
+      const pass = modalLogin.querySelector("input[type='password']").value;
+      if (user === USERNAME && pass === PASSWORD) {
+        window.location.href = "index.html";
+      } else {
+        alert("Usuário ou senha incorretos!");
+      }
+    };
+  </script>
+</body>
+</html>
