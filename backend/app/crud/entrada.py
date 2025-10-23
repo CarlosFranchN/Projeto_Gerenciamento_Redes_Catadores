@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models, schemas
+from app import models
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 import time
 import random
+
+from .. import schemas
 
 MAX_RETRIES = 3
 
@@ -34,20 +36,48 @@ def create_entrada_material(db: Session, entrada: schemas.EntradaMaterialCreate)
     db.refresh(db_entrada)
     return db_entrada
 
-def get_entradas_material(db: Session, skip: int = 0, limit: int = 100):
-    """Lista todas as entradas de material."""
-    # return db.query(models.EntradaMaterial).offset(skip).limit(limit).all()
-    return (
+def get_entradas_material(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100,
+    data_inicio: Optional[date] = None,
+    data_fim: Optional[date] = None,
+    id_associacao: Optional[int] = None,
+    id_material: Optional[int] = None
+) -> dict: 
+
+    query = (
         db.query(models.EntradaMaterial)
+        .filter(models.EntradaMaterial.status == "Confirmada")
+    )
+
+
+    if data_inicio:
+        query = query.filter(models.EntradaMaterial.data_entrada >= data_inicio)
+    if data_fim:
+        query = query.filter(models.EntradaMaterial.data_entrada <= data_fim)
+    if id_associacao:
+        query = query.filter(models.EntradaMaterial.id_associacao == id_associacao)
+    if id_material:
+        query = query.filter(models.EntradaMaterial.id_material == id_material)
+
+    total_count = query.count()
+
+
+    items = (
+        query
         .options(
             joinedload(models.EntradaMaterial.material), 
             joinedload(models.EntradaMaterial.associacao)
         )
-        .filter(models.EntradaMaterial.status == "Confirmada")
+        .order_by(models.EntradaMaterial.data_entrada.desc()) 
         .offset(skip)
         .limit(limit)
-        .all()
+        .all() 
     )
+
+
+    return {"total_count": total_count, "items": items}
 
 def cancel_entrada_material(db: Session, entrada_id: int):
     """Marca uma entrada de material como 'Cancelada'."""

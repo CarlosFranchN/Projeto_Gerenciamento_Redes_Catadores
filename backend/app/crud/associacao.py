@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models, schemas
+from app import models
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 import time
 import random
+
+from .. import schemas
 
 MAX_RETRIES = 3
 

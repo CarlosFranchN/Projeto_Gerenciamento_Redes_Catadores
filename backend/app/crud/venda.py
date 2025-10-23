@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models, schemas
+from app import models
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 import time
 import random
 from .material import calcular_estoque_material
+from .. import schemas
 
 MAX_RETRIES = 3
 
@@ -104,16 +105,58 @@ def get_venda(db: Session, venda_id: int):
     """Busca uma única venda pelo seu ID, incluindo seus itens."""
     return db.query(models.Venda).filter(models.Venda.id == venda_id).first()
 
-def get_vendas(db: Session, skip: int = 0, limit: int = 100):
-    """Lista todas as vendas CONCLUÍDAS (concluida=True)."""
-    return (
+def get_vendas(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100,
+    data_inicio: Optional[date] = None,
+    data_fim: Optional[date] = None,
+    comprador: Optional[str] = None,
+    id_material: Optional[int] = None
+) -> dict: 
+    """
+    Lista vendas (CONCLUÍDAS), com filtros e paginação.
+    Retorna um dicionário com a contagem total e os itens da página.
+    """
+
+    
+    query = (
         db.query(models.Venda)
-        # 👇 ALTERE AQUI 👇
         .filter(models.Venda.concluida == True) 
+    )
+
+
+    if id_material:
+        query = (
+            query
+            .join(models.ItemVenda, models.Venda.id == models.ItemVenda.id_venda)
+            .filter(models.ItemVenda.id_material == id_material)
+            .distinct() 
+        )
+    if comprador:
+        query = query.filter(models.Venda.nome_comprador.ilike(f"%{comprador}%"))
+    if data_inicio:
+        query = query.filter(models.Venda.data_venda >= data_inicio)
+    if data_fim:
+        query = query.filter(models.Venda.data_venda <= data_fim)
+
+
+    total_count = query.count()
+
+    
+    items = (
+        query 
+        .options(
+            joinedload(models.Venda.itens) 
+            .joinedload(models.ItemVenda.material) 
+        )
+        .order_by(models.Venda.data_venda.desc()) 
         .offset(skip)
         .limit(limit)
-        .all()
-    )
+        .all())
+
+    
+    return {"total_count": total_count, "items": items}
 
 def cancel_venda(db: Session, venda_id: int):
     """Marca uma venda como não concluída/cancelada (concluida=False)."""

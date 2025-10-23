@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models, schemas
+from app import models
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 import time
 import random
+
+from .. import schemas
 
 
 def get_report_summary(db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None):
@@ -32,7 +34,7 @@ def get_report_summary(db: Session, start_date: Optional[date] = None, end_date:
     total_vendido = vendas_result.total_vendido if vendas_result else 0.0
     receita_periodo = vendas_result.receita if vendas_result else 0.0
 
-    return schemas.ReportSummaryResponse(
+    return schema.ReportSummaryResponse(
         total_recebido=total_recebido,
         total_vendido=total_vendido,
         receita_periodo=receita_periodo

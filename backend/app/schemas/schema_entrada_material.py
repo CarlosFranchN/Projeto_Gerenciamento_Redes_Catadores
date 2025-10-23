@@ -26,3 +26,10 @@ class EntradaMaterial(EntradaMaterialBase):
 
     class Config:
         orm_mode = True
+        
+class  EntradaPaginasResponse(BaseModel):
+    total_count : int
+    items: List[EntradaMaterial]
+    
+    class Config:
+        from_attributes = True

@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models, schemas
+from app import models
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 import time
 import random
+
+# from backend.app import schema
+from .. import schemas
 
 
 def calcular_estoque_material(db: Session, material_id: int) -> float:

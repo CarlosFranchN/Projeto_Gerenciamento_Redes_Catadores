@@ -1,8 +1,12 @@
 # app/routers/entradas_material.py
 from fastapi import APIRouter, Depends,status, HTTPException,Response
 from sqlalchemy.orm import Session
-from typing import List
-from .. import crud, schemas
+from typing import List,Optional
+from datetime import date
+# from .. import crud, schemas
+# import crud.material as crud_material
+# from .. import crud, schemas
+from .. import crud,schemas
 from ..database import get_db
 
 
@@ -24,10 +28,25 @@ def create_entrada_material(entrada: schemas.EntradaMaterialCreate, db: Session 
 
     return crud.create_entrada_material(db=db, entrada=entrada)
 
-@router.get("/", response_model=List[schemas.EntradaMaterial])
-def read_entradas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    entradas = crud.get_entradas_material(db, skip=skip, limit=limit)
-    return entradas
+@router.get("/", response_model=schemas.EntradaPaginasResponse)
+def read_entradas(skip: int = 0, 
+                  limit: int = 100, 
+                  data_inicio : Optional[date] = None,
+                  data_fim : Optional[date] = None,
+                  id_associacao: Optional[int] = None,
+                  id_material : Optional[int] = None,
+                  db: Session = Depends(get_db)
+                  
+                  ):
+    entradas_paginadas = crud.get_entradas_material(
+        db=db,
+        skip=skip,
+        limit=limit,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        id_associacao=id_associacao,
+        id_material=id_material)
+    return entradas_paginadas
 
 @router.delete(
     "/{entrada_id}", 
@@ -48,3 +67,4 @@ def cancel_entrada_material_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entrada de material não encontrada")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

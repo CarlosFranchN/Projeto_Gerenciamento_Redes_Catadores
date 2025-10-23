@@ -264,6 +264,18 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
 }
 
 function RecebimentosView({ store, setActive, onCreate, onCancel }) {
+
+    const [recebimentos, setRecebimentos] = useState([]); // Lista de dados local
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0); // Para forçar re-busca
+
+
+    const [dataInicio, setDataInicio] = useState("");
+    const [dataFim, setDataFim] = useState("");
+    const [filtroAssociacaoId, setFiltroAssociacaoId] = useState("");
+    const [filtroMaterialId, setFiltroMaterialId] = useState("");
+
+
     const [open, setOpen] = useState(false);
     const [data, setData] = useState(todayISO());
     const [materialId, setMaterialId] = useState("");
@@ -271,9 +283,54 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
     const [quantidade, setQuantidade] = useState("");
     const [busy, setBusy] = useState(false);
 
+    const [paginaAtual, setPaginaAtual] = useState(0); // Começa na página 0
+    const [totalRecebimentos, setTotalRecebimentos] = useState(0);
+    const ITENS_POR_PAGINA = 25;
+    
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
     const assocOpts = store.associacoes.map(a => ({ value: String(a.id), label: a.nome }));
 
+    
+useEffect(() => {
+    const fetchRecebimentos = async () => {
+        setLoading(true);
+        
+        // 1. Monta os parâmetros de filtro
+        const params = new URLSearchParams();
+        if (dataInicio) params.append('data_inicio', dataInicio);
+        if (dataFim) params.append('end_date', dataFim);
+        if (filtroAssociacaoId) params.append('id_associacao', filtroAssociacaoId);
+        if (filtroMaterialId) params.append('id_material', filtroMaterialId);
+        
+        // 👇 2. ADICIONA PARÂMETROS DE PAGINAÇÃO 👇
+        const skip = paginaAtual * ITENS_POR_PAGINA;
+        params.append('skip', skip);
+        params.append('limit', ITENS_POR_PAGINA);
+        
+        try {
+            // 3. Busca os dados
+            const response = await fetch(`${API_URL}/entradas_material/?${params.toString()}`);
+            if (!response.ok) throw new Error(`Falha ao buscar recebimentos: ${response.statusText}`);
+            
+            // 4. PROCESSA A NOVA RESPOSTA (OBJETO) 👇
+            const data = await response.json(); // data agora é { total_count: X, items: [...] }
+            
+            setRecebimentos(data.items);        // Salva os itens da página
+            setTotalRecebimentos(data.total_count); // Salva a contagem total
+
+        } catch (error) {
+             console.error("Erro ao buscar recebimentos:", error);
+             alert(error.message);
+             setRecebimentos([]); // Limpa em caso de erro
+             setTotalRecebimentos(0); // Zera em caso de erro
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    fetchRecebimentos();
+// 👇 5. ADICIONA paginaAtual AO ARRAY DE DEPENDÊNCIAS 👇
+}, [dataInicio, dataFim, filtroAssociacaoId, filtroMaterialId, refreshTrigger, paginaAtual]);
     const handleCloseDrawer = () => {
         setOpen(false); setBusy(false); setData(todayISO());
         setMaterialId(""); setAssociacaoId(""); setQuantidade("");
@@ -292,25 +349,52 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
         };
 
         try {
-            const success = await onCreate(payload);
-            if (success) { handleCloseDrawer(); }
-        } catch (error) { /* erro já tratado em onCreate */ }
+            const success = await onCreate(payload); 
+            if (success) { 
+                handleCloseDrawer(); 
+                setRefreshTrigger(t => t + 1); 
+            }
+        } catch (error) {  }
         finally { setBusy(false); }
     };
 
-    const total = store.recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
 
-    return (
+    const handleCancel = async (id) => {
+        const success = await onCancel(id); 
+        if (success) {
+            setRefreshTrigger(t => t + 1); 
+        }
+    };
+    
+
+    const total = recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
+
+return (
         <section>
+            {/* --- Toolbar (Botão + Novo Recebimento) --- */}
             <Toolbar>
                 <h2 className="text-xl font-semibold">Recebimentos</h2>
                 <div className="flex gap-2">
                     <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo recebimento</button>
                 </div>
             </Toolbar>
+            
+            {/* --- Área de Filtros --- */}
+            <Card className="p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                    <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
+                    <TextInput label="Data Fim" type="date" value={dataFim} onChange={setDataFim} />
+                    <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos os Materiais" />
+                    <Select label="Filtrar por Associação" value={filtroAssociacaoId} onChange={setFiltroAssociacaoId} options={assocOpts} placeholder="Todas as Associações" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroAssociacaoId(""); }}>Limpar Filtros</button>
+                </div>
+            </Card>
+
+            {/* --- StatCards --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <StatCard title="Entradas registradas" value={store.recebimentos.length} />
-                <StatCard title="Total recebido" value={`${total.toFixed(1)} Kg`} />
+                {/* ATENÇÃO: 'recebimentos.length' é só da página. Use 'totalRecebimentos' para o total. */}
+                <StatCard title="Entradas (Filtradas)" value={totalRecebimentos} /> 
+                <StatCard title="Total Recebido (Filtrado)" value={`${total.toFixed(1)} Kg`} />
                 <Card className="p-5">
                     <div className="text-sm text-neutral-500">Ações rápidas</div>
                     <div className="mt-2 flex gap-2">
@@ -319,28 +403,67 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
                     </div>
                 </Card>
             </div>
-            <Table
-                columns={[
-                    { key: "data_entrada", header: "Data", render: v => fmtDateBR(v) },
-                    { key: "codigo_lote", header: "Cód. Lote" },
-                    { key: "material", header: "Material", render: (_, row) => row.material?.nome || "-" },
-                    { key: "associacao", header: "Associação", render: (_, row) => row.associacao?.nome || "-" },
-                    { key: "quantidade", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
-                    {
-                        key: "actions", header: "Ações", render: (_, row) => (
-                            <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                onClick={() => onCancel(row.id)} title="Cancelar recebimento">
-                                🚫 Cancelar
-                            </button>
-                        )
-                    },
-                ]}
-                data={store.recebimentos}
-                emptyLabel="Nenhum recebimento cadastrado"
-            />
+
+            {/* --- Indicador de Carregamento e Tabela --- */}
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando recebimentos...</div>}
+            {!loading && (
+                <Table
+                    columns={[
+                        { key: "data_entrada", header: "Data", render: v => fmtDateBR(v) },
+                        { key: "codigo_lote", header: "Cód. Lote" },
+                        { key: "material", header: "Material", render: (_, row) => row.material?.nome || "-" },
+                        { key: "associacao", header: "Associação", render: (_, row) => row.associacao?.nome || "-" },
+                        { key: "quantidade", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
+                        {
+                            key: "actions", header: "Ações", render: (_, row) => (
+                                <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
+                                        onClick={() => handleCancel(row.id)} // Chama handleCancel local
+                                        title="Cancelar recebimento">
+                                    🚫 Cancelar
+                                </button>
+                            )
+                        },
+                    ]}
+                    data={recebimentos} // Usa o estado local 'recebimentos'
+                    emptyLabel="Nenhum recebimento encontrado para os filtros selecionados."
+                />
+            )}
+
+            {/* --- SEÇÃO DE PAGINAÇÃO (A NOVA PARTE) --- */}
+            {!loading && totalRecebimentos > ITENS_POR_PAGINA && (
+                <div className="flex justify-between items-center mt-4">
+                    {/* Informação de Contagem */}
+                    <span className="text-sm text-neutral-600">
+                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - 
+                        {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalRecebimentos)} de 
+                        {' '}{totalRecebimentos} entradas
+                    </span>
+                    
+                    {/* Botões de Navegação */}
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setPaginaAtual(p => p - 1)}
+                            disabled={paginaAtual === 0} // Desabilita na primeira página
+                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            &larr; Anterior
+                        </button>
+                        <button 
+                            onClick={() => setPaginaAtual(p => p + 1)}
+                            disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalRecebimentos} // Desabilita na última página
+                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Próxima &rarr;
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {/* --- Drawer (Formulário de Criação) --- */}
             <Drawer open={open} onClose={handleCloseDrawer} title="Adicionar Recebimento">
                 <form onSubmit={onSubmit} className="space-y-3">
-                    <TextInput label="Data" type="date" value={data} onChange={setData} required />
+                    {/* O campo de data foi removido, pois é automático no backend */}
+                    {/* <TextInput label="Data" type="date" value={data} onChange={setData} required /> */}
                     <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
                     <Select label="Associação" value={associacaoId} onChange={setAssociacaoId} options={assocOpts} required />
                     <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 120" required />
@@ -352,9 +475,24 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
             </Drawer>
         </section>
     );
+
 }
 
 function VendasView({ store, setActive, onCreate, onCancel }) {
+    // --- Estados de Dados, Filtros e Paginação ---
+    const [vendas, setVendas] = useState([]); // Lista local de vendas
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalVendas, setTotalVendas] = useState(0);
+    const ITENS_POR_PAGINA = 20; // Quantas vendas por página
+
+    const [dataInicio, setDataInicio] = useState("");
+    const [dataFim, setDataFim] = useState("");
+    const [filtroComprador, setFiltroComprador] = useState("");
+    const [filtroMaterialId, setFiltroMaterialId] = useState("");
+
+    // --- Estados do Formulário (Drawer) ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [dataVenda, setDataVenda] = useState(todayISO());
@@ -365,10 +503,49 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
     const [estoqueDisponivel, setEstoqueDisponivel] = useState(null);
     const [itens, setItens] = useState([]);
 
+    // --- Opções para Selects (do store global) ---
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-
     const getMat = (id) => store.materiais.find(m => m.id === Number(id));
 
+    // --- useEffect para BUSCAR DADOS FILTRADOS E PAGINADOS ---
+    useEffect(() => {
+        const fetchVendasData = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+
+            // Filtros
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('end_date', dataFim);
+            if (filtroComprador) params.append('comprador', filtroComprador);
+            if (filtroMaterialId) params.append('id_material', filtroMaterialId);
+            
+            // Paginação
+            const skip = paginaAtual * ITENS_POR_PAGINA;
+            params.append('skip', skip);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                const response = await fetch(`${API_URL}/vendas/?${params.toString()}`);
+                if (!response.ok) throw new Error(`Falha ao buscar vendas: ${response.statusText}`);
+                
+                const data = await response.json(); // Espera { total_count: X, items: [...] }
+                
+                setVendas(data.items);
+                setTotalVendas(data.total_count);
+
+            } catch (error) {
+                 console.error("Erro ao buscar vendas:", error);
+                 alert(error.message);
+                 setVendas([]);
+                 setTotalVendas(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchVendasData();
+    }, [dataInicio, dataFim, filtroComprador, filtroMaterialId, paginaAtual, refreshTrigger]); // Depende dos filtros, página e trigger
+
+    // --- useEffect para buscar estoque (do Drawer) ---
     useEffect(() => {
         const fetchEstoque = async () => {
             if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
@@ -389,6 +566,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         fetchEstoque();
     }, [itemAtualMaterialId]);
 
+    // --- Funções do Drawer ---
     const handleAddItem = () => {
         if (!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit) {
             alert("Preencha Material, Quantidade e Preço Unitário para adicionar.");
@@ -427,39 +605,52 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         setOpen(true);
     };
 
+    // --- Funções de Ação ---
     const handleSubmitVenda = async () => {
         if (!comprador) { alert("Informe o nome do comprador."); return; }
         if (itens.length === 0) { alert("Adicione pelo menos um item à venda."); return; }
-
         setBusy(true);
         try {
             const success = await onCreate({ nomeComprador: comprador, itens: itens });
-            if (success) { handleCloseDrawer(); }
+            if (success) { 
+                handleCloseDrawer(); 
+                setRefreshTrigger(t => t + 1); // Força refetch
+            }
         } catch (error) { /* erro já tratado em onCreate */ }
         finally { setBusy(false); }
     };
+    
+    const handleCancel = async (id) => {
+        const success = await onCancel(id); // Chama a função da App
+        if (success) {
+            setRefreshTrigger(t => t + 1); // Força refetch
+        }
+    };
 
-    const totalQtdVendida = store.vendas.reduce((totalVendas, venda) =>
+    // --- Cálculos (usam o estado local 'vendas') ---
+    // (Atenção: Estes cálculos agora refletem apenas a PÁGINA ATUAL, não o total filtrado)
+    // (Para totais filtrados, a API /reports/summary seria melhor, mas vamos manter assim por enquanto)
+    const totalQtdVendida = vendas.reduce((totalVendas, venda) =>
         totalVendas + venda.itens.reduce((totalItens, item) =>
             totalItens + Number(item.quantidade_vendida || 0), 0),
-        0);
-
-    const receitaTotal = store.vendas.reduce((totalVendas, venda) =>
+    0);
+    const receitaTotal = vendas.reduce((totalVendas, venda) =>
         totalVendas + venda.itens.reduce((totalItens, item) =>
             totalItens + (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0)), 0),
-        0);
+    0);
 
+    // --- Preparação dos dados para a Tabela (Achatamento) ---
     const itensVendidosData = useMemo(() => {
-        return store.vendas.flatMap(venda =>
+        return vendas.flatMap(venda => // Usa o estado local 'vendas'
             venda.itens.map(item => ({
                 ...item,
                 venda_id: venda.id,
                 data_venda: venda.data_venda,
                 codigo: venda.codigo,
-                comprador: venda.comprador,
+                nome_comprador: venda.nome_comprador,
             }))
         ).sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda));
-    }, [store.vendas]);
+    }, [vendas]); // Depende do estado local 'vendas'
 
     return (
         <section>
@@ -467,35 +658,83 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                 <h2 className="text-xl font-semibold">Vendas</h2>
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova venda</button>
             </Toolbar>
+
+            {/* --- ÁREA DE FILTROS --- */}
+            <Card className="p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                    <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
+                    <TextInput label="Data Fim" type="date" value={dataFim} onChange={setDataFim} />
+                    <TextInput label="Filtrar por Comprador" value={filtroComprador} onChange={setFiltroComprador} placeholder="Nome do comprador..." />
+                    <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos os Materiais" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroComprador(""); setFiltroMaterialId(""); }}>Limpar Filtros</button>
+                </div>
+            </Card>
+
+            {/* --- StatCards --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <StatCard title="Vendas registradas" value={store.vendas.length} />
-                <StatCard title="Quantidade vendida (Total)" value={`${totalQtdVendida.toFixed(2)} Kg`} />
-                <StatCard title="Receita total" value={money(receitaTotal)} />
+                <StatCard title="Vendas (Filtradas)" value={totalVendas} />
+                <StatCard title="Qtd Vendida (Página)" value={`${totalQtdVendida.toFixed(2)} Kg`} />
+                <StatCard title="Receita (Página)" value={money(receitaTotal)} />
             </div>
-            <Table
-                columns={[
-                    { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
-                    { key: "codigo", header: "Cód. Venda" },
-                    { key: "comprador", header: "Comprador" },
-                    { key: "material", header: "Material", render: (mat) => mat?.nome || "-" },
-                    { key: "quantidade_vendida", header: "Quantidade", render: (v, row) => `${v} ${row.material?.unidade_medida || "un"}` },
-                    { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
-                    { key: "total", header: "Total Item", render: (_, row) => money(Number(row.quantidade_vendida || 0) * Number(row.valor_unitario || 0)) },
-                    {
-                        key: "actions", header: "Ações", render: (_, row) => (
-                            <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                onClick={() => onCancel(row.venda_id)}
-                                title="Cancelar venda completa">
-                                🚫 Cancelar Venda
-                            </button>
-                        )
-                    },
-                ]}
-                data={itensVendidosData}
-                emptyLabel="Nenhuma venda registrada"
-            />
+
+            {/* --- Tabela de Itens Vendidos --- */}
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando vendas...</div>}
+            {!loading && (
+                <Table
+                    columns={[
+                        { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
+                        { key: "codigo", header: "Cód. Venda" },
+                        { key: "nome_comprador", header: "Comprador" },
+                        { key: "material", header: "Material", render: (mat) => mat?.nome || "-" },
+                        { key: "quantidade_vendida", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || "un"}` },
+                        { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
+                        { key: "total", header: "Total Item", render: (_, row) => money(Number(row.quantidade_vendida || 0) * Number(row.valor_unitario || 0)) },
+                        {
+                            key: "actions", header: "Ações", render: (_, row) => (
+                                <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
+                                        onClick={() => handleCancel(row.venda_id)}
+                                        title="Cancelar venda completa">
+                                    🚫 Cancelar Venda
+                                </button>
+                            )
+                        },
+                    ]}
+                    data={itensVendidosData}
+                    emptyLabel="Nenhuma venda encontrada para os filtros selecionados."
+                />
+            )}
+
+            {/* --- SEÇÃO DE PAGINAÇÃO --- */}
+            {!loading && totalVendas > ITENS_POR_PAGINA && (
+                <div className="flex justify-between items-center mt-4">
+                    <span className="text-sm text-neutral-600">
+                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - 
+                        {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalVendas)} de 
+                        {' '}{totalVendas} vendas
+                    </span>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setPaginaAtual(p => p - 1)}
+                            disabled={paginaAtual === 0}
+                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            &larr; Anterior
+                        </button>
+                        <button 
+                            onClick={() => setPaginaAtual(p => p + 1)}
+                            disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalVendas}
+                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Próxima &rarr;
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Drawer (Formulário) --- */}
             <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Venda">
-                <div className="space-y-4">
+                 {/* O formulário de múltiplos itens permanece o mesmo */}
+                 <div className="space-y-4">
                     <TextInput label="Data" type="date" value={dataVenda} onChange={setDataVenda} required />
                     <TextInput label="Nome do Comprador" value={comprador} onChange={setComprador} placeholder="Ex: Recicla Brasil Ltda" required />
                     <hr className="my-4" />
@@ -517,7 +756,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                             onChange={(value) => setItemAtualQuantidade(value)}
                             placeholder="Kg" required={itens.length === 0}
                         />
-                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0} />
+                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0}/>
                         <div className="flex items-end">
                             <button
                                 type="button"
@@ -798,14 +1037,14 @@ function App() {
                     await Promise.all([
                         fetchMaterialsWithStock(),
                         fetchAssociacoes(),
-                        fetchEntradas(),
-                        fetchVendas(),
+                        // fetchEntradas(),
+                        // fetchVendas(),
                     ]);
                 setStore({
                     materiais: materiaisData,
                     associacoes: associacoesData,
-                    recebimentos: entradasData,
-                    vendas: vendasData,
+                    recebimentos: [],
+                    vendas: [],
                 });
                 console.log("Dados carregados com sucesso!");
             } catch (error) {
@@ -896,7 +1135,7 @@ function App() {
             id_associacao: payload.associacaoId,
         };
         try {
-            const response = await fetch(`${API_URL}/entradas/`, {
+            const response = await fetch(`${API_URL}/entradas_material/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payloadParaAPI),

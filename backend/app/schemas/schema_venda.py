@@ -35,3 +35,10 @@ class Venda(VendaBase):
 
     class Config:
         orm_mode = True
+        
+class VendasPaginadasResponse(BaseModel):
+    total_count: int
+    items:  List[Venda]
+    
+    class Config:
+        from_attributes = True
