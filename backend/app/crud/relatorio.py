@@ -34,7 +34,7 @@ def get_report_summary(db: Session, start_date: Optional[date] = None, end_date:
     total_vendido = vendas_result.total_vendido if vendas_result else 0.0
     receita_periodo = vendas_result.receita if vendas_result else 0.0
 
-    return schema.ReportSummaryResponse(
+    return schemas.ReportSummaryResponse(
         total_recebido=total_recebido,
         total_vendido=total_vendido,
         receita_periodo=receita_periodo

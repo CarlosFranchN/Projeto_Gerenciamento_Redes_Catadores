@@ -647,7 +647,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                 venda_id: venda.id,
                 data_venda: venda.data_venda,
                 codigo: venda.codigo,
-                nome_comprador: venda.nome_comprador,
+                nome_comprador: venda.comprador,
             }))
         ).sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda));
     }, [vendas]); // Depende do estado local 'vendas'
@@ -1164,7 +1164,7 @@ function App() {
 
     const createVenda = async (payload) => {
         const payloadParaAPI = {
-            comprador: payload.comprador,
+            comprador: payload.nomeComprador,
             concluida: true,
             itens: payload.itens,
         };
