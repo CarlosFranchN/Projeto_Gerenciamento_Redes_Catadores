@@ -13,17 +13,39 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=schemas.Associacao, summary="Registra uma nova associação")
-def create_associacao(
-    associacao: schemas.AssociacaoCreate,
-    db: Session = Depends(get_db)):
-    # db_associacao = crud.create_associacao(db=db, associacao=associacao)
-    db_associacao = db.query(models.Associacao).filter(models.Associacao.nome == associacao.nome).first()
-    if db_associacao:
+@router.post("/", response_model=schemas.Associacao)
+def create_associacao(associacao: schemas.AssociacaoCreate, db: Session = Depends(get_db)):
+    """
+    Cria uma nova Associação (incluindo o registro Doador pai).
+    """
+    
+    # --- Validação Corrigida ---
+    # 1. Verifica se o NOME do Doador já existe (na tabela doadores)
+    db_doador = crud.get_doador_by_nome(db, nome=associacao.nome)
+    if db_doador:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Associação já cadastrada")
-    return crud.create_associacao(db=db, associacao=associacao)
+            status_code=status.HTTP_409_CONFLICT, # 409 Conflito é mais apropriado
+            detail=f"Um doador com o nome '{associacao.nome}' já existe."
+        )
+        
+    # 2. Verifica se o Tipo de Doador existe
+    db_tipo_doador = crud.get_tipo_doador(db, tipo_doador_id=associacao.id_tipo_doador)
+    if not db_tipo_doador:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tipo de Doador com ID {associacao.id_tipo_doador} não encontrado."
+        )
+    # (Poderíamos adicionar uma verificação se o tipo é "ASSOCIACAO" aqui também)
+
+    # 3. Se tudo estiver OK, chama o CRUD para criar
+    try:
+        return crud.create_associacao(db=db, associacao=associacao)
+    except ValueError as e:
+        # Captura outros erros de integridade (como CNPJ duplicado, se houver)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        print(f"Erro inesperado ao criar associação: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno ao criar associação.")
 
 @router.get("/",response_model=List[schemas.Associacao], summary="Lista todas as associações")
 def read_all_associacoes(

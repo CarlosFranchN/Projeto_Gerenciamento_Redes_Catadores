@@ -15,7 +15,7 @@ class MaterialUpdate(MaterialBase):
 
 class Material(MaterialBase):
     id : int
-    codigo_material : Optional[str]
+    codigo_material : Optional[str] = None
     
     class Config:
         orm_mode = True

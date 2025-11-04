@@ -12,10 +12,6 @@ from .. import schemas
 MAX_RETRIES = 3
 
 def create_venda(db: Session, venda: schemas.VendaCreate):
-    """Cria uma nova venda, seus itens, e gera um código único para a venda,
-       VALIDANDO o estoque e usando LÓGICA DE RETENTATIVA para o código."""
-
-    # --- Bloco de Validação de Estoque (permanece igual) ---
     ids_materiais_para_buscar = {item.id_material for item in venda.itens}
     materiais_db = db.query(models.Material).filter(models.Material.id.in_(ids_materiais_para_buscar)).all()
     materiais_map = {m.id: m for m in materiais_db}
@@ -34,9 +30,7 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
                 f"Disponível: {estoque_disponivel} {unidade}, "
                 f"Tentando vender: {item_venda.quantidade_vendida} {unidade}."
             )
-    # --- Fim da Validação ---
 
-    # --- Lógica de Criação com Retentativa ---
     retry_count = 0
     db_venda = None 
 
@@ -49,9 +43,7 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
         
         try:
             db_venda = models.Venda(
-                # CORREÇÃO 1: Usar o nome correto do campo do modelo/schema
-                comprador=venda.comprador, 
-                # CORREÇÃO 2: Definir explicitamente como True ao criar
+                id_comprador=venda.id_comprador, 
                 concluida = True, 
                 codigo=codigo_gerado
             )
@@ -68,14 +60,13 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
                 db.add(db_item)
                 itens_obj_list.append(db_item)
             
-            db.commit() # Tenta salvar
+            db.commit() 
             
-            db.refresh(db_venda) # Sucesso! Atualiza o objeto principal
-            # (Refresh nos itens é opcional aqui, Pydantic/SQLAlchemy devem carregar via relationship)
-            return db_venda # Retorna sucesso
+            db.refresh(db_venda)
+            return db_venda 
 
         except IntegrityError as e:
-            db.rollback() # Desfaz a tentativa
+            db.rollback() 
             
             original_error_msg = str(getattr(e, 'orig', e)).lower() 
             is_unique_violation = "unique constraint" in original_error_msg or "duplicar valor da chave" in original_error_msg
@@ -98,7 +89,7 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
             print(f"Erro inesperado durante create_venda: {e}")
             raise ValueError(f"Erro inesperado ao salvar venda: {e}") from e
 
-    # Se saiu do loop sem sucesso
+
     raise RuntimeError("Falha ao criar venda após múltiplas tentativas.")
 
 def get_venda(db: Session, venda_id: int):

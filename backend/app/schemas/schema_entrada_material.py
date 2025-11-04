@@ -1,17 +1,13 @@
 from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
-from typing import List,Optional
 from .schema_material import Material
-from .schema_associacao import Associacao
-
+from .schema_doador import Doador # 👈 MUDANÇA AQUI
 
 class EntradaMaterialBase(BaseModel):
     quantidade: float
     id_material: int
-    id_associacao: int
-
-    class Config:
-        orm_mode = True
+    id_doador: int # 👈 MUDANÇA AQUI (de id_associacao para id_doador)
 
 class EntradaMaterialCreate(EntradaMaterialBase):
     pass
@@ -20,16 +16,18 @@ class EntradaMaterial(EntradaMaterialBase):
     id: int
     data_entrada: datetime
     codigo_lote: Optional[str] = None
-    # Aqui mostramos os dados completos das entidades relacionadas
+    status: str
+
     material: Material
-    associacao: Associacao
+    doador: Doador # 👈 MUDANÇA AQUI
 
     class Config:
-        orm_mode = True
-        
-class  EntradaPaginasResponse(BaseModel):
-    total_count : int
+        from_attributes = True
+
+# Schema de resposta paginada
+class EntradasPaginadasResponse(BaseModel):
+    total_count: int
     items: List[EntradaMaterial]
-    
+
     class Config:
         from_attributes = True

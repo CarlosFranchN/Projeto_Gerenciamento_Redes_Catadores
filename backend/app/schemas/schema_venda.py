@@ -1,9 +1,10 @@
 from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
-from typing import List,Optional
 from .schema_material import Material
+from .schema_comprador import Comprador # 👈 IMPORTAÇÃO NOVA
 
-
+# --- Schemas para ItemVenda (depende de Material) ---
 class ItemVendaBase(BaseModel):
     quantidade_vendida: float
     valor_unitario: float
@@ -14,31 +15,34 @@ class ItemVendaCreate(ItemVendaBase):
 
 class ItemVenda(ItemVendaBase):
     id: int
-    material: Material # Mostra os dados completos do material
+    material: Material # Mostra o objeto Material aninhado
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
+# --- Schemas para Venda (depende de Comprador e ItemVenda) ---
 class VendaBase(BaseModel):
-    comprador: str
-    concluida : bool = True
+    id_comprador: int # 👈 MUDANÇA AQUI (de nome_comprador para id_comprador)
+    concluida: bool = True
 
 class VendaCreate(VendaBase):
-    itens: List[ItemVendaCreate] # Para criar uma venda, passamos uma lista de itens
+    itens: List[ItemVendaCreate] # A lista de itens para criar
 
 class Venda(VendaBase):
     id: int
     codigo: Optional[str] = None
     data_venda: datetime
-    # comprador: Comprador
-    itens: List[ItemVenda] = [] # A resposta da venda incluirá a lista de itens vendidos
+
+    itens: List[ItemVenda] = []
+    comprador: Comprador # 👈 MUDANÇA AQUI (mostra o objeto Comprador)
 
     class Config:
-        orm_mode = True
-        
+        from_attributes = True
+
+# Schema de resposta paginada
 class VendasPaginadasResponse(BaseModel):
     total_count: int
-    items:  List[Venda]
-    
+    items: List[Venda]
+
     class Config:
         from_attributes = True

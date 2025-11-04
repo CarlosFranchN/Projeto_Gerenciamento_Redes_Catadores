@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import materiais,associacoes,estoque,entrada_material,vendas,relatorio
+from .routers import materiais,associacoes,estoque,entrada_material,vendas,relatorio,compradores,tipo_doador,doador
 
 
 app = FastAPI(
@@ -22,8 +22,10 @@ app.add_middleware(
 )
 
 app.include_router(materiais.router)
+app.include_router(tipo_doador.router)
+app.include_router(doador.router)
 app.include_router(associacoes.router)
-# app.include_router(compradores.router)
+app.include_router(compradores.router)
 app.include_router(entrada_material.router)
 app.include_router(vendas.router)
 app.include_router(estoque.router)
