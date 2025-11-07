@@ -94,7 +94,15 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
 
 def get_venda(db: Session, venda_id: int):
     """Busca uma única venda pelo seu ID, incluindo seus itens."""
-    return db.query(models.Venda).filter(models.Venda.id == venda_id).first()
+    return (
+        db.query(models.Venda)
+        .options(
+            joinedload(models.Venda.itens).joinedload(models.ItemVenda.material),
+            joinedload(models.Venda.comprador) # 👈 Carrega dados do Comprador
+        )
+        .filter(models.Venda.id == venda_id)
+        .first()
+    )
 
 def get_vendas(
     db: Session, 
@@ -102,51 +110,33 @@ def get_vendas(
     limit: int = 100,
     data_inicio: Optional[date] = None,
     data_fim: Optional[date] = None,
-    comprador: Optional[str] = None,
+    id_comprador: Optional[int] = None, 
     id_material: Optional[int] = None
-) -> dict: 
-    """
-    Lista vendas (CONCLUÍDAS), com filtros e paginação.
-    Retorna um dicionário com a contagem total e os itens da página.
-    """
-
-    
-    query = (
-        db.query(models.Venda)
-        .filter(models.Venda.concluida == True) 
-    )
-
+) -> dict:
+    query = db.query(models.Venda).filter(models.Venda.concluida == True)
 
     if id_material:
-        query = (
-            query
-            .join(models.ItemVenda, models.Venda.id == models.ItemVenda.id_venda)
-            .filter(models.ItemVenda.id_material == id_material)
-            .distinct() 
-        )
-    if comprador:
-        query = query.filter(models.Venda.nome_comprador.ilike(f"%{comprador}%"))
+        query = query.join(models.ItemVenda).filter(models.ItemVenda.id_material == id_material).distinct()
+    if id_comprador: 
+        query = query.filter(models.Venda.id_comprador == id_comprador)
     if data_inicio:
         query = query.filter(models.Venda.data_venda >= data_inicio)
     if data_fim:
         query = query.filter(models.Venda.data_venda <= data_fim)
 
-
     total_count = query.count()
 
-    
     items = (
-        query 
-        .options(
-            joinedload(models.Venda.itens) 
-            .joinedload(models.ItemVenda.material) 
+            query
+            .options(
+                joinedload(models.Venda.itens).joinedload(models.ItemVenda.material),
+                joinedload(models.Venda.comprador) # 👈 Carrega o objeto Comprador na resposta
+            )
+            .order_by(models.Venda.data_venda.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
-        .order_by(models.Venda.data_venda.desc()) 
-        .offset(skip)
-        .limit(limit)
-        .all())
-
-    
     return {"total_count": total_count, "items": items}
 
 def cancel_venda(db: Session, venda_id: int):

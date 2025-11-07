@@ -3,10 +3,10 @@ from datetime import datetime
 from typing import List,Optional
 
 class MaterialBase(BaseModel):
-    nome:str
-    categoria: Optional[str] = None
+    nome: str
     unidade_medida: str = 'Kg'
-    
+    categoria: Optional[str] = None
+    ativo: bool = True 
 class MaterialCreate(MaterialBase):
     pass
 
@@ -14,8 +14,8 @@ class MaterialUpdate(MaterialBase):
     pass
 
 class Material(MaterialBase):
-    id : int
-    codigo_material : Optional[str] = None
+    id: int
+    codigo: Optional[str] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True 

@@ -1,9 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from .schema_doador import Doador # Importa o schema do Doador
+from .schema_parceiro import Parceiro 
 
-# Este schema é para os DETALHES específicos da associação
+class AssociacaoBase(BaseModel):
+    lider: Optional[str] = None
+    telefone: Optional[str] = None
+    cnpj: Optional[str] = None
+    ativo: bool = True
 class AssociacaoBase(BaseModel):
     lider: Optional[str] = None
     telefone: Optional[str] = None
@@ -11,22 +15,26 @@ class AssociacaoBase(BaseModel):
     ativo: bool = True
 
 class AssociacaoCreate(AssociacaoBase):
-    # Para CRIAR uma associação, precisamos também dos dados do Doador-pai
-    nome: str
-    id_tipo_doador: int # Vamos simplificar e assumir que o tipo é sempre 'ASSOCIACAO'
-    # Mas para flexibilidade, vamos pedir o nome e o tipo do doador
+    nome: str 
+    
 
 class AssociacaoUpdate(AssociacaoBase):
-    # Para ATUALIZAR, podemos querer atualizar o nome também
+    
     nome: Optional[str] = None
 
 class Associacao(AssociacaoBase):
     id: int
-    doador_id: int
+    parceiro_id: int 
+    data_cadastro: datetime
     
-
-    # Inclui o objeto Doador-pai (para pegar o NOME)
-    doador_info: Doador 
-
+    parceiro_info: Parceiro 
+    
+    class Config:
+        from_attributes = True
+        
+class AssociacoesPaginadasResponse(BaseModel):
+    total_count : int
+    items : List[Associacao]
+    
     class Config:
         from_attributes = True

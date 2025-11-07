@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import materiais,associacoes,estoque,entrada_material,vendas,relatorio,compradores,tipo_doador,doador
+from .routers import materiais,associacoes,estoque,parceiros, recebimentos, tipos_parceiro,vendas,relatorio,compradores,compras
 
 
 app = FastAPI(
@@ -17,20 +17,20 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"], # Permite GET, POST, DELETE, etc.
+    allow_methods=["*"], 
     allow_headers=["*"],
 )
 
 app.include_router(materiais.router)
-app.include_router(tipo_doador.router)
-app.include_router(doador.router)
 app.include_router(associacoes.router)
-app.include_router(compradores.router)
-app.include_router(entrada_material.router)
-app.include_router(vendas.router)
 app.include_router(estoque.router)
+app.include_router(recebimentos.router) 
+app.include_router(vendas.router)
 app.include_router(relatorio.router)
-
+app.include_router(compradores.router)
+app.include_router(tipos_parceiro.router) 
+app.include_router(parceiros.router)      
+app.include_router(compras.router)        
 
 @app.get('/')
 def init():

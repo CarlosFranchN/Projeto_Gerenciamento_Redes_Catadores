@@ -7,49 +7,75 @@ from sqlalchemy.exc import IntegrityError
 import time
 import random
 
-# from backend.app import schema
+
 from .. import schemas
 
 
 def calcular_estoque_material(db: Session, material_id: int) -> float:
-    """Calcula o estoque atual de um material específico."""
-    
-    total_entradas = (
-        db.query(func.sum(models.EntradaMaterial.quantidade))
-        .filter(models.EntradaMaterial.id_material == material_id)
-        .filter(models.EntradaMaterial.status == "Confirmada")
-        .scalar() 
-    ) or 0.0 
-
-    total_vendido = (
-        db.query(func.sum(models.ItemVenda.quantidade_vendida).label("total_vendido"))
-        # 👇 ADICIONE A CONDIÇÃO DE JOIN EXPLÍCITA 👇
-        .join(models.Venda, models.ItemVenda.id_venda == models.Venda.id) 
-        .filter(models.ItemVenda.id_material == material_id)
-        .filter(models.Venda.concluida == True) 
+    total_doado = (
+        db.query(func.sum(models.RecebimentoDoacao.quantidade))
+        .filter(models.RecebimentoDoacao.id_material == material_id)
+        .filter(models.RecebimentoDoacao.status == "Confirmada")
         .scalar()
     ) or 0.0
 
-    estoque_calculado = total_entradas - total_vendido
-    estoque_atual = max(0.0, estoque_calculado)
-    return estoque_atual
+    total_comprado = (
+        db.query(func.sum(models.Compra.quantidade))
+        .filter(models.Compra.id_material == material_id)
+        .filter(models.Compra.status == "Concluída")
+        .scalar()
+    ) or 0.0
+
+    total_vendido = (
+        db.query(func.sum(models.ItemVenda.quantidade_vendida))
+        .join(models.Venda)
+        .filter(models.ItemVenda.id_material == material_id)
+        .filter(models.Venda.concluida == True)
+        .scalar()
+    ) or 0.0
+
+    estoque_atual = (total_doado + total_comprado) - total_vendido
+    return max(0.0, estoque_atual)
 
 def get_estoque_todos_materiais(db: Session) -> List[dict]:
-    """Busca todos os materiais e calcula o estoque atual para cada um."""
-    todos_materiais = db.query(models.Material).order_by(models.Material.nome).all()
-
+    """Retorna lista de materiais com o estoque calculado."""
+    todos_materiais = get_all_material(db, limit=1000) 
     estoque_completo = []
     for material in todos_materiais:
-        estoque_atual = calcular_estoque_material(db, material_id=material.id)
+        estoque = calcular_estoque_material(db, material.id)
+        
         estoque_completo.append({
-            "id": material.id,
-            "codigo": material.codigo_material,
-            "nome": material.nome,
-            "categoria": material.categoria,
-            "unidade_medida": material.unidade_medida,
-            "estoque_atual": estoque_atual 
+            **material.__dict__, 
+            "estoque_atual": estoque
         })
     return estoque_completo
+
+def get_estoque_todos_materiais(db: Session, skip: int = 0, limit: int = 100) -> dict:
+
+    query = db.query(models.Material).filter(models.Material.ativo == True)
+    
+    
+    total_count = query.count()
+    
+    
+    materiais_pagina = (
+        query
+        .order_by(models.Material.nome)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    
+    
+    items = []
+    for material in materiais_pagina:
+        estoque = calcular_estoque_material(db, material.id)
+        items.append({
+            **material.__dict__,
+            "estoque_atual": estoque
+        })
+        
+    return {"total_count": total_count, "items": items}
 
 
 def get_material(db: Session, id_material: int):
@@ -89,11 +115,26 @@ def update_material(db: Session, material_id: int, material_update: schemas.Mate
  
     update_data = material_update.dict(exclude_unset=True) 
     for key, value in update_data.items():
-        setattr(db_material, key, value) # Define o atributo dinamicamente
+        setattr(db_material, key, value) 
 
 
     db.commit()
 
     db.refresh(db_material)
 
+    return db_material
+
+def delete_material(db: Session, material_id: int):
+    """Marca um material como inativo (Soft Delete)."""
+    db_material = get_material(db, id_material=material_id)
+    if not db_material:
+        return None
+    
+    
+    if not db_material.ativo:
+        return db_material
+
+    db_material.ativo = False
+    db.commit()
+    db.refresh(db_material)
     return db_material

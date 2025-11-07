@@ -34,13 +34,13 @@ def get_por_material_endpoint(
     """ Retorna recebido, vendido, saldo e receita por material para um período. """
     return crud.get_report_por_material(db, start_date=start_date, end_date=end_date)
 
-# 👇 ESTE É O ENDPOINT CORRIGIDO 👇
+
 @router.get(
-    "/por-doador",  # 1. URL atualizada (era /por-associacao)
-    response_model=List[schemas.ReportPorDoadorItem], # 2. Schema de resposta corrigido
-    summary="Relatório agregado por doador" # 3. Sumário atualizado
+    "/por-doador",  
+    response_model=List[schemas.ReportPorParceiroItem], 
+    summary="Relatório agregado por doador" 
 )
-def get_por_doador_endpoint( # 4. Nome da função atualizado
+def get_por_doador_endpoint( 
     start_date: Optional[date] = None, 
     end_date: Optional[date] = None, 
     db: Session = Depends(get_db)

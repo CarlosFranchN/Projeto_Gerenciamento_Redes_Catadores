@@ -9,42 +9,39 @@ def get_comprador_by_nome(db: Session, nome: str):
     return db.query(models.Comprador).filter(models.Comprador.nome == nome).first()
 
 def get_compradores(db: Session, skip: int = 0, limit: int = 100) -> List[models.Comprador]:
-    """
-    Lista todos os compradores ATIVOS com paginação.
-    (Vamos implementar a paginação completa de uma vez)
-    """
+
     query = (
         db.query(models.Comprador)
-        .filter(models.Comprador.ativo == True) # Filtra apenas compradores ativos
+        .filter(models.Comprador.ativo == True)
     )
 
-    # Contagem total para paginação
+
     total_count = query.count()
 
-    # Aplica ordenação, paginação e busca os itens
+
     items = (
         query
-        .order_by(models.Comprador.nome) # Ordena por nome
+        .order_by(models.Comprador.nome) 
         .offset(skip)
         .limit(limit)
         .all()
     )
-    
-    # Retorna o dicionário para a resposta paginada
     return {"total_count": total_count, "items": items}
 
 
-def get_all_compradores(db: Session, skip: int = 0, limit: int = 100) -> List[models.Comprador]:
-    # Retorna apenas compradores ativos
-    return (
-        db.query(models.Comprador)
-        .filter(models.Comprador.ativo == True)
+def get_all_compradores(db: Session, skip: int = 0, limit: int = 100) -> dict:
+    query = db.query(models.Comprador).filter(models.Comprador.ativo == True)
+    
+    total_count = query.count()
+    
+    items = (
+        query
         .order_by(models.Comprador.nome)
         .offset(skip)
         .limit(limit)
         .all()
     )
-
+    return {"total_count": total_count, "items": items}
 def create_comprador(db: Session, comprador: schemas.CompradorCreate):
     db_comprador = models.Comprador(**comprador.dict())
     db.add(db_comprador)
@@ -65,12 +62,12 @@ def update_comprador(db: Session, comprador_id: int, comprador_update: schemas.C
     db.refresh(db_comprador)
     return db_comprador
 
-def delete_comprador(db: Session, comprador_id: int): # Soft Delete
+def delete_comprador(db: Session, comprador_id: int): 
     db_comprador = get_comprador(db, comprador_id=comprador_id)
     if not db_comprador:
         return None
 
-    db_comprador.ativo = False # Marca como inativo
+    db_comprador.ativo = False 
     db.commit()
     db.refresh(db_comprador)
     return db_comprador

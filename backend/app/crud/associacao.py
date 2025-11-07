@@ -15,13 +15,27 @@ def get_associacao(db: Session, id_associacao: int):
     query = db.query(models.Associacao).options(joinedload(models.Associacao.doador_info)).filter(models.Associacao.id == id_associacao).first()
     return query
 
-def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100):
-    """Lista todas as associações ATIVAS com paginação."""
-    return (
-        db.query(models.Associacao).join(models.Doador , models.Associacao.doador_id == models.Doador.id).options(
-            joinedload(models.Associacao.doador_info)
-        ).filter(models.Associacao.ativo == True).order_by(models.Doador.nome).offset(skip).limit(limit).all()
+def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
+    """Lista associações ATIVAS com paginação e contagem total."""
+    
+    # 1. Query base (apenas ativas)
+    query = db.query(models.Associacao).filter(models.Associacao.ativo == True)
+
+    # 2. Contagem total
+    total_count = query.count()
+
+    # 3. Busca da página atual
+    items = (
+        query
+        .join(models.Parceiro, models.Associacao.parceiro_id == models.Parceiro.id)
+        .options(joinedload(models.Associacao.parceiro_info))
+        .order_by(models.Parceiro.nome)
+        .offset(skip)
+        .limit(limit)
+        .all()
     )
+    
+    return {"total_count": total_count, "items": items}
 
 def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> models.Associacao:
     """
@@ -31,35 +45,35 @@ def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> mode
 
     id_tipo_associacao = 1 
     
-    tipo_doador_obj = db.query(models.TipoDoador).filter(models.TipoDoador.nome == "ASSOCIACAO").first()
-    if not tipo_doador_obj:
+    tipo_parc_obj = db.query(models.TipoParceiro).filter(models.TipoParceiro.nome == "ASSOCIACAO").first()
+    if not tipo_parc_obj:
 
-        tipo_doador_obj = models.TipoDoador(nome="ASSOCIACAO")
-        db.add(tipo_doador_obj)
+        tipo_parc_obj = models.TipoParceiro(nome="ASSOCIACAO")
+        db.add(tipo_parc_obj)
         db.flush() 
     
-    id_tipo_associacao = tipo_doador_obj.id
+    id_tipo_associacao = tipo_parc_obj.id
 
 
-    db_doador = models.Doador(
+    db_parc = models.Parceiro(
         nome=associacao.nome,
-        id_tipo_doador=id_tipo_associacao
+        id_tipo_associacao=id_tipo_associacao
     )
-    db.add(db_doador)
+    db.add(db_parc)
     
 
     try:
         db.flush()
-        db.refresh(db_doador)
+        db.refresh(db_parc)
     except IntegrityError as e:
         db.rollback() 
-        if "unique constraint" in str(e).lower() and "doadores_nome_key" in str(e).lower():
-            raise ValueError(f"Já existe um doador com o nome '{associacao.nome}'")
+        if "unique constraint" in str(e).lower() and "parceiro_nome_key" in str(e).lower():
+            raise ValueError(f"Já existe um parceiro com o nome '{associacao.nome}'")
         else:
             raise e 
 
     db_associacao = models.Associacao(
-        doador_id=db_doador.id, 
+        id=db_parc.id, 
         lider=associacao.lider,
         telefone=associacao.telefone,
         cnpj=associacao.cnpj,
@@ -119,10 +133,7 @@ def update_associacao(db: Session, associacao_id: int, associacao_update: schema
     return db_associacao
 
 def delete_associacao(db: Session, associacao_id: int) -> Optional[models.Associacao]:
-    """
-    Marca uma associação como inativa (soft delete).
-    A lógica é a mesma, pois o campo 'ativo' está na tabela 'associacoes'.
-    """
+
     db_associacao = get_associacao(db, id_associacao=associacao_id)
     
     if not db_associacao:

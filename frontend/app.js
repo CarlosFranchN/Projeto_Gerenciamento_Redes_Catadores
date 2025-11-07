@@ -21,16 +21,6 @@ const sameYM = (iso, ref = new Date()) => {
         d.getMonth() === ref.getMonth()
     );
 };
-const inRange = (iso, startISO, endISO) => {
-    if (!iso) return false;
-    const t = new Date(iso).getTime();
-    if (isNaN(t)) return false;
-    const a = startISO ? new Date(startISO).getTime() : -Infinity;
-    const b = endISO
-        ? new Date(endISO).getTime() + 24 * 60 * 60 * 1000 - 1
-        : Infinity;
-    return t >= a && t <= b;
-};
 
 // ========== UI building blocks ==========
 const Card = ({ children, className }) => (<div className={cls("rounded-2xl border border-black/5 bg-white shadow-sm", className)}>{children}</div>);
@@ -44,26 +34,23 @@ const Select = ({ label, value, onChange, options, placeholder = "Selecione...",
 
 // ========== Views ==========
 function DashboardView({ store }) {
-    const recMes = store.recebimentos.filter(r => sameYM(r.data_entrada));
-    const venMes = store.vendas.filter(v => sameYM(v.data_venda));
-    const totalRecMes = recMes.reduce((s, x) => s + Number(x.quantidade || 0), 0);
-    const receitaMes = venMes.reduce((totalVendas, venda) =>
-        totalVendas + venda.itens.reduce((totalItens, item) =>
-            totalItens + (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0)), 0),
-        0);
+    const materiaisAtivos = store.materiais.filter(m => m.ativo).length;
+    const associacoesAtivas = store.associacoes.filter(a => a.ativo).length;
+    const compradoresAtivos = store.compradores.filter(c => c.ativo).length;
 
     return (
         <section>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <StatCard title="Materiais" value={store.materiais.length} subtitle="Cadastrados (com estoque)" />
-                <StatCard title="Associações" value={store.associacoes.length} subtitle="Ativas" />
-                <StatCard title="Recebimentos (mês)" value={`${totalRecMes.toFixed(1)} Kg`} subtitle="Somatório" />
-                <StatCard title="Receita (mês)" value={money(receitaMes)} subtitle="Vendas" />
+                <StatCard title="Materiais" value={materiaisAtivos} subtitle="Cadastros Ativos" />
+                <StatCard title="Associações" value={associacoesAtivas} subtitle="Parceiras Ativas" />
+                <StatCard title="Compradores" value={compradoresAtivos} subtitle="Cadastros Ativos" />
+                <StatCard title="Relatórios" value="4" subtitle="Disponíveis" />
             </div>
             <Card className="p-6">
                 <h3 className="text-lg font-semibold mb-2">Boas-vindas 👋</h3>
                 <p className="text-neutral-600 text-sm leading-relaxed">
-                    Sistema de Gestão da Rede de Catadores. Use o menu ao lado para navegar.
+                    Sistema de Gestão v2.0 (Arquitetura Doador/Comprador).
+                    Use o menu para navegar e gerenciar os dados.
                 </p>
             </Card>
         </section>
@@ -90,7 +77,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
 
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome, categoria, unidade };
+        const payload = { nome, categoria, unidade_medida: unidade }; // Envia unidade_medida
         let success = false;
         try {
             if (editingId) {
@@ -114,7 +101,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
     return (
         <section>
             <Toolbar>
-                <h2 className="text-xl font-semibold">Materiais</h2>
+                <h2 className="text-xl font-semibold">Materiais e Estoque</h2>
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Novo material</button>
             </Toolbar>
             <Table
@@ -144,7 +131,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
                 <form onSubmit={submit} className="space-y-3">
                     <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: PET, Papelão" required />
                     <TextInput label="Categoria" value={categoria} onChange={setCategoria} placeholder="Ex: Plástico, Papel" />
-                    <TextInput label="Unidade" value={unidade} onChange={setUnidade} placeholder="Ex: Kg, un" required />
+                    <TextInput label="Unidade de Medida" value={unidade} onChange={setUnidade} placeholder="Ex: Kg, un" required />
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
@@ -155,19 +142,69 @@ function MateriaisView({ data, onCreate, onUpdate }) {
     );
 }
 
-function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
+// --- NOVA VIEW DE TIPO DE DOADOR ---
+function TipoDoadorView({ data, onCreate }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nome, setNome] = useState("");
-    const [cnpj, setCnpj] = useState("");
-    const [lider, setLider] = useState("");
-    const [telefone, setTelefone] = useState("");
-    const [ativo, setAtivo] = useState(true);
-    const [editingId, setEditingId] = useState(null);
 
     const handleCloseDrawer = () => {
-        setOpen(false); setBusy(false); setNome(""); setLider(""); setTelefone("");
-        setCnpj(""); setAtivo(true); setEditingId(null);
+        setOpen(false); setBusy(false); setNome("");
+    };
+
+    const submit = async (e) => {
+        e.preventDefault(); setBusy(true);
+        const payload = { nome };
+        try {
+            const success = await onCreate(payload);
+            if (success) { handleCloseDrawer(); }
+        } catch (error) { console.error("Falha submit tipo doador:", error); }
+        finally { setBusy(false); }
+    };
+
+    return (
+        <section>
+            <Toolbar>
+                <h2 className="text-xl font-semibold">Tipos de Doador</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setOpen(true); }}>+ Novo Tipo</button>
+            </Toolbar>
+            <Table
+                columns={[
+                    { key: "id", header: "ID" },
+                    { key: "nome", header: "Nome" },
+                ]}
+                data={data}
+                emptyLabel="Nenhum tipo de doador cadastrado"
+            />
+            <Drawer open={open} onClose={handleCloseDrawer} title="Adicionar Tipo de Doador">
+                <form onSubmit={submit} className="space-y-3">
+                    <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: ASSOCIACAO, ORGAO_PUBLICO" required />
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
+                    </div>
+                </form>
+            </Drawer>
+        </section>
+    );
+}
+
+// --- NOVA VIEW DE COMPRADORES ---
+function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+
+    // Campos do formulário
+    const [nome, setNome] = useState("");
+    const [cnpj, setCnpj] = useState("");
+    const [telefone, setTelefone] = useState("");
+    const [email, setEmail] = useState("");
+    const [ativo, setAtivo] = useState(true);
+
+    const handleCloseDrawer = () => {
+        setOpen(false); setBusy(false); setEditingId(null);
+        setNome(""); setCnpj(""); setTelefone(""); setEmail(""); setAtivo(true);
     };
 
     const handleOpenCreate = () => {
@@ -175,9 +212,19 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
         setOpen(true);
     };
 
+    const handleEdit = (comprador) => {
+        setEditingId(comprador.id);
+        setNome(comprador.nome || "");
+        setCnpj(comprador.cnpj || "");
+        setTelefone(comprador.telefone || "");
+        setEmail(comprador.email || "");
+        setAtivo(comprador.ativo === true);
+        setOpen(true);
+    };
+
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome, cnpj, lider, telefone, ativo };
+        const payload = { nome, cnpj, telefone, email, ativo };
         let success = false;
         try {
             if (editingId) {
@@ -186,13 +233,110 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
                 success = await onCreate(payload);
             }
             if (success) { handleCloseDrawer(); }
-        } catch (error) { console.error("Falha no submit associação:", error); }
+        } catch (error) { console.error("Falha submit comprador:", error); }
         finally { setBusy(false); }
+    };
+
+    return (
+        <section>
+            <Toolbar>
+                <h2 className="text-xl font-semibold">Compradores</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Novo Comprador</button>
+            </Toolbar>
+            <Table
+                columns={[
+                    { key: "id", header: "ID" },
+                    { key: "nome", header: "Nome" },
+                    { key: "cnpj", header: "CNPJ" },
+                    { key: "telefone", header: "Telefone" },
+                    { key: "email", header: "Email" },
+                    {
+                        key: "ativo", header: "Status", render: (isAtivo) => (
+                            <span className={cls("px-2 py-0.5 rounded-full text-xs font-medium", isAtivo ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800")}>
+                                {isAtivo ? "Ativo" : "Inativo"}
+                            </span>
+                        )
+                    },
+                    {
+                        key: "actions", header: "Ações", render: (_, row) => (
+                            <div className="flex gap-2">
+                                <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                    onClick={() => handleEdit(row)} title="Editar comprador">
+                                    ✏️ Editar
+                                </button>
+                                {row.ativo && (
+                                    <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                        onClick={() => onDelete(row.id)} title="Inativar comprador">
+                                        🗑️ Inativar
+                                    </button>
+                                )}
+                            </div>
+                        )
+                    },
+                ]}
+                data={data}
+                emptyLabel="Nenhum comprador cadastrado"
+            />
+            <Drawer open={open} onClose={handleCloseDrawer} title={editingId ? "Editar Comprador" : "Adicionar Comprador"}>
+                <form onSubmit={submit} className="space-y-3">
+                    <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: Recicla Brasil Ltda" required />
+                    <TextInput label="CNPJ" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
+                    <TextInput label="Telefone" value={telefone} onChange={setTelefone} placeholder="(85) 9...." />
+                    <TextInput label="Email" type="email" value={email} onChange={setEmail} placeholder="contato@empresa.com" />
+                    <Select
+                        label="Status"
+                        value={String(ativo)}
+                        onChange={(value) => setAtivo(value === 'true')}
+                        options={[{ value: 'true', label: "Ativo" }, { value: 'false', label: "Inativo" }]}
+                        required
+                    />
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
+                    </div>
+                </form>
+            </Drawer>
+        </section>
+    );
+}
+
+// --- ASSOCIAGOESVIEW REFATORADA ---
+function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+
+    // Campos do formulário (agora combinam Doador e Associacao)
+    const [nome, setNome] = useState("");
+    const [lider, setLider] = useState("");
+    const [telefone, setTelefone] = useState("");
+    const [cnpj, setCnpj] = useState("");
+    const [ativo, setAtivo] = useState(true);
+    // O tipo de doador é fixo, mas precisamos do ID de "ASSOCIACAO"
+
+    // Busca o ID do tipo "ASSOCIACAO" no store
+    const tipoDoadorAssociacaoId = useMemo(() => {
+        const tipoAssoc = store.tipoDoadores.find(t => t.nome === "ASSOCIACAO");
+        return tipoAssoc ? tipoAssoc.id : null;
+    }, [store.tipoDoadores]);
+
+    const handleCloseDrawer = () => {
+        setOpen(false); setBusy(false); setEditingId(null);
+        setNome(""); setLider(""); setTelefone(""); setCnpj(""); setAtivo(true);
+    };
+
+    const handleOpenCreate = () => {
+        if (!tipoDoadorAssociacaoId) {
+            alert("Erro: O tipo de doador 'ASSOCIACAO' não foi encontrado no banco de dados. Cadastre-o primeiro em 'Tipos de Doador'.");
+            return;
+        }
+        handleCloseDrawer();
+        setOpen(true);
     };
 
     const handleEdit = (assoc) => {
         setEditingId(assoc.id);
-        setNome(assoc.nome || "");
+        setNome(assoc.doador_info?.nome || ""); // Pega o nome do doador_info
         setLider(assoc.lider || "");
         setTelefone(assoc.telefone || "");
         setCnpj(assoc.cnpj || "");
@@ -200,16 +344,44 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
         setOpen(true);
     };
 
+    const submit = async (e) => {
+        e.preventDefault(); setBusy(true);
+
+        let payload = {};
+        let success = false;
+        try {
+            if (editingId) {
+                // Ao ATUALIZAR, enviamos o payload de AssociacaoUpdate
+                payload = { nome, lider, telefone, cnpj, ativo };
+                success = await onUpdate(editingId, payload);
+            } else {
+                // Ao CRIAR, enviamos o payload de AssociacaoCreate
+                if (!tipoDoadorAssociacaoId) throw new Error("ID do tipo 'ASSOCIACAO' não encontrado.");
+                payload = {
+                    nome,
+                    id_tipo_doador: tipoDoadorAssociacaoId, // Passa o ID do tipo
+                    lider,
+                    telefone,
+                    cnpj,
+                    ativo
+                };
+                success = await onCreate(payload);
+            }
+            if (success) { handleCloseDrawer(); }
+        } catch (error) { console.error("Falha no submit associação:", error); }
+        finally { setBusy(false); }
+    };
+
     return (
         <section>
             <Toolbar>
                 <h2 className="text-xl font-semibold">Associações</h2>
-                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova associação</button>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova Associação</button>
             </Toolbar>
             <Table
                 columns={[
                     { key: "id", header: "ID" },
-                    { key: "nome", header: "Nome" },
+                    { key: "doador_info", header: "Nome", render: (doador) => doador?.nome || "-" },
                     { key: "lider", header: "Líder" },
                     { key: "telefone", header: "Telefone" },
                     { key: "cnpj", header: "CNPJ" },
@@ -237,14 +409,14 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
                         )
                     },
                 ]}
-                data={data}
+                data={store.associacoes}
                 emptyLabel="Nenhuma associação cadastrada"
             />
             <Drawer open={open} onClose={handleCloseDrawer} title={editingId ? "Editar Associação" : "Adicionar Associação"}>
                 <form onSubmit={submit} className="space-y-3">
-                    <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: Associação Central" required />
+                    <TextInput label="Nome da Associação" value={nome} onChange={setNome} placeholder="Ex: Associação Central" required />
+                    <TextInput label="Nome do Líder" value={lider} onChange={setLider} placeholder="Ex: João Silva" />
                     <TextInput label="CNPJ" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
-                    <TextInput label="Nome do Líder/Responsável" value={lider} onChange={setLider} placeholder="Ex: João Silva" />
                     <TextInput label="Telefone" value={telefone} onChange={setTelefone} placeholder="(85) 9...." />
                     <Select
                         label="Status"
@@ -253,6 +425,7 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
                         options={[{ value: 'true', label: "Ativa" }, { value: 'false', label: "Inativa" }]}
                         required
                     />
+                    {/* O ID do Tipo Doador é pego automaticamente via `tipoDoadorAssociacaoId` */}
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
@@ -263,138 +436,137 @@ function AssociacoesView({ data, onCreate, onUpdate, onDelete }) {
     );
 }
 
+// --- RECEBIMENTOSVIEW REFATORADA ---
 function RecebimentosView({ store, setActive, onCreate, onCancel }) {
-
-    const [recebimentos, setRecebimentos] = useState([]); // Lista de dados local
+    // Estados locais de dados, filtros e paginação
+    const [recebimentos, setRecebimentos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [refreshTrigger, setRefreshTrigger] = useState(0); // Para forçar re-busca
-
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalRecebimentos, setTotalRecebimentos] = useState(0);
+    const ITENS_POR_PAGINA = 20;
 
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim, setDataFim] = useState("");
-    const [filtroAssociacaoId, setFiltroAssociacaoId] = useState("");
+    const [filtroDoadorId, setFiltroDoadorId] = useState("");
     const [filtroMaterialId, setFiltroMaterialId] = useState("");
 
-
+    // Estados do formulário (Drawer)
     const [open, setOpen] = useState(false);
-    const [data, setData] = useState(todayISO());
-    const [materialId, setMaterialId] = useState("");
-    const [associacaoId, setAssociacaoId] = useState("");
-    const [quantidade, setQuantidade] = useState("");
     const [busy, setBusy] = useState(false);
+    const [tipoDoador, setTipoDoador] = useState("associacao"); // 'associacao' ou 'outro'
+    const [doadorId, setDoadorId] = useState(""); // Para o Select
+    const [nomeDoadorExterno, setNomeDoadorExterno] = useState(""); // Para o TextInput
+    const [materialId, setMaterialId] = useState("");
+    const [quantidade, setQuantidade] = useState("");
 
-    const [paginaAtual, setPaginaAtual] = useState(0); // Começa na página 0
-    const [totalRecebimentos, setTotalRecebimentos] = useState(0);
-    const ITENS_POR_PAGINA = 25;
-    
+    // Opções dos Selects (do store global)
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-    const assocOpts = store.associacoes.map(a => ({ value: String(a.id), label: a.nome }));
+    // Filtra doadores para mostrar apenas associações (ou todos, dependendo da regra)
+    const doadoresOpts = store.doadores.map(d => ({ value: String(d.id), label: `${d.nome} (${d.tipo_info.nome})` }));
 
-    
-useEffect(() => {
-    const fetchRecebimentos = async () => {
-        setLoading(true);
-        
-        // 1. Monta os parâmetros de filtro
-        const params = new URLSearchParams();
-        if (dataInicio) params.append('data_inicio', dataInicio);
-        if (dataFim) params.append('end_date', dataFim);
-        if (filtroAssociacaoId) params.append('id_associacao', filtroAssociacaoId);
-        if (filtroMaterialId) params.append('id_material', filtroMaterialId);
-        
-        // 👇 2. ADICIONA PARÂMETROS DE PAGINAÇÃO 👇
-        const skip = paginaAtual * ITENS_POR_PAGINA;
-        params.append('skip', skip);
-        params.append('limit', ITENS_POR_PAGINA);
-        
-        try {
-            // 3. Busca os dados
-            const response = await fetch(`${API_URL}/entradas_material/?${params.toString()}`);
-            if (!response.ok) throw new Error(`Falha ao buscar recebimentos: ${response.statusText}`);
-            
-            // 4. PROCESSA A NOVA RESPOSTA (OBJETO) 👇
-            const data = await response.json(); // data agora é { total_count: X, items: [...] }
-            
-            setRecebimentos(data.items);        // Salva os itens da página
-            setTotalRecebimentos(data.total_count); // Salva a contagem total
+    // useEffect para buscar dados filtrados e paginados
+    useEffect(() => {
+        const fetchRecebimentos = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('end_date', dataFim);
+            if (filtroDoadorId) params.append('id_doador', filtroDoadorId);
+            if (filtroMaterialId) params.append('id_material', filtroMaterialId);
 
-        } catch (error) {
-             console.error("Erro ao buscar recebimentos:", error);
-             alert(error.message);
-             setRecebimentos([]); // Limpa em caso de erro
-             setTotalRecebimentos(0); // Zera em caso de erro
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    fetchRecebimentos();
-// 👇 5. ADICIONA paginaAtual AO ARRAY DE DEPENDÊNCIAS 👇
-}, [dataInicio, dataFim, filtroAssociacaoId, filtroMaterialId, refreshTrigger, paginaAtual]);
+            const skip = paginaAtual * ITENS_POR_PAGINA;
+            params.append('skip', skip);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                const response = await fetch(`${API_URL}/entradas/?${params.toString()}`);
+                if (!response.ok) throw new Error(`Falha ao buscar recebimentos: ${response.statusText}`);
+                const data = await response.json();
+                setRecebimentos(data.items);
+                setTotalRecebimentos(data.total_count);
+            } catch (error) {
+                console.error("Erro ao buscar recebimentos:", error);
+                alert(error.message);
+                setRecebimentos([]);
+                setTotalRecebimentos(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRecebimentos();
+    }, [dataInicio, dataFim, filtroDoadorId, filtroMaterialId, paginaAtual, refreshTrigger]);
+
+    // Funções do Drawer
     const handleCloseDrawer = () => {
-        setOpen(false); setBusy(false); setData(todayISO());
-        setMaterialId(""); setAssociacaoId(""); setQuantidade("");
+        setOpen(false); setBusy(false); setMaterialId(""); setAssociacaoId(""); setQuantidade("");
+        setDoadorId(""); setNomeDoadorExterno(""); setTipoDoador("associacao");
     };
 
     const onSubmit = async (e) => {
         e.preventDefault();
-        if (!store.materiais.length) { alert("Cadastre materiais primeiro."); setActive("materiais"); return; }
-        if (!store.associacoes.length) { alert("Cadastre associações primeiro."); setActive("associacoes"); return; }
         setBusy(true);
+
+        let doadorParaSalvar = null;
+        if (tipoDoador === 'associacao') {
+            if (!doadorId) {
+                alert("Selecione um doador.");
+                setBusy(false);
+                return;
+            }
+            doadorParaSalvar = Number(doadorId);
+        } else {
+            alert("A criação de doadores externos ainda não foi implementada neste formulário.");
+            setBusy(false);
+            return; 
+        }
 
         const payload = {
             materialId: Number(materialId),
-            associacaoId: Number(associacaoId),
+            id_doador: doadorParaSalvar,
             quantidade: parseFloat(quantidade || "0"),
         };
 
         try {
-            const success = await onCreate(payload); 
-            if (success) { 
-                handleCloseDrawer(); 
-                setRefreshTrigger(t => t + 1); 
+            const success = await onCreate(payload);
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1);
             }
-        } catch (error) {  }
+        } catch (error) { /* erro já tratado em onCreate */ }
         finally { setBusy(false); }
     };
 
-
+    // Função de Cancelamento
     const handleCancel = async (id) => {
-        const success = await onCancel(id); 
+        const success = await onCancel(id);
         if (success) {
-            setRefreshTrigger(t => t + 1); 
+            setRefreshTrigger(t => t + 1);
         }
     };
-    
 
-    const total = recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
+    const totalFiltrado = recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
 
-return (
+    return (
         <section>
-            {/* --- Toolbar (Botão + Novo Recebimento) --- */}
             <Toolbar>
                 <h2 className="text-xl font-semibold">Recebimentos</h2>
-                <div className="flex gap-2">
-                    <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo recebimento</button>
-                </div>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo recebimento</button>
             </Toolbar>
-            
-            {/* --- Área de Filtros --- */}
+
             <Card className="p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
                     <TextInput label="Data Fim" type="date" value={dataFim} onChange={setDataFim} />
                     <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos os Materiais" />
-                    <Select label="Filtrar por Associação" value={filtroAssociacaoId} onChange={setFiltroAssociacaoId} options={assocOpts} placeholder="Todas as Associações" />
-                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroAssociacaoId(""); }}>Limpar Filtros</button>
+                    <Select label="Filtrar por Doador" value={filtroDoadorId} onChange={setFiltroDoadorId} options={doadoresOpts} placeholder="Todos os Doadores" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroDoadorId(""); }}>Limpar Filtros</button>
                 </div>
             </Card>
 
-            {/* --- StatCards --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* ATENÇÃO: 'recebimentos.length' é só da página. Use 'totalRecebimentos' para o total. */}
-                <StatCard title="Entradas (Filtradas)" value={totalRecebimentos} /> 
-                <StatCard title="Total Recebido (Filtrado)" value={`${total.toFixed(1)} Kg`} />
+                <StatCard title="Entradas (Filtradas)" value={totalRecebimentos} />
+                <StatCard title="Total Recebido (Página)" value={`${totalFiltrado.toFixed(1)} Kg`} />
                 <Card className="p-5">
                     <div className="text-sm text-neutral-500">Ações rápidas</div>
                     <div className="mt-2 flex gap-2">
@@ -404,7 +576,6 @@ return (
                 </Card>
             </div>
 
-            {/* --- Indicador de Carregamento e Tabela --- */}
             {loading && <div className="text-center p-4 text-emerald-600">Carregando recebimentos...</div>}
             {!loading && (
                 <Table
@@ -412,61 +583,60 @@ return (
                         { key: "data_entrada", header: "Data", render: v => fmtDateBR(v) },
                         { key: "codigo_lote", header: "Cód. Lote" },
                         { key: "material", header: "Material", render: (_, row) => row.material?.nome || "-" },
-                        { key: "associacao", header: "Associação", render: (_, row) => row.associacao?.nome || "-" },
+                        { key: "doador", header: "Doador", render: (_, row) => row.doador?.nome || "-" },
                         { key: "quantidade", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
                         {
                             key: "actions", header: "Ações", render: (_, row) => (
                                 <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                        onClick={() => handleCancel(row.id)} // Chama handleCancel local
-                                        title="Cancelar recebimento">
+                                    onClick={() => handleCancel(row.id)} title="Cancelar recebimento">
                                     🚫 Cancelar
                                 </button>
                             )
                         },
                     ]}
-                    data={recebimentos} // Usa o estado local 'recebimentos'
+                    data={recebimentos}
                     emptyLabel="Nenhum recebimento encontrado para os filtros selecionados."
                 />
             )}
 
-            {/* --- SEÇÃO DE PAGINAÇÃO (A NOVA PARTE) --- */}
             {!loading && totalRecebimentos > ITENS_POR_PAGINA && (
                 <div className="flex justify-between items-center mt-4">
-                    {/* Informação de Contagem */}
                     <span className="text-sm text-neutral-600">
-                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - 
-                        {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalRecebimentos)} de 
-                        {' '}{totalRecebimentos} entradas
+                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalRecebimentos)} de {totalRecebimentos} entradas
                     </span>
-                    
-                    {/* Botões de Navegação */}
                     <div className="flex gap-2">
-                        <button 
-                            onClick={() => setPaginaAtual(p => p - 1)}
-                            disabled={paginaAtual === 0} // Desabilita na primeira página
-                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             &larr; Anterior
                         </button>
-                        <button 
-                            onClick={() => setPaginaAtual(p => p + 1)}
-                            disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalRecebimentos} // Desabilita na última página
-                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalRecebimentos} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             Próxima &rarr;
                         </button>
                     </div>
                 </div>
             )}
-            
-            {/* --- Drawer (Formulário de Criação) --- */}
+
             <Drawer open={open} onClose={handleCloseDrawer} title="Adicionar Recebimento">
                 <form onSubmit={onSubmit} className="space-y-3">
-                    {/* O campo de data foi removido, pois é automático no backend */}
-                    {/* <TextInput label="Data" type="date" value={data} onChange={setData} required /> */}
                     <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
-                    <Select label="Associação" value={associacaoId} onChange={setAssociacaoId} options={assocOpts} required />
                     <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 120" required />
+
+                    <hr />
+                    <div className="text-sm text-neutral-600">Tipo de Doador</div>
+                    <div className="flex gap-2">
+                        <Pill active={tipoDoador === 'associacao'} onClick={() => setTipoDoador('associacao')}>Cadastrado</Pill>
+                        <Pill active={tipoDoador === 'outro'} onClick={() => setTipoDoador('outro')}>Outro</Pill>
+                    </div>
+
+                    {tipoDoador === 'associacao' ? (
+                        <Select label="Doador Cadastrado" value={doadorId} onChange={setDoadorId} options={doadoresOpts} required />
+                    ) : (
+                        <TextInput label="Nome do Doador Externo" value={nomeDoadorExterno} onChange={setNomeDoadorExterno} placeholder="Ex: Prefeitura, João Silva..." required />
+                    )}
+
+                    <div className="text-xs text-neutral-500 pt-2">
+                        *A criação de 'Outro Doador' precisa ser implementada. Por enquanto, selecione um 'Doador Cadastrado'.
+                    </div>
+
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
@@ -475,51 +645,49 @@ return (
             </Drawer>
         </section>
     );
-
 }
 
+// --- VENDASVIEW REFATORADA ---
 function VendasView({ store, setActive, onCreate, onCancel }) {
-    // --- Estados de Dados, Filtros e Paginação ---
-    const [vendas, setVendas] = useState([]); // Lista local de vendas
+    // Estados locais de dados, filtros e paginação
+    const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [paginaAtual, setPaginaAtual] = useState(0);
     const [totalVendas, setTotalVendas] = useState(0);
-    const ITENS_POR_PAGINA = 20; // Quantas vendas por página
+    const ITENS_POR_PAGINA = 20;
 
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim, setDataFim] = useState("");
     const [filtroComprador, setFiltroComprador] = useState("");
     const [filtroMaterialId, setFiltroMaterialId] = useState("");
 
-    // --- Estados do Formulário (Drawer) ---
+    // Estados do formulário (Drawer)
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [dataVenda, setDataVenda] = useState(todayISO());
-    const [comprador, setComprador] = useState("");
+    const [compradorId, setCompradorId] = useState(""); // MUDANÇA: de string 'comprador' para 'compradorId'
     const [itemAtualMaterialId, setItemAtualMaterialId] = useState("");
     const [itemAtualQuantidade, setItemAtualQuantidade] = useState("");
     const [itemAtualPrecoUnit, setItemAtualPrecoUnit] = useState("");
     const [estoqueDisponivel, setEstoqueDisponivel] = useState(null);
     const [itens, setItens] = useState([]);
 
-    // --- Opções para Selects (do store global) ---
+    // Opções dos Selects (do store global)
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
+    const compradoresOpts = store.compradores.map(c => ({ value: String(c.id), label: c.nome })); // Para o novo Select
     const getMat = (id) => store.materiais.find(m => m.id === Number(id));
 
-    // --- useEffect para BUSCAR DADOS FILTRADOS E PAGINADOS ---
+    // useEffect para buscar dados filtrados e paginados
     useEffect(() => {
         const fetchVendasData = async () => {
             setLoading(true);
             const params = new URLSearchParams();
-
-            // Filtros
             if (dataInicio) params.append('data_inicio', dataInicio);
             if (dataFim) params.append('end_date', dataFim);
             if (filtroComprador) params.append('comprador', filtroComprador);
             if (filtroMaterialId) params.append('id_material', filtroMaterialId);
-            
-            // Paginação
+
             const skip = paginaAtual * ITENS_POR_PAGINA;
             params.append('skip', skip);
             params.append('limit', ITENS_POR_PAGINA);
@@ -527,25 +695,22 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
             try {
                 const response = await fetch(`${API_URL}/vendas/?${params.toString()}`);
                 if (!response.ok) throw new Error(`Falha ao buscar vendas: ${response.statusText}`);
-                
-                const data = await response.json(); // Espera { total_count: X, items: [...] }
-                
+                const data = await response.json();
                 setVendas(data.items);
                 setTotalVendas(data.total_count);
-
             } catch (error) {
-                 console.error("Erro ao buscar vendas:", error);
-                 alert(error.message);
-                 setVendas([]);
-                 setTotalVendas(0);
+                console.error("Erro ao buscar vendas:", error);
+                alert(error.message);
+                setVendas([]);
+                setTotalVendas(0);
             } finally {
                 setLoading(false);
             }
         };
         fetchVendasData();
-    }, [dataInicio, dataFim, filtroComprador, filtroMaterialId, paginaAtual, refreshTrigger]); // Depende dos filtros, página e trigger
+    }, [dataInicio, dataFim, filtroComprador, filtroMaterialId, paginaAtual, refreshTrigger]);
 
-    // --- useEffect para buscar estoque (do Drawer) ---
+    // useEffect para buscar estoque (do Drawer)
     useEffect(() => {
         const fetchEstoque = async () => {
             if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
@@ -566,7 +731,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         fetchEstoque();
     }, [itemAtualMaterialId]);
 
-    // --- Funções do Drawer ---
+    // Funções do Drawer (handleAddItem, handleRemoveItem)
     const handleAddItem = () => {
         if (!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit) {
             alert("Preencha Material, Quantidade e Preço Unitário para adicionar.");
@@ -596,7 +761,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
 
     const handleCloseDrawer = () => {
         setOpen(false); setBusy(false); setDataVenda(todayISO());
-        setComprador(""); setItens([]); setItemAtualMaterialId("");
+        setCompradorId(""); setItens([]); setItemAtualMaterialId(""); // MUDANÇA AQUI
         setItemAtualQuantidade(""); setItemAtualPrecoUnit(""); setEstoqueDisponivel(null);
     };
 
@@ -605,52 +770,53 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         setOpen(true);
     };
 
-    // --- Funções de Ação ---
+    // Funções de Ação
     const handleSubmitVenda = async () => {
-        if (!comprador) { alert("Informe o nome do comprador."); return; }
+        if (!compradorId) { alert("Selecione um comprador."); return; } // MUDANÇA AQUI
         if (itens.length === 0) { alert("Adicione pelo menos um item à venda."); return; }
+
         setBusy(true);
         try {
-            const success = await onCreate({ nomeComprador: comprador, itens: itens });
-            if (success) { 
-                handleCloseDrawer(); 
-                setRefreshTrigger(t => t + 1); // Força refetch
+            // MUDANÇA AQUI: Passa 'id_comprador'
+            const success = await onCreate({ id_comprador: Number(compradorId), itens: itens });
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1);
             }
         } catch (error) { /* erro já tratado em onCreate */ }
         finally { setBusy(false); }
     };
-    
+
     const handleCancel = async (id) => {
-        const success = await onCancel(id); // Chama a função da App
+        const success = await onCancel(id);
         if (success) {
-            setRefreshTrigger(t => t + 1); // Força refetch
+            setRefreshTrigger(t => t + 1);
         }
     };
 
-    // --- Cálculos (usam o estado local 'vendas') ---
-    // (Atenção: Estes cálculos agora refletem apenas a PÁGINA ATUAL, não o total filtrado)
-    // (Para totais filtrados, a API /reports/summary seria melhor, mas vamos manter assim por enquanto)
+    // Cálculos de StatCard (baseados nos dados da página)
     const totalQtdVendida = vendas.reduce((totalVendas, venda) =>
         totalVendas + venda.itens.reduce((totalItens, item) =>
             totalItens + Number(item.quantidade_vendida || 0), 0),
-    0);
+        0);
     const receitaTotal = vendas.reduce((totalVendas, venda) =>
         totalVendas + venda.itens.reduce((totalItens, item) =>
             totalItens + (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0)), 0),
-    0);
+        0);
 
-    // --- Preparação dos dados para a Tabela (Achatamento) ---
+    // Preparação dos dados para a Tabela
     const itensVendidosData = useMemo(() => {
-        return vendas.flatMap(venda => // Usa o estado local 'vendas'
+        return vendas.flatMap(venda =>
             venda.itens.map(item => ({
                 ...item,
                 venda_id: venda.id,
                 data_venda: venda.data_venda,
                 codigo: venda.codigo,
-                nome_comprador: venda.comprador,
+                // MUDANÇA AQUI: Pega o objeto 'comprador' aninhado
+                comprador: venda.comprador,
             }))
         ).sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda));
-    }, [vendas]); // Depende do estado local 'vendas'
+    }, [vendas]);
 
     return (
         <section>
@@ -659,7 +825,6 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova venda</button>
             </Toolbar>
 
-            {/* --- ÁREA DE FILTROS --- */}
             <Card className="p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
@@ -670,21 +835,20 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                 </div>
             </Card>
 
-            {/* --- StatCards --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <StatCard title="Vendas (Filtradas)" value={totalVendas} />
                 <StatCard title="Qtd Vendida (Página)" value={`${totalQtdVendida.toFixed(2)} Kg`} />
                 <StatCard title="Receita (Página)" value={money(receitaTotal)} />
             </div>
 
-            {/* --- Tabela de Itens Vendidos --- */}
             {loading && <div className="text-center p-4 text-emerald-600">Carregando vendas...</div>}
             {!loading && (
                 <Table
                     columns={[
                         { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
                         { key: "codigo", header: "Cód. Venda" },
-                        { key: "nome_comprador", header: "Comprador" },
+                        // MUDANÇA AQUI: Lê o nome do objeto comprador
+                        { key: "comprador", header: "Comprador", render: (comprador) => comprador?.nome || "-" },
                         { key: "material", header: "Material", render: (mat) => mat?.nome || "-" },
                         { key: "quantidade_vendida", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || "un"}` },
                         { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
@@ -692,8 +856,8 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                         {
                             key: "actions", header: "Ações", render: (_, row) => (
                                 <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                        onClick={() => handleCancel(row.venda_id)}
-                                        title="Cancelar venda completa">
+                                    onClick={() => handleCancel(row.venda_id)}
+                                    title="Cancelar venda completa">
                                     🚫 Cancelar Venda
                                 </button>
                             )
@@ -704,40 +868,35 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                 />
             )}
 
-            {/* --- SEÇÃO DE PAGINAÇÃO --- */}
             {!loading && totalVendas > ITENS_POR_PAGINA && (
                 <div className="flex justify-between items-center mt-4">
                     <span className="text-sm text-neutral-600">
-                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - 
-                        {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalVendas)} de 
-                        {' '}{totalVendas} vendas
+                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalVendas)} de {totalVendas} vendas
                     </span>
                     <div className="flex gap-2">
-                        <button 
-                            onClick={() => setPaginaAtual(p => p - 1)}
-                            disabled={paginaAtual === 0}
-                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             &larr; Anterior
                         </button>
-                        <button 
-                            onClick={() => setPaginaAtual(p => p + 1)}
-                            disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalVendas}
-                            className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalVendas} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             Próxima &rarr;
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* --- Drawer (Formulário) --- */}
             <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Venda">
-                 {/* O formulário de múltiplos itens permanece o mesmo */}
-                 <div className="space-y-4">
+                <div className="space-y-4">
                     <TextInput label="Data" type="date" value={dataVenda} onChange={setDataVenda} required />
-                    <TextInput label="Nome do Comprador" value={comprador} onChange={setComprador} placeholder="Ex: Recicla Brasil Ltda" required />
+                    {/* MUDANÇA AQUI: de TextInput para Select */}
+                    <Select
+                        label="Comprador"
+                        value={compradorId}
+                        onChange={setCompradorId}
+                        options={compradoresOpts}
+                        required
+                    />
                     <hr className="my-4" />
+                    {/* ... (Resto do formulário de adicionar itens, que está correto) ... */}
                     <h4 className="font-medium text-neutral-700">Adicionar Item</h4>
                     <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg bg-neutral-50">
                         <div className="col-span-3">
@@ -756,7 +915,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                             onChange={(value) => setItemAtualQuantidade(value)}
                             placeholder="Kg" required={itens.length === 0}
                         />
-                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0}/>
+                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0} />
                         <div className="flex items-end">
                             <button
                                 type="button"
@@ -804,7 +963,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
                         <button
                             type="button"
                             onClick={handleSubmitVenda}
-                            disabled={busy || itens.length === 0 || !comprador}
+                            disabled={busy || itens.length === 0 || !compradorId} // MUDANÇA AQUI
                             className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60"
                         >
                             {busy ? "Salvando..." : "Finalizar Venda"}
@@ -834,14 +993,15 @@ function RelatoriosView({ store }) {
                 const queryString = params.toString();
 
                 const [summaryRes, porMaterialRes, porAssocRes] = await Promise.all([
-                    fetch(`${API_URL}/relatorio/relatorio?${queryString}`),
+                    fetch(`${API_URL}/relatorio/summary?${queryString}`),
                     fetch(`${API_URL}/relatorio/por-material?${queryString}`),
-                    fetch(`${API_URL}/relatorio/por-associacao?${queryString}`)
+                    // CORREÇÃO: URL da Rota
+                    fetch(`${API_URL}/relatorio/por-doador?${queryString}`)
                 ]);
 
                 if (!summaryRes.ok) { throw new Error(`Erro Sumário: ${summaryRes.statusText}`); }
                 if (!porMaterialRes.ok) { throw new Error(`Erro Por Material: ${porMaterialRes.statusText}`); }
-                if (!porAssocRes.ok) { throw new Error(`Erro Por Associação: ${porAssocRes.statusText}`); }
+                if (!porAssocRes.ok) { throw new Error(`Erro Por Doador: ${porAssocRes.statusText}`); } // Corrigido
 
                 const summaryJson = await summaryRes.json();
                 const porMaterialJson = await porMaterialRes.json();
@@ -849,7 +1009,7 @@ function RelatoriosView({ store }) {
 
                 setSummaryData(summaryJson);
                 setPorMaterialData(porMaterialJson);
-                setPorAssociacaoData(porAssocJson);
+                setPorAssociacaoData(porAssocJson); // Salva os dados de doador
 
             } catch (error) {
                 console.error("Erro ao buscar dados dos relatórios:", error);
@@ -868,7 +1028,7 @@ function RelatoriosView({ store }) {
     const revChartRef = useRef(null), revChartInstance = useRef(null);
 
     useEffect(() => {
-        if (!window.Chart || !porMaterialData) { // Simplificado
+        if (!window.Chart || !porMaterialData) {
             if (recChartInstance.current) recChartInstance.current.destroy();
             if (revChartInstance.current) revChartInstance.current.destroy();
             recChartInstance.current = null;
@@ -884,14 +1044,14 @@ function RelatoriosView({ store }) {
         if (recChartInstance.current) recChartInstance.current.destroy();
         if (revChartInstance.current) revChartInstance.current.destroy();
 
-        if (recChartRef.current && recData.length > 0) { // Adicionado verificação de dados
+        if (recChartRef.current && recData.length > 0) {
             recChartInstance.current = new Chart(recChartRef.current, {
                 type: "bar",
                 data: { labels: recLabels, datasets: [{ label: "Recebido (Kg)", data: recData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }] },
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }
-        if (revChartRef.current && revData.length > 0) { // Adicionado verificação de dados
+        if (revChartRef.current && revData.length > 0) {
             revChartInstance.current = new Chart(revChartRef.current, {
                 type: "bar",
                 data: { labels: revLabels, datasets: [{ label: "Receita (R$)", data: revData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
@@ -953,13 +1113,14 @@ function RelatoriosView({ store }) {
                             />
                         </Card>
                         <Card className="p-6">
-                            <div className="text-sm text-neutral-500 mb-3">Recebido por Associação (Kg)</div>
+                            {/* CORREÇÃO: Título da Tabela */}
+                            <div className="text-sm text-neutral-500 mb-3">Recebido por Doador (Kg)</div>
                             <Table
                                 columns={[
-                                    { key: "nome", header: "Associação" },
+                                    { key: "nome", header: "Doador" }, // Corrigido
                                     { key: "quantidade", header: "Quantidade Total", render: (v) => v.toFixed(1) + ' Kg' },
                                 ]}
-                                data={porAssociacaoData}
+                                data={porAssociacaoData} // Usa o estado
                                 emptyLabel="Sem recebimentos no período"
                             />
                         </Card>
@@ -969,15 +1130,20 @@ function RelatoriosView({ store }) {
         </section>
     );
 }
+
 // ========== App ==========
 
 function App() {
+    const API_URL = "http://127.0.0.1:8000";
     const [active, setActive] = useState("dashboard");
     const [store, setStore] = useState({
         materiais: [],
         associacoes: [],
-        recebimentos: [],
-        vendas: [],
+        compradores: [], 
+        tipoDoadores: [], 
+        doadores: [],
+        recebimentos: [], 
+        vendas: [],       
     });
     const [loading, setLoading] = useState(true);
 
@@ -985,79 +1151,75 @@ function App() {
     const fetchMaterialsWithStock = async () => {
         try {
             const response = await fetch(`${API_URL}/estoque/`);
-            if (!response.ok)
-                throw new Error(`Fetch Estoque: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Fetch Estoque: ${response.statusText}`);
             return await response.json();
-        } catch (error) {
-            console.error("Erro fetchMaterialsWithStock:", error);
-            throw error;
-        }
+        } catch (error) { console.error("Erro fetchMaterialsWithStock:", error); throw error; }
     };
     const fetchAssociacoes = async () => {
         try {
             const response = await fetch(`${API_URL}/associacoes/`);
-            if (!response.ok)
-                throw new Error(`Fetch Associações: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Fetch Associações: ${response.statusText}`);
             return await response.json();
-        } catch (error) {
-            console.error("Erro fetchAssociacoes:", error);
-            throw error;
-        }
+        } catch (error) { console.error("Erro fetchAssociacoes:", error); throw error; }
     };
-    const fetchEntradas = async () => {
+    // NOVO: Fetch Compradores
+    const fetchCompradores = async () => {
         try {
-            const response = await fetch(`${API_URL}/entradas_material/`);
-            if (!response.ok)
-                throw new Error(`Fetch Entradas: ${response.statusText}`);
+            const response = await fetch(`${API_URL}/compradores/`);
+            if (!response.ok) throw new Error(`Fetch Compradores: ${response.statusText}`);
             return await response.json();
-        } catch (error) {
-            console.error("Erro fetchEntradas:", error);
-            throw error;
-        }
+        } catch (error) { console.error("Erro fetchCompradores:", error); throw error; }
     };
-    const fetchVendas = async () => {
+    // NOVO: Fetch Tipos de Doador
+    const fetchTipoDoadores = async () => {
         try {
-            const response = await fetch(`${API_URL}/vendas/`);
+            const response = await fetch(`${API_URL}/tipo_doador/`);
+            if (!response.ok) throw new Error(`Fetch Tipos Doador: ${response.statusText}`);
+            return await response.json();
+        } catch (error) { console.error("Erro fetchTipoDoadores:", error); throw error; }
+    };
+
+    const fetchDoadores = async () => {
+        try {
+            const response = await fetch(`${API_URL}/doadores/`);
             if (!response.ok)
-                throw new Error(`Fetch Vendas: ${response.statusText}`);
+                throw new Error(`Fetch Doadores: ${response.statusText}`);
             return await response.json();
         } catch (error) {
-            console.error("Erro fetchVendas:", error);
+            console.error("Erro fetchDoadores:", error);
             throw error;
         }
     };
+    // REMOVIDO: fetchEntradas e fetchVendas (agora são locais)
 
     // --- Busca de Dados Iniciais ---
     useEffect(() => {
         const loadInitialData = async () => {
             setLoading(true);
-            console.log("Buscando dados iniciais da API...");
+            console.log("Buscando dados cadastrais (Materiais, Associações, Compradores, Tipos)...");
             try {
-                const [materiaisData, associacoesData, entradasData, vendasData] =
+                // ATUALIZADO: Busca os dados mestres
+                const [materiaisData, associacoesData, compradoresData, tipoDoadoresData, doadoresData] =
                     await Promise.all([
                         fetchMaterialsWithStock(),
                         fetchAssociacoes(),
-                        // fetchEntradas(),
-                        // fetchVendas(),
+                        fetchCompradores(),
+                        fetchTipoDoadores(),
+                        fetchDoadores(),
                     ]);
                 setStore({
                     materiais: materiaisData,
                     associacoes: associacoesData,
-                    recebimentos: [],
-                    vendas: [],
+                    compradores: compradoresData.items, 
+                    tipoDoadores: tipoDoadoresData,
+                    doadores: doadoresData,
+                    recebimentos: [], 
+                    vendas: [],       
                 });
-                console.log("Dados carregados com sucesso!");
+                console.log("Dados cadastrais carregados com sucesso!");
             } catch (error) {
-                console.error("Falha GERAL ao carregar dados da API:", error);
-                alert(
-                    `Não foi possível carregar os dados iniciais.\nErro: ${error.message}`
-                );
-                setStore({
-                    materiais: [],
-                    associacoes: [],
-                    recebimentos: [],
-                    vendas: [],
-                });
+                console.error("Falha GERAL ao carregar dados cadastrais:", error);
+                alert(`Não foi possível carregar os dados de cadastro.\nErro: ${error.message}`);
             } finally {
                 setLoading(false);
             }
@@ -1074,85 +1236,95 @@ function App() {
             console.error("Falha ao re-buscar estoque após ação:", error);
         }
     };
+    // Função Helper para Atualizar Associações (após criar/editar)
+    const refreshAssociacoes = async () => {
+        try {
+            const updatedData = await fetchAssociacoes();
+            setStore((s) => ({ ...s, associacoes: updatedData }));
+        } catch (error) {
+            console.error("Falha ao re-buscar associações:", error);
+        }
+    };
+    // Função Helper para Atualizar Compradores
+    const refreshCompradores = async () => {
+        try {
+            const updatedData = await fetchCompradores();
+            setStore((s) => ({ ...s, compradores: updatedData.items })); // Assume paginação
+        } catch (error) {
+            console.error("Falha ao re-buscar compradores:", error);
+        }
+    };
+    // Função Helper para Atualizar Tipos de Doador
+    const refreshTipoDoadores = async () => {
+        try {
+            const updatedData = await fetchTipoDoadores();
+            setStore((s) => ({ ...s, tipoDoadores: updatedData }));
+        } catch (error) {
+            console.error("Falha ao re-buscar tipos de doador:", error);
+        }
+    };
 
     // --- Funções CREATE ---
     const createMaterial = async (payload) => {
-        const payloadParaAPI = {
-            nome: payload.nome,
-            categoria: payload.categoria,
-            unidade_medida: payload.unidade,
-        };
+        const payloadParaAPI = { ...payload }; // 'unidade' já é 'unidade_medida' no form
         try {
-            const response = await fetch(`${API_URL}/materiais/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
-            if (!response.ok) {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
+            const response = await fetch(`${API_URL}/materiais/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
             await refreshMateriaisComEstoque();
             return true;
-        } catch (error) {
-            console.error("Erro criar material:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+        } catch (error) { console.error("Erro criar material:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
-    const createAssociacao = async (payload) => {
-        const payloadParaAPI = { ...payload };
+    // NOVO: createTipoDoador
+    const createTipoDoador = async (payload) => {
         try {
-            const response = await fetch(`${API_URL}/associacoes/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
-            if (!response.ok) {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
-            const newData = await response.json();
-            setStore((s) => ({
-                ...s,
-                associacoes: [...s.associacoes, newData].sort((a, b) =>
-                    a.nome.localeCompare(b.nome)
-                ),
-            }));
+            const response = await fetch(`${API_URL}/tipo_doador/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+            await refreshTipoDoadores(); // Re-busca a lista
             return true;
-        } catch (error) {
-            console.error("Erro criar associação:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+        } catch (error) { console.error("Erro criar tipo doador:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
+    // NOVO: createComprador
+    const createComprador = async (payload) => {
+        try {
+            const response = await fetch(`${API_URL}/compradores/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+            await refreshCompradores(); // Re-busca a lista
+            return true;
+        } catch (error) { console.error("Erro criar comprador:", error); alert(`Erro: ${error.message}`); return false; }
+    };
+
+    // REFATORADO: createAssociacao
+    const createAssociacao = async (payload) => {
+        try {
+            const response = await fetch(`${API_URL}/associacoes/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+            await refreshAssociacoes(); // Re-busca a lista
+            return true;
+        } catch (error) { console.error("Erro criar associação:", error); alert(`Erro: ${error.message}`); return false; }
+    };
+
+    // REFATORADO: createRecebimento
     const createRecebimento = async (payload) => {
+        // A lógica de criar 'Outro Doador' deve ser tratada ANTES de chamar esta função
+        // Esta função agora espera um 'id_doador' válido
         const payloadParaAPI = {
             quantidade: payload.quantidade,
             id_material: payload.materialId,
-            id_associacao: payload.associacaoId,
+            id_doador: payload.id_doador,
         };
         try {
-            const response = await fetch(`${API_URL}/entradas_material/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
+            const response = await fetch(`${API_URL}/entradas/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
             if (!response.ok) {
                 const errorData = await response.json();
                 let errorMsg = "Falha ao registrar recebimento.";
-                if (errorData.detail && Array.isArray(errorData.detail)) {
-                    errorMsg = errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; ');
-                } else if (errorData.detail) { errorMsg = errorData.detail; }
+                if (errorData.detail && Array.isArray(errorData.detail)) { errorMsg = errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; '); }
+                else if (errorData.detail) { errorMsg = errorData.detail; }
                 throw new Error(errorMsg);
             }
-            const newData = await response.json();
-            setStore((s) => ({
-                ...s,
-                recebimentos: [...s.recebimentos, newData],
-            }));
+            // Não precisa mais atualizar o store local (pois a view re-busca)
+            // Apenas atualiza o estoque
             await refreshMateriaisComEstoque();
             return true;
         } catch (error) {
@@ -1162,19 +1334,16 @@ function App() {
         }
     };
 
+    // REFATORADO: createVenda
     const createVenda = async (payload) => {
         const payloadParaAPI = {
-            comprador: payload.nomeComprador,
+            id_comprador: payload.id_comprador, // Agora espera ID
             concluida: true,
             itens: payload.itens,
         };
         console.log("Enviando para API (Venda):", JSON.stringify(payloadParaAPI, null, 2));
         try {
-            const response = await fetch(`${API_URL}/vendas/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
+            const response = await fetch(`${API_URL}/vendas/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
             if (!response.ok) {
                 const errorData = await response.json();
                 let errorMsg = `Falha ao registrar venda (Status: ${response.status})`;
@@ -1183,8 +1352,7 @@ function App() {
                 } else if (errorData.detail) { errorMsg += `: ${errorData.detail}`; }
                 throw new Error(errorMsg);
             }
-            const newData = await response.json();
-            setStore((s) => ({ ...s, vendas: [...s.vendas, newData] }));
+            // Não precisa mais atualizar o store local (pois a view re-busca)
             await refreshMateriaisComEstoque();
             return true;
         } catch (error) {
@@ -1196,138 +1364,82 @@ function App() {
 
     // --- Funções UPDATE ---
     const updateMaterial = async (id, payload) => {
-        const payloadParaAPI = {
-            nome: payload.nome,
-            categoria: payload.categoria,
-            unidade_medida: payload.unidade,
-        };
+        const payloadParaAPI = { ...payload }; // 'unidade' já é 'unidade_medida' no form
         try {
-            const response = await fetch(`${API_URL}/materiais/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
-            if (!response.ok) {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
+            const response = await fetch(`${API_URL}/materiais/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
             await refreshMateriaisComEstoque();
             return true;
-        } catch (error) {
-            console.error("Erro atualizar material:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+        } catch (error) { console.error("Erro atualizar material:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
     const updateAssociacao = async (id, payload) => {
         const payloadParaAPI = { ...payload };
         try {
-            const response = await fetch(`${API_URL}/associacoes/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payloadParaAPI),
-            });
-            if (!response.ok) {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
-            const updatedData = await response.json();
-            setStore((s) => ({
-                ...s,
-                associacoes: s.associacoes.map((a) =>
-                    a.id === id ? updatedData : a
-                ),
-            }));
+            const response = await fetch(`${API_URL}/associacoes/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+            await refreshAssociacoes(); // Re-busca a lista de associações
             return true;
-        } catch (error) {
-            console.error("Erro atualizar associação:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+        } catch (error) { console.error("Erro atualizar associação:", error); alert(`Erro: ${error.message}`); return false; }
+    };
+
+    // NOVO: updateComprador
+    const updateComprador = async (id, payload) => {
+        const payloadParaAPI = { ...payload };
+        try {
+            const response = await fetch(`${API_URL}/compradores/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
+            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+            await refreshCompradores(); // Re-busca a lista de compradores
+            return true;
+        } catch (error) { console.error("Erro atualizar comprador:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
     // --- Funções DELETE / CANCEL ---
     const deleteAssociacao = async (id) => {
-        if (!confirm("Tem certeza que deseja INATIVAR esta associação?"))
-            return false;
+        if (!confirm("Tem certeza que deseja INATIVAR esta associação?")) return false;
         try {
-            const response = await fetch(`${API_URL}/associacoes/${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(`${API_URL}/associacoes/${id}`, { method: "DELETE" });
             if (response.status === 204) {
-                setStore((s) => ({
-                    ...s,
-                    associacoes: s.associacoes.filter((a) => a.id !== id),
-                }));
+                await refreshAssociacoes(); // Re-busca a lista
                 return true;
-            } else {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
-        } catch (error) {
-            console.error("Erro inativar associação:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+        } catch (error) { console.error("Erro inativar associação:", error); alert(`Erro: ${error.message}`); return false; }
+    };
+
+    // NOVO: deleteComprador (Soft Delete)
+    const deleteComprador = async (id) => {
+        if (!confirm("Tem certeza que deseja INATIVAR este comprador?")) return false;
+        try {
+            const response = await fetch(`${API_URL}/compradores/${id}`, { method: "DELETE" });
+            if (response.status === 204) {
+                await refreshCompradores(); // Re-busca a lista
+                return true;
+            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+        } catch (error) { console.error("Erro inativar comprador:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
     const cancelEntrada = async (id) => {
-        if (
-            !confirm(
-                "Tem certeza que deseja CANCELAR este recebimento? O estoque será recalculado."
-            )
-        )
-            return false;
+        if (!confirm("Tem certeza que deseja CANCELAR este recebimento? O estoque será recalculado.")) return false;
         try {
-            const response = await fetch(`${API_URL}/entradas/${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(`${API_URL}/entradas/${id}`, { method: "DELETE" });
             if (response.status === 204) {
-                setStore((s) => ({
-                    ...s,
-                    recebimentos: s.recebimentos.filter((r) => r.id !== id),
-                }));
-                await refreshMateriaisComEstoque();
+                // A view vai re-buscar automaticamente
+                await refreshMateriaisComEstoque(); // Atualiza estoque
                 return true;
-            } else {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
-        } catch (error) {
-            console.error("Erro cancelar recebimento:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+        } catch (error) { console.error("Erro cancelar recebimento:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
     const cancelVenda = async (id) => {
-        if (
-            !confirm(
-                "Tem certeza que deseja CANCELAR esta venda? O estoque será recalculado."
-            )
-        )
-            return false;
+        if (!confirm("Tem certeza que deseja CANCELAR esta venda? O estoque será recalculado.")) return false;
         try {
-            const response = await fetch(`${API_URL}/vendas/${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(`${API_URL}/vendas/${id}`, { method: "DELETE" });
             if (response.status === 204) {
-                setStore((s) => ({
-                    ...s,
-                    vendas: s.vendas.filter((v) => v.id !== id),
-                }));
-                await refreshMateriaisComEstoque();
+                // A view vai re-buscar automaticamente
+                await refreshMateriaisComEstoque(); // Atualiza estoque
                 return true;
-            } else {
-                const d = await response.json();
-                throw new Error(d.detail || "Erro");
-            }
-        } catch (error) {
-            console.error("Erro cancelar venda:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
+            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
+        } catch (error) { console.error("Erro cancelar venda:", error); alert(`Erro: ${error.message}`); return false; }
     };
 
     // --- Renderização ---
@@ -1338,35 +1450,51 @@ function App() {
                     <div className="w-9 h-9 rounded-2xl bg-emerald-600 grid place-items-center text-white font-bold">RC</div>
                     <div className="flex-1">
                         <div className="font-semibold leading-tight">Rede de Catadores – Gestão</div>
-                        <div className="text-xs text-neutral-500">MVP Conectado</div>
+                        <div className="text-xs text-neutral-500">v2.0 (Doador/Comprador)</div>
                     </div>
                 </div>
             </header>
 
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[240px,1fr] gap-6 px-4 py-6">
                 <aside className="md:sticky md:top-16 h-max">
-                    <nav className="bg-white/80 rounded-2xl border border-black/5 shadow-sm p-3">
-                        <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Navegação</div>
-                        <div className="flex flex-wrap md:flex-col gap-2">
-                            <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>Dashboard</Pill>
-                            <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>Materiais</Pill>
-                            <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>Associações</Pill>
-                            <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>Recebimentos</Pill>
-                            <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>Vendas</Pill>
-                            <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>Relatórios</Pill>
+                    <nav className="bg-white/80 rounded-2xl border border-black/5 shadow-sm p-3 space-y-4">
+
+                        {/* GRUPO 1: Navegação Principal */}
+                        <div>
+                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Navegação</div>
+                            <div className="flex flex-wrap md:flex-col gap-2">
+                                <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>Dashboard</Pill>
+                                <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>Relatórios</Pill>
+                            </div>
+                        </div>
+
+                        {/* GRUPO 2: Cadastros (Comprador antes de Associação) */}
+                        <div>
+                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Cadastros</div>
+                            <div className="flex flex-wrap md:flex-col gap-2">
+                                <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>Materiais/Estoque</Pill>
+                                <Pill active={active === "compradores"} onClick={() => setActive("compradores")}>Compradores</Pill>
+                                <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>Associações</Pill>
+                                <Pill active={active === "tipoDoadores"} onClick={() => setActive("tipoDoadores")}>Tipos de Doador</Pill>
+                            </div>
+                        </div>
+
+                        {/* GRUPO 3: Comercialização (Sua nova ideia) */}
+                        <div>
+                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Comercialização</div>
+                            <div className="flex flex-wrap md:flex-col gap-2">
+                                <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>Vendas</Pill>
+                                <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>Recebimentos</Pill>
+
+                            </div>
                         </div>
                     </nav>
                 </aside>
 
                 <main className="space-y-6">
-                    {loading && (
-                        <div className="text-center p-6 text-xl text-emerald-600">
-                            Carregando dados...
-                        </div>
-                    )}
-                    {!loading && active === "dashboard" && (
-                        <DashboardView store={store} />
-                    )}
+                    {loading && (<div className="text-center p-6 text-xl text-emerald-600"> Carregando dados... </div>)}
+
+                    {!loading && active === "dashboard" && (<DashboardView store={store} />)}
                     {!loading && active === "materiais" && (
                         <MateriaisView
                             data={store.materiais}
@@ -1376,10 +1504,25 @@ function App() {
                     )}
                     {!loading && active === "associacoes" && (
                         <AssociacoesView
+                            store={store} // Passa o store para ler os tipoDoadores
                             data={store.associacoes}
                             onCreate={createAssociacao}
                             onUpdate={updateAssociacao}
                             onDelete={deleteAssociacao}
+                        />
+                    )}
+                    {!loading && active === "compradores" && (
+                        <CompradoresView
+                            data={store.compradores}
+                            onCreate={createComprador}
+                            onUpdate={updateComprador}
+                            onDelete={deleteComprador}
+                        />
+                    )}
+                    {!loading && active === "tipoDoadores" && (
+                        <TipoDoadorView
+                            data={store.tipoDoadores}
+                            onCreate={createTipoDoador}
                         />
                     )}
                     {!loading && active === "recebimentos" && (
@@ -1404,7 +1547,7 @@ function App() {
                 </main>
             </div>
             <footer className="py-8 text-center text-xs text-neutral-500">
-                Sistema de Gestão - MVP v0.2
+                Sistema de Gestão - v2.0
             </footer>
         </div>
     );

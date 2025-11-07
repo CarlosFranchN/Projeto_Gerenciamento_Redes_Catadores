@@ -1,8 +1,8 @@
-"""Versao 2.0: Implementa arquitetura Doador e Comprador
+"""Versao 3.0: Implementa arquitetura Parceiro e Compra
 
-Revision ID: a012f8de6d4c
+Revision ID: edeaa421a717
 Revises: 
-Create Date: 2025-11-04 01:42:12.627361
+Create Date: 2025-11-06 18:37:05.031765
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a012f8de6d4c'
+revision: str = 'edeaa421a717'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -46,13 +46,19 @@ def upgrade() -> None:
     op.create_index(op.f('ix_materiais_codigo'), 'materiais', ['codigo'], unique=True)
     op.create_index(op.f('ix_materiais_id'), 'materiais', ['id'], unique=False)
     op.create_index(op.f('ix_materiais_nome'), 'materiais', ['nome'], unique=True)
-    tipo_doador_table = op.create_table('tipo_doador',
+    op.create_table('tipo_parceiro',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nome', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('nome')
     )
-    op.bulk_insert(tipo_doador_table,
+    tipo_parceiro_table = sa.table('tipo_parceiro',
+    sa.column('id', sa.Integer),
+    sa.column('nome', sa.String)
+)
+
+    # Insere os dados iniciais
+    op.bulk_insert(tipo_parceiro_table,
         [
             {'nome': 'ASSOCIACAO'},
             {'nome': 'ORGAO_PUBLICO'},
@@ -61,20 +67,19 @@ def upgrade() -> None:
             {'nome': 'OUTRO'}
         ]
     )
-    
-    op.create_index(op.f('ix_tipo_doador_id'), 'tipo_doador', ['id'], unique=False)
-    op.create_table('doadores',
+    op.create_index(op.f('ix_tipo_parceiro_id'), 'tipo_parceiro', ['id'], unique=False)
+    op.create_table('parceiros',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nome', sa.String(), nullable=False),
-    sa.Column('id_tipo_doador', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['id_tipo_doador'], ['tipo_doador.id'], ),
+    sa.Column('id_tipo_parceiro', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['id_tipo_parceiro'], ['tipo_parceiro.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_doadores_id'), 'doadores', ['id'], unique=False)
-    op.create_index(op.f('ix_doadores_nome'), 'doadores', ['nome'], unique=True)
+    op.create_index(op.f('ix_parceiros_id'), 'parceiros', ['id'], unique=False)
+    op.create_index(op.f('ix_parceiros_nome'), 'parceiros', ['nome'], unique=True)
     op.create_table('vendas',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('codigo', sa.String(), nullable=False),
+    sa.Column('codigo', sa.String(), nullable=True),
     sa.Column('data_venda', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('concluida', sa.Boolean(), server_default='true', nullable=False),
     sa.Column('id_comprador', sa.Integer(), nullable=False),
@@ -85,31 +90,34 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vendas_id'), 'vendas', ['id'], unique=False)
     op.create_table('associacoes',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('doador_id', sa.Integer(), nullable=False),
+    sa.Column('parceiro_id', sa.Integer(), nullable=False),
     sa.Column('lider', sa.String(), nullable=True),
     sa.Column('telefone', sa.String(), nullable=True),
+    sa.Column('data_cadastro', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('cnpj', sa.String(), nullable=True),
     sa.Column('ativo', sa.Boolean(), server_default='true', nullable=False),
-    sa.ForeignKeyConstraint(['doador_id'], ['doadores.id'], ),
+    sa.ForeignKeyConstraint(['parceiro_id'], ['parceiros.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('doador_id')
+    sa.UniqueConstraint('parceiro_id')
     )
     op.create_index(op.f('ix_associacoes_cnpj'), 'associacoes', ['cnpj'], unique=False)
     op.create_index(op.f('ix_associacoes_id'), 'associacoes', ['id'], unique=False)
-    op.create_table('entradas_material',
+    op.create_table('compras',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('codigo_lote', sa.String(), nullable=False),
+    sa.Column('codigo_compra', sa.String(), nullable=True),
     sa.Column('quantidade', sa.Float(), nullable=False),
-    sa.Column('data_entrada', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('status', sa.String(), server_default='Confirmada', nullable=False),
-    sa.Column('id_doador', sa.Integer(), nullable=False),
+    sa.Column('valor_pago_unitario', sa.Float(), nullable=False),
+    sa.Column('valor_pago_total', sa.Float(), nullable=False),
+    sa.Column('data_compra', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('status', sa.String(), server_default='Concluída', nullable=False),
+    sa.Column('id_parceiro', sa.Integer(), nullable=False),
     sa.Column('id_material', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['id_doador'], ['doadores.id'], ),
     sa.ForeignKeyConstraint(['id_material'], ['materiais.id'], ),
+    sa.ForeignKeyConstraint(['id_parceiro'], ['parceiros.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_entradas_material_codigo_lote'), 'entradas_material', ['codigo_lote'], unique=True)
-    op.create_index(op.f('ix_entradas_material_id'), 'entradas_material', ['id'], unique=False)
+    op.create_index(op.f('ix_compras_codigo_compra'), 'compras', ['codigo_compra'], unique=True)
+    op.create_index(op.f('ix_compras_id'), 'compras', ['id'], unique=False)
     op.create_table('itens_venda',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('quantidade_vendida', sa.Float(), nullable=False),
@@ -121,28 +129,45 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_itens_venda_id'), 'itens_venda', ['id'], unique=False)
+    op.create_table('recebimentos_doacao',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo_lote', sa.String(), nullable=True),
+    sa.Column('quantidade', sa.Float(), nullable=False),
+    sa.Column('data_entrada', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('status', sa.String(), server_default='Confirmada', nullable=False),
+    sa.Column('id_parceiro', sa.Integer(), nullable=False),
+    sa.Column('id_material', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['id_material'], ['materiais.id'], ),
+    sa.ForeignKeyConstraint(['id_parceiro'], ['parceiros.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_recebimentos_doacao_codigo_lote'), 'recebimentos_doacao', ['codigo_lote'], unique=True)
+    op.create_index(op.f('ix_recebimentos_doacao_id'), 'recebimentos_doacao', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_recebimentos_doacao_id'), table_name='recebimentos_doacao')
+    op.drop_index(op.f('ix_recebimentos_doacao_codigo_lote'), table_name='recebimentos_doacao')
+    op.drop_table('recebimentos_doacao')
     op.drop_index(op.f('ix_itens_venda_id'), table_name='itens_venda')
     op.drop_table('itens_venda')
-    op.drop_index(op.f('ix_entradas_material_id'), table_name='entradas_material')
-    op.drop_index(op.f('ix_entradas_material_codigo_lote'), table_name='entradas_material')
-    op.drop_table('entradas_material')
+    op.drop_index(op.f('ix_compras_id'), table_name='compras')
+    op.drop_index(op.f('ix_compras_codigo_compra'), table_name='compras')
+    op.drop_table('compras')
     op.drop_index(op.f('ix_associacoes_id'), table_name='associacoes')
     op.drop_index(op.f('ix_associacoes_cnpj'), table_name='associacoes')
     op.drop_table('associacoes')
     op.drop_index(op.f('ix_vendas_id'), table_name='vendas')
     op.drop_index(op.f('ix_vendas_codigo'), table_name='vendas')
     op.drop_table('vendas')
-    op.drop_index(op.f('ix_doadores_nome'), table_name='doadores')
-    op.drop_index(op.f('ix_doadores_id'), table_name='doadores')
-    op.drop_table('doadores')
-    op.drop_index(op.f('ix_tipo_doador_id'), table_name='tipo_doador')
-    op.drop_table('tipo_doador')
+    op.drop_index(op.f('ix_parceiros_nome'), table_name='parceiros')
+    op.drop_index(op.f('ix_parceiros_id'), table_name='parceiros')
+    op.drop_table('parceiros')
+    op.drop_index(op.f('ix_tipo_parceiro_id'), table_name='tipo_parceiro')
+    op.drop_table('tipo_parceiro')
     op.drop_index(op.f('ix_materiais_nome'), table_name='materiais')
     op.drop_index(op.f('ix_materiais_id'), table_name='materiais')
     op.drop_index(op.f('ix_materiais_codigo'), table_name='materiais')

@@ -49,8 +49,7 @@ def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
     response_model=List[schemas.EstoqueGeralResponseItem],
     summary="Lista todos os materiais com o estoque atual calculado"
 )
-def get_estoque_geral(db: Session = Depends(get_db)):
-    estoque_geral_calculado = crud.get_estoque_todos_materiais(db)
-
-    # Retorna a lista. FastAPI/Pydantic cuidam da validação e serialização.
-    return estoque_geral_calculado
+def get_estoque_geral_endpoint(
+    skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+):
+    return crud.get_estoque_todos_materiais(db, skip=skip, limit=limit)
