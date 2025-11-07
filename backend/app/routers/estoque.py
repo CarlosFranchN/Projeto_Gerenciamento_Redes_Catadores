@@ -13,10 +13,10 @@ router = APIRouter(
     tags=["Estoque"]
 )
 
-# Endpoint antigo para estoque de UM material (pode manter)
+
 @router.get(
     "/{id_material}",
-    response_model=schemas.EstoqueGeralResponseItem, # Reutiliza o schema
+    response_model=schemas.EstoqueGeralResponseItem, 
     summary="Consulta o estoque atual de um material específico"
 )
 def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
@@ -35,10 +35,10 @@ def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
 
     estoque = crud.calcular_estoque_material(db, material_id=id_material)
 
-    # Monta a resposta usando o schema definido
+
     return schemas.EstoqueGeralResponseItem(
-        id=material.id, # Corrigido para id em vez de material_id
-        codigo=material.codigo_material,
+        id=material.id, 
+        codigo=material.codigo,
         nome=material.nome,
         categoria=material.categoria,
         estoque_atual=estoque,
@@ -46,10 +46,10 @@ def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
     )
 @router.get(
     "/",
-    response_model=List[schemas.EstoqueGeralResponseItem],
+    response_model=schemas.EstoquePaginadoResponse,
     summary="Lista todos os materiais com o estoque atual calculado"
 )
-def get_estoque_geral_endpoint(
+def get_estoque_geral(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     return crud.get_estoque_todos_materiais(db, skip=skip, limit=limit)

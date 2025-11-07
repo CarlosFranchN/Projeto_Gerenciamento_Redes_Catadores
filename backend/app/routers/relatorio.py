@@ -1,10 +1,10 @@
 # app/routers/relatorio.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import date
-from .. import crud, schemas # Importa os módulos __init__
+from .. import crud, schemas 
 from ..database import get_db
 
 router = APIRouter(
@@ -47,4 +47,4 @@ def get_por_doador_endpoint(
 ):
     """ Retorna o total recebido por doador para um período. """
     # 5. Chamada da função CRUD corrigida
-    return crud.get_report_por_doador(db, start_date=start_date, end_date=end_date)
+    return crud.get_report_por_parceiro(db, start_date=start_date, end_date=end_date)

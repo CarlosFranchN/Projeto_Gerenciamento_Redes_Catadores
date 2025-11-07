@@ -1,5 +1,5 @@
 # app/crud/crud_relatorio.py
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, case
 from .. import models, schemas
 from typing import Optional, List

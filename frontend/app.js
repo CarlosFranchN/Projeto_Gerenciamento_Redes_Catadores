@@ -141,9 +141,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
         </section>
     );
 }
-
-// --- NOVA VIEW DE TIPO DE DOADOR ---
-function TipoDoadorView({ data, onCreate }) {
+function TipoParceiroView({ data, onCreate }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nome, setNome] = useState("");
@@ -154,19 +152,18 @@ function TipoDoadorView({ data, onCreate }) {
 
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome };
         try {
-            const success = await onCreate(payload);
+            const success = await onCreate({ nome });
             if (success) { handleCloseDrawer(); }
-        } catch (error) { console.error("Falha submit tipo doador:", error); }
+        } catch (error) { console.error("Falha submit tipo:", error); }
         finally { setBusy(false); }
     };
 
     return (
         <section>
             <Toolbar>
-                <h2 className="text-xl font-semibold">Tipos de Doador</h2>
-                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setOpen(true); }}>+ Novo Tipo</button>
+                <h2 className="text-xl font-semibold">Tipos de Parceiro</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo Tipo</button>
             </Toolbar>
             <Table
                 columns={[
@@ -174,11 +171,11 @@ function TipoDoadorView({ data, onCreate }) {
                     { key: "nome", header: "Nome" },
                 ]}
                 data={data}
-                emptyLabel="Nenhum tipo de doador cadastrado"
+                emptyLabel="Nenhum tipo cadastrado."
             />
-            <Drawer open={open} onClose={handleCloseDrawer} title="Adicionar Tipo de Doador">
+            <Drawer open={open} onClose={handleCloseDrawer} title="Novo Tipo de Parceiro">
                 <form onSubmit={submit} className="space-y-3">
-                    <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: ASSOCIACAO, ORGAO_PUBLICO" required />
+                    <TextInput label="Nome do Tipo" value={nome} onChange={setNome} placeholder="Ex: ORGAO_PUBLICO" required />
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
@@ -188,7 +185,6 @@ function TipoDoadorView({ data, onCreate }) {
         </section>
     );
 }
-
 // --- NOVA VIEW DE COMPRADORES ---
 function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
     const [open, setOpen] = useState(false);
@@ -300,34 +296,69 @@ function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
     );
 }
 
-// --- ASSOCIAGOESVIEW REFATORADA ---
 function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
+    // --- Estados Locais (Dados, Loading, Paginação, Filtros) ---
+    const [associacoes, setAssociacoes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalAssociacoes, setTotalAssociacoes] = useState(0);
+    const ITENS_POR_PAGINA = 20;
+
+    const [filtroNome, setFiltroNome] = useState("");
+
+    // --- Estados do Formulário (Drawer) ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [editingId, setEditingId] = useState(null);
-
-    // Campos do formulário (agora combinam Doador e Associacao)
     const [nome, setNome] = useState("");
     const [lider, setLider] = useState("");
     const [telefone, setTelefone] = useState("");
     const [cnpj, setCnpj] = useState("");
     const [ativo, setAtivo] = useState(true);
-    // O tipo de doador é fixo, mas precisamos do ID de "ASSOCIACAO"
 
-    // Busca o ID do tipo "ASSOCIACAO" no store
-    const tipoDoadorAssociacaoId = useMemo(() => {
-        const tipoAssoc = store.tipoDoadores.find(t => t.nome === "ASSOCIACAO");
+    // Busca o ID do tipo "ASSOCIACAO" no store global (necessário para criar)
+    const tipoParceiroAssociacaoId = useMemo(() => {
+        const tipoAssoc = store.tiposParceiro.find(t => t.nome === "ASSOCIACAO");
         return tipoAssoc ? tipoAssoc.id : null;
-    }, [store.tipoDoadores]);
+    }, [store.tiposParceiro]);
 
+    // --- useEffect para BUSCAR DADOS ---
+    useEffect(() => {
+        const fetchAssociacoes = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (filtroNome) params.append('nome', filtroNome);
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                const response = await fetch(`${API_URL}/associacoes/?${params.toString()}`);
+                if (!response.ok) throw new Error(`Falha ao buscar associações: ${response.statusText}`);
+                const data = await response.json();
+                setAssociacoes(data.items);
+                setTotalAssociacoes(data.total_count);
+            } catch (error) {
+                console.error("Erro ao buscar associações:", error);
+                alert(error.message);
+                setAssociacoes([]);
+                setTotalAssociacoes(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAssociacoes();
+    }, [filtroNome, paginaAtual, refreshTrigger]);
+
+    // --- Funções do Drawer e Ações ---
     const handleCloseDrawer = () => {
         setOpen(false); setBusy(false); setEditingId(null);
         setNome(""); setLider(""); setTelefone(""); setCnpj(""); setAtivo(true);
     };
 
     const handleOpenCreate = () => {
-        if (!tipoDoadorAssociacaoId) {
-            alert("Erro: O tipo de doador 'ASSOCIACAO' não foi encontrado no banco de dados. Cadastre-o primeiro em 'Tipos de Doador'.");
+        if (!tipoParceiroAssociacaoId) {
+            alert("Erro: Tipo 'ASSOCIACAO' não encontrado. Verifique os cadastros.");
             return;
         }
         handleCloseDrawer();
@@ -336,7 +367,8 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
 
     const handleEdit = (assoc) => {
         setEditingId(assoc.id);
-        setNome(assoc.doador_info?.nome || ""); // Pega o nome do doador_info
+        // CORREÇÃO: O nome agora vem do objeto aninhado 'doador_info'
+        setNome(assoc.doador_info?.nome || "");
         setLider(assoc.lider || "");
         setTelefone(assoc.telefone || "");
         setCnpj(assoc.cnpj || "");
@@ -346,30 +378,30 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
 
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-
-        let payload = {};
         let success = false;
         try {
             if (editingId) {
-                // Ao ATUALIZAR, enviamos o payload de AssociacaoUpdate
-                payload = { nome, lider, telefone, cnpj, ativo };
+                const payload = { nome, lider, telefone, cnpj, ativo };
                 success = await onUpdate(editingId, payload);
             } else {
-                // Ao CRIAR, enviamos o payload de AssociacaoCreate
-                if (!tipoDoadorAssociacaoId) throw new Error("ID do tipo 'ASSOCIACAO' não encontrado.");
-                payload = {
+                const payload = {
                     nome,
-                    id_tipo_doador: tipoDoadorAssociacaoId, // Passa o ID do tipo
-                    lider,
-                    telefone,
-                    cnpj,
-                    ativo
+                    id_tipo_parceiro: tipoParceiroAssociacaoId,
+                    lider, telefone, cnpj, ativo
                 };
                 success = await onCreate(payload);
             }
-            if (success) { handleCloseDrawer(); }
-        } catch (error) { console.error("Falha no submit associação:", error); }
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1); // Força recarregamento da tabela
+            }
+        } catch (error) { console.error("Falha no submit:", error); }
         finally { setBusy(false); }
+    };
+
+    const handleDelete = async (id) => {
+        const success = await onDelete(id);
+        if (success) setRefreshTrigger(t => t + 1);
     };
 
     return (
@@ -378,54 +410,76 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
                 <h2 className="text-xl font-semibold">Associações</h2>
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova Associação</button>
             </Toolbar>
-            <Table
-                columns={[
-                    { key: "id", header: "ID" },
-                    { key: "doador_info", header: "Nome", render: (doador) => doador?.nome || "-" },
-                    { key: "lider", header: "Líder" },
-                    { key: "telefone", header: "Telefone" },
-                    { key: "cnpj", header: "CNPJ" },
-                    {
-                        key: "ativo", header: "Status", render: (isAtivo) => (
-                            <span className={cls("px-2 py-0.5 rounded-full text-xs font-medium", isAtivo ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800")}>
-                                {isAtivo ? "Ativa" : "Inativa"}
+
+            {/* Filtros */}
+            <Card className="p-4 mb-4">
+                <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                        <TextInput label="Filtrar por Nome" value={filtroNome} onChange={setFiltroNome} placeholder="Digite o nome..." />
+                    </div>
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => setFiltroNome("")}>Limpar</button>
+                </div>
+            </Card>
+
+            {/* Tabela */}
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando associações...</div>}
+            {!loading && (
+                <>
+                    <Table
+                        columns={[
+                            { key: "doador_info", header: "Nome", render: (doador) => doador?.nome || "-" },
+                            { key: "lider", header: "Líder" },
+                            { key: "telefone", header: "Telefone" },
+                            { key: "cnpj", header: "CNPJ" },
+                            {
+                                key: "ativo", header: "Status", render: (isAtivo) => (
+                                    <span className={cls("px-2 py-0.5 rounded-full text-xs font-medium", isAtivo ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800")}>
+                                        {isAtivo ? "Ativa" : "Inativa"}
+                                    </span>
+                                )
+                            },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <div className="flex gap-2">
+                                        <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                            onClick={() => handleEdit(row)} title="Editar">
+                                            ✏️ Editar
+                                        </button>
+                                        {row.ativo && (
+                                            <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                                onClick={() => handleDelete(row.id)} title="Inativar">
+                                                🗑️ Inativar
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            },
+                        ]}
+                        data={associacoes}
+                        emptyLabel="Nenhuma associação encontrada."
+                    />
+                    {/* Paginação */}
+                    {totalAssociacoes > ITENS_POR_PAGINA && (
+                        <div className="flex justify-between items-center mt-4">
+                            <span className="text-sm text-neutral-600">
+                                Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalAssociacoes)} de {totalAssociacoes}
                             </span>
-                        )
-                    },
-                    {
-                        key: "actions", header: "Ações", render: (_, row) => (
                             <div className="flex gap-2">
-                                <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                                    onClick={() => handleEdit(row)} title="Editar associação">
-                                    ✏️ Editar
-                                </button>
-                                {row.ativo && (
-                                    <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
-                                        onClick={() => onDelete(row.id)} title="Inativar associação">
-                                        🗑️ Inativar
-                                    </button>
-                                )}
+                                <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-3 py-1 rounded border bg-white disabled:opacity-50">&larr; Anterior</button>
+                                <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalAssociacoes} className="px-3 py-1 rounded border bg-white disabled:opacity-50">Próxima &rarr;</button>
                             </div>
-                        )
-                    },
-                ]}
-                data={store.associacoes}
-                emptyLabel="Nenhuma associação cadastrada"
-            />
+                        </div>
+                    )}
+                </>
+            )}
+
             <Drawer open={open} onClose={handleCloseDrawer} title={editingId ? "Editar Associação" : "Adicionar Associação"}>
                 <form onSubmit={submit} className="space-y-3">
                     <TextInput label="Nome da Associação" value={nome} onChange={setNome} placeholder="Ex: Associação Central" required />
                     <TextInput label="Nome do Líder" value={lider} onChange={setLider} placeholder="Ex: João Silva" />
                     <TextInput label="CNPJ" value={cnpj} onChange={setCnpj} placeholder="00.000.000/0000-00" />
                     <TextInput label="Telefone" value={telefone} onChange={setTelefone} placeholder="(85) 9...." />
-                    <Select
-                        label="Status"
-                        value={String(ativo)}
-                        onChange={(value) => setAtivo(value === 'true')}
-                        options={[{ value: 'true', label: "Ativa" }, { value: 'false', label: "Inativa" }]}
-                        required
-                    />
-                    {/* O ID do Tipo Doador é pego automaticamente via `tipoDoadorAssociacaoId` */}
+                    <Select label="Status" value={String(ativo)} onChange={(value) => setAtivo(value === 'true')} options={[{ value: 'true', label: "Ativa" }, { value: 'false', label: "Inativa" }]} required />
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
@@ -438,7 +492,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
 
 // --- RECEBIMENTOSVIEW REFATORADA ---
 function RecebimentosView({ store, setActive, onCreate, onCancel }) {
-    // Estados locais de dados, filtros e paginação
+    // --- Estados Locais ---
     const [recebimentos, setRecebimentos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -446,84 +500,83 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
     const [totalRecebimentos, setTotalRecebimentos] = useState(0);
     const ITENS_POR_PAGINA = 20;
 
+    // --- Filtros ---
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim, setDataFim] = useState("");
-    const [filtroDoadorId, setFiltroDoadorId] = useState("");
+    const [filtroParceiroId, setFiltroParceiroId] = useState(""); // Renomeado para Parceiro
     const [filtroMaterialId, setFiltroMaterialId] = useState("");
 
-    // Estados do formulário (Drawer)
+    // --- Estados do Formulário (Drawer) ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [tipoDoador, setTipoDoador] = useState("associacao"); // 'associacao' ou 'outro'
-    const [doadorId, setDoadorId] = useState(""); // Para o Select
-    const [nomeDoadorExterno, setNomeDoadorExterno] = useState(""); // Para o TextInput
+    // const [data, setData] = useState(todayISO()); // REMOVIDO: Data é automática no back
+    const [tipoParceiroMode, setTipoParceiroMode] = useState("cadastrado"); // 'cadastrado' ou 'outro'
+    const [parceiroId, setParceiroId] = useState(""); // Para o Select (ID)
+    const [nomeParceiroExterno, setNomeParceiroExterno] = useState(""); // Para o TextInput (Nome)
     const [materialId, setMaterialId] = useState("");
     const [quantidade, setQuantidade] = useState("");
 
-    // Opções dos Selects (do store global)
+    // --- Opções para Selects ---
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-    // Filtra doadores para mostrar apenas associações (ou todos, dependendo da regra)
-    const doadoresOpts = store.doadores.map(d => ({ value: String(d.id), label: `${d.nome} (${d.tipo_info.nome})` }));
+    // 👇 USA A LISTA DE PARCEIROS (que inclui Associações e outros)
+    const parceirosOpts = store.parceiros.map(p => ({ value: String(p.id), label: p.nome }));
 
-    // useEffect para buscar dados filtrados e paginados
+    // --- Busca de Dados (useEffect) ---
     useEffect(() => {
         const fetchRecebimentos = async () => {
             setLoading(true);
             const params = new URLSearchParams();
             if (dataInicio) params.append('data_inicio', dataInicio);
             if (dataFim) params.append('end_date', dataFim);
-            if (filtroDoadorId) params.append('id_doador', filtroDoadorId);
+            // 👇 Usa o nome correto do filtro da API
+            if (filtroParceiroId) params.append('id_parceiro', filtroParceiroId);
             if (filtroMaterialId) params.append('id_material', filtroMaterialId);
 
-            const skip = paginaAtual * ITENS_POR_PAGINA;
-            params.append('skip', skip);
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
+                // 👇 URL CORRETA: /recebimentos/ (se você renomeou no backend) ou /entradas/
+                // Vou assumir /recebimentos/ conforme nossa última conversa de backend.
+                // SE DER 404, TROQUE DE VOLTA PARA /entradas/
                 const response = await fetch(`${API_URL}/entradas/?${params.toString()}`);
-                if (!response.ok) throw new Error(`Falha ao buscar recebimentos: ${response.statusText}`);
+                if (!response.ok) throw new Error(`Falha ao buscar: ${response.statusText}`);
                 const data = await response.json();
                 setRecebimentos(data.items);
                 setTotalRecebimentos(data.total_count);
             } catch (error) {
-                console.error("Erro ao buscar recebimentos:", error);
-                alert(error.message);
-                setRecebimentos([]);
-                setTotalRecebimentos(0);
-            } finally {
-                setLoading(false);
-            }
+                console.error("Erro buscr recebimentos:", error);
+                setRecebimentos([]); setTotalRecebimentos(0);
+            } finally { setLoading(false); }
         };
         fetchRecebimentos();
-    }, [dataInicio, dataFim, filtroDoadorId, filtroMaterialId, paginaAtual, refreshTrigger]);
+    }, [dataInicio, dataFim, filtroParceiroId, filtroMaterialId, paginaAtual, refreshTrigger]);
 
-    // Funções do Drawer
+    // --- Actions ---
     const handleCloseDrawer = () => {
-        setOpen(false); setBusy(false); setMaterialId(""); setAssociacaoId(""); setQuantidade("");
-        setDoadorId(""); setNomeDoadorExterno(""); setTipoDoador("associacao");
+        setOpen(false); setBusy(false);
+        setMaterialId(""); setQuantidade("");
+        setParceiroId(""); setNomeParceiroExterno(""); setTipoParceiroMode("cadastrado");
     };
 
     const onSubmit = async (e) => {
         e.preventDefault();
         setBusy(true);
 
-        let doadorParaSalvar = null;
-        if (tipoDoador === 'associacao') {
-            if (!doadorId) {
-                alert("Selecione um doador.");
-                setBusy(false);
-                return;
-            }
-            doadorParaSalvar = Number(doadorId);
+        // Lógica para decidir qual ID de parceiro usar
+        let idParceiroFinal = null;
+        if (tipoParceiroMode === 'cadastrado') {
+            if (!parceiroId) { alert("Selecione um parceiro."); setBusy(false); return; }
+            idParceiroFinal = Number(parceiroId);
         } else {
-            alert("A criação de doadores externos ainda não foi implementada neste formulário.");
+            alert("Criação rápida de parceiro externo ainda não implementada. Por favor, cadastre-o primeiro na aba 'Cadastros'.");
             setBusy(false);
-            return; 
+            return;
         }
 
         const payload = {
-            materialId: Number(materialId),
-            id_doador: doadorParaSalvar,
+            id_parceiro: idParceiroFinal, // 👈 Envia o campo correto para a API
+            id_material: Number(materialId),
             quantidade: parseFloat(quantidade || "0"),
         };
 
@@ -533,113 +586,97 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
                 handleCloseDrawer();
                 setRefreshTrigger(t => t + 1);
             }
-        } catch (error) { /* erro já tratado em onCreate */ }
-        finally { setBusy(false); }
+        } catch (error) { } finally { setBusy(false); }
     };
 
-    // Função de Cancelamento
     const handleCancel = async (id) => {
         const success = await onCancel(id);
-        if (success) {
-            setRefreshTrigger(t => t + 1);
-        }
+        if (success) setRefreshTrigger(t => t + 1);
     };
 
-    const totalFiltrado = recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
+    const totalPagina = recebimentos.reduce((s, x) => s + Number(x.quantidade || 0), 0);
 
     return (
         <section>
             <Toolbar>
-                <h2 className="text-xl font-semibold">Recebimentos</h2>
-                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo recebimento</button>
+                <h2 className="text-xl font-semibold">Recebimentos (Doações)</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo</button>
             </Toolbar>
 
             <Card className="p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
                     <TextInput label="Data Fim" type="date" value={dataFim} onChange={setDataFim} />
-                    <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos os Materiais" />
-                    <Select label="Filtrar por Doador" value={filtroDoadorId} onChange={setFiltroDoadorId} options={doadoresOpts} placeholder="Todos os Doadores" />
-                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroDoadorId(""); }}>Limpar Filtros</button>
+                    <Select label="Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos" />
+                    <Select label="Parceiro (Doador)" value={filtroParceiroId} onChange={setFiltroParceiroId} options={parceirosOpts} placeholder="Todos" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroParceiroId(""); }}>Limpar</button>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <StatCard title="Entradas (Filtradas)" value={totalRecebimentos} />
-                <StatCard title="Total Recebido (Página)" value={`${totalFiltrado.toFixed(1)} Kg`} />
-                <Card className="p-5">
-                    <div className="text-sm text-neutral-500">Ações rápidas</div>
-                    <div className="mt-2 flex gap-2">
-                        <button className="px-3 py-1.5 rounded-lg border text-sm" onClick={() => setActive("materiais")}>+ Material</button>
-                        <button className="px-3 py-1.5 rounded-lg border text-sm" onClick={() => setActive("associacoes")}>+ Associação</button>
-                    </div>
-                </Card>
+                <StatCard title="Total Registros" value={totalRecebimentos} subtitle="Filtrados" />
+                <StatCard title="Qtd. Recebida" value={`${totalPagina.toFixed(1)} Kg`} subtitle="Nesta página" />
             </div>
 
-            {loading && <div className="text-center p-4 text-emerald-600">Carregando recebimentos...</div>}
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando...</div>}
             {!loading && (
-                <Table
-                    columns={[
-                        { key: "data_entrada", header: "Data", render: v => fmtDateBR(v) },
-                        { key: "codigo_lote", header: "Cód. Lote" },
-                        { key: "material", header: "Material", render: (_, row) => row.material?.nome || "-" },
-                        { key: "doador", header: "Doador", render: (_, row) => row.doador?.nome || "-" },
-                        { key: "quantidade", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
-                        {
-                            key: "actions", header: "Ações", render: (_, row) => (
-                                <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                    onClick={() => handleCancel(row.id)} title="Cancelar recebimento">
-                                    🚫 Cancelar
-                                </button>
-                            )
-                        },
-                    ]}
-                    data={recebimentos}
-                    emptyLabel="Nenhum recebimento encontrado para os filtros selecionados."
-                />
+                <>
+                    <Table
+                        columns={[
+                            { key: "data_entrada", header: "Data", render: v => fmtDateBR(v) },
+                            { key: "codigo_lote", header: "Cód. Lote" },
+                            // 👇 Lê o nome do objeto parceiro aninhado
+                            { key: "parceiro", header: "Parceiro (Doador)", render: (p) => p?.nome || "-" },
+                            { key: "material", header: "Material", render: (m) => m?.nome || "-" },
+                            { key: "quantidade", header: "Qtd.", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
+                                        onClick={() => handleCancel(row.id)} title="Cancelar recebimento">
+                                        🚫 Cancelar
+                                    </button>
+                                )
+                            },
+                        ]}
+                        data={recebimentos}
+                        emptyLabel="Nenhum recebimento encontrado."
+                    />
+                    {/* Paginação Simplificada */}
+                    {totalRecebimentos > ITENS_POR_PAGINA && (
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-3 py-1 rounded border bg-white disabled:opacity-50">&larr; Anterior</button>
+                            <span className="px-3 py-1 text-sm text-neutral-600">Pág. {paginaAtual + 1}</span>
+                            <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalRecebimentos} className="px-3 py-1 rounded border bg-white disabled:opacity-50">Próxima &rarr;</button>
+                        </div>
+                    )}
+                </>
             )}
 
-            {!loading && totalRecebimentos > ITENS_POR_PAGINA && (
-                <div className="flex justify-between items-center mt-4">
-                    <span className="text-sm text-neutral-600">
-                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalRecebimentos)} de {totalRecebimentos} entradas
-                    </span>
-                    <div className="flex gap-2">
-                        <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                            &larr; Anterior
-                        </button>
-                        <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalRecebimentos} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                            Próxima &rarr;
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            <Drawer open={open} onClose={handleCloseDrawer} title="Adicionar Recebimento">
-                <form onSubmit={onSubmit} className="space-y-3">
-                    <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
-                    <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 120" required />
-
-                    <hr />
-                    <div className="text-sm text-neutral-600">Tipo de Doador</div>
-                    <div className="flex gap-2">
-                        <Pill active={tipoDoador === 'associacao'} onClick={() => setTipoDoador('associacao')}>Cadastrado</Pill>
-                        <Pill active={tipoDoador === 'outro'} onClick={() => setTipoDoador('outro')}>Outro</Pill>
+            <Drawer open={open} onClose={handleCloseDrawer} title="Novo Recebimento (Doação)">
+                <form onSubmit={onSubmit} className="space-y-4">
+                    <div className="text-sm font-medium text-neutral-700">Fonte da Doação</div>
+                    {/* Seletor de Modo (Cadastrado vs Outro) */}
+                    <div className="flex gap-2 mb-2">
+                        <Pill active={tipoParceiroMode === 'cadastrado'} onClick={() => setTipoParceiroMode('cadastrado')}>Parceiro Cadastrado</Pill>
+                        <Pill active={tipoParceiroMode === 'outro'} onClick={() => setTipoParceiroMode('outro')}>Outro (Rápido)</Pill>
                     </div>
 
-                    {tipoDoador === 'associacao' ? (
-                        <Select label="Doador Cadastrado" value={doadorId} onChange={setDoadorId} options={doadoresOpts} required />
+                    {tipoParceiroMode === 'cadastrado' ? (
+                        <Select label="Selecione o Parceiro" value={parceiroId} onChange={setParceiroId} options={parceirosOpts} required />
                     ) : (
-                        <TextInput label="Nome do Doador Externo" value={nomeDoadorExterno} onChange={setNomeDoadorExterno} placeholder="Ex: Prefeitura, João Silva..." required />
+                        <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800">
+                            Para manter a integridade dos dados, por favor cadastre novos parceiros na aba <strong>Cadastros - Parceiros</strong> primeiro.
+                        </div>
+
                     )}
 
-                    <div className="text-xs text-neutral-500 pt-2">
-                        *A criação de 'Outro Doador' precisa ser implementada. Por enquanto, selecione um 'Doador Cadastrado'.
-                    </div>
+                    <hr className="my-4" />
+                    <Select label="Material Recebido" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
+                    <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 150.5" required />
 
-                    <div className="flex justify-end gap-2 pt-2">
+                    <div className="flex justify-end gap-2 pt-4">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
-                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
+                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvar" : "Salvar"}</button>
                     </div>
                 </form>
             </Drawer>
@@ -647,7 +684,6 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
     );
 }
 
-// --- VENDASVIEW REFATORADA ---
 function VendasView({ store, setActive, onCreate, onCancel }) {
     // Estados locais de dados, filtros e paginação
     const [vendas, setVendas] = useState([]);
@@ -974,7 +1010,6 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         </section>
     );
 }
-
 function RelatoriosView({ store }) {
     const [start, setStart] = useState("");
     const [end, setEnd] = useState("");
@@ -995,13 +1030,12 @@ function RelatoriosView({ store }) {
                 const [summaryRes, porMaterialRes, porAssocRes] = await Promise.all([
                     fetch(`${API_URL}/relatorio/summary?${queryString}`),
                     fetch(`${API_URL}/relatorio/por-material?${queryString}`),
-                    // CORREÇÃO: URL da Rota
                     fetch(`${API_URL}/relatorio/por-doador?${queryString}`)
                 ]);
 
                 if (!summaryRes.ok) { throw new Error(`Erro Sumário: ${summaryRes.statusText}`); }
                 if (!porMaterialRes.ok) { throw new Error(`Erro Por Material: ${porMaterialRes.statusText}`); }
-                if (!porAssocRes.ok) { throw new Error(`Erro Por Doador: ${porAssocRes.statusText}`); } // Corrigido
+                if (!porAssocRes.ok) { throw new Error(`Erro Por Doador: ${porAssocRes.statusText}`); }
 
                 const summaryJson = await summaryRes.json();
                 const porMaterialJson = await porMaterialRes.json();
@@ -1009,14 +1043,11 @@ function RelatoriosView({ store }) {
 
                 setSummaryData(summaryJson);
                 setPorMaterialData(porMaterialJson);
-                setPorAssociacaoData(porAssocJson); // Salva os dados de doador
+                setPorAssociacaoData(porAssocJson);
 
             } catch (error) {
                 console.error("Erro ao buscar dados dos relatórios:", error);
-                alert(`Erro ao carregar relatórios: ${error.message}. Verifique o console e o backend.`);
-                setSummaryData({ total_recebido: 0, total_vendido: 0, receita_periodo: 0 });
-                setPorMaterialData([]);
-                setPorAssociacaoData([]);
+                // alert(`Erro ao carregar relatórios: ${error.message}`); // Opcional: comentar para não spammar alertas em dev
             } finally {
                 setLoading(false);
             }
@@ -1028,13 +1059,7 @@ function RelatoriosView({ store }) {
     const revChartRef = useRef(null), revChartInstance = useRef(null);
 
     useEffect(() => {
-        if (!window.Chart || !porMaterialData) {
-            if (recChartInstance.current) recChartInstance.current.destroy();
-            if (revChartInstance.current) revChartInstance.current.destroy();
-            recChartInstance.current = null;
-            revChartInstance.current = null;
-            return;
-        }
+        if (!window.Chart || !porMaterialData) return;
 
         const recLabels = porMaterialData.map(m => m.nome);
         const recData = porMaterialData.map(m => m.recebido);
@@ -1044,14 +1069,14 @@ function RelatoriosView({ store }) {
         if (recChartInstance.current) recChartInstance.current.destroy();
         if (revChartInstance.current) revChartInstance.current.destroy();
 
-        if (recChartRef.current && recData.length > 0) {
+        if (recChartRef.current && porMaterialData.length > 0) {
             recChartInstance.current = new Chart(recChartRef.current, {
                 type: "bar",
                 data: { labels: recLabels, datasets: [{ label: "Recebido (Kg)", data: recData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }] },
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }
-        if (revChartRef.current && revData.length > 0) {
+        if (revChartRef.current && porMaterialData.length > 0) {
             revChartInstance.current = new Chart(revChartRef.current, {
                 type: "bar",
                 data: { labels: revLabels, datasets: [{ label: "Receita (R$)", data: revData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
@@ -1081,10 +1106,13 @@ function RelatoriosView({ store }) {
             {!loading && (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <StatCard title="Total recebido" value={`${summaryData.total_recebido.toFixed(1)} Kg`} subtitle="No período selecionado" />
-                        <StatCard title="Total vendido" value={`${summaryData.total_vendido.toFixed(1)} Kg`} subtitle="No período selecionado" />
+
+                        <StatCard title="Total recebido" value={`${Number(summaryData.total_recebido || 0).toFixed(1)} Kg`} subtitle="No período selecionado" />
+                        <StatCard title="Total vendido" value={`${Number(summaryData.total_vendido || 0).toFixed(1)} Kg`} subtitle="No período selecionado" />
                         <StatCard title="Receita no período" value={money(summaryData.receita_periodo)} />
                     </div>
+
+
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         <Card className="p-6">
                             <div className="text-sm text-neutral-500 mb-2">Recebidos por Material (Kg)</div>
@@ -1097,15 +1125,17 @@ function RelatoriosView({ store }) {
                             {porMaterialData.length === 0 && !loading && <div className="text-neutral-400 text-sm mt-4 text-center">Sem dados de receita no período.</div>}
                         </Card>
                     </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <Card className="p-6">
                             <div className="text-sm text-neutral-500 mb-3">Resumo por Material</div>
                             <Table
                                 columns={[
                                     { key: "nome", header: "Material" },
-                                    { key: "recebido", header: "Recebido", render: (v, row) => `${v.toFixed(1)} ${row.unidade_medida}` },
-                                    { key: "vendido", header: "Vendido", render: (v, row) => `${v.toFixed(1)} ${row.unidade_medida}` },
-                                    { key: "saldo", header: "Saldo", render: (v, row) => `${v.toFixed(1)} ${row.unidade_medida}` },
+                                    // 👇 PROTEÇÃO APLICADA AQUI 👇
+                                    { key: "recebido", header: "Recebido", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
+                                    { key: "vendido", header: "Vendido", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
+                                    { key: "saldo", header: "Saldo", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
                                     { key: "receita", header: "Receita", render: v => money(v) },
                                 ]}
                                 data={porMaterialData}
@@ -1113,14 +1143,14 @@ function RelatoriosView({ store }) {
                             />
                         </Card>
                         <Card className="p-6">
-                            {/* CORREÇÃO: Título da Tabela */}
                             <div className="text-sm text-neutral-500 mb-3">Recebido por Doador (Kg)</div>
                             <Table
                                 columns={[
-                                    { key: "nome", header: "Doador" }, // Corrigido
-                                    { key: "quantidade", header: "Quantidade Total", render: (v) => v.toFixed(1) + ' Kg' },
+                                    { key: "nome", header: "Doador" },
+                                    { key: "tipo_parceiro", header: "Tipo", render: (v) => <span className="text-xs bg-slate-100 px-2 py-1 rounded">{v}</span> },
+                                    { key: "quantidade_recebida", header: "Doou (Kg)", render: (v) => Number(v || 0).toFixed(1) }
                                 ]}
-                                data={porAssociacaoData} // Usa o estado
+                                data={porAssociacaoData}
                                 emptyLabel="Sem recebimentos no período"
                             />
                         </Card>
@@ -1131,95 +1161,221 @@ function RelatoriosView({ store }) {
     );
 }
 
-// ========== App ==========
+function ComprasView({ store, setActive, onCreate, onCancel }) {
+    // --- Estados Locais ---
+    const [compras, setCompras] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalCompras, setTotalCompras] = useState(0);
+    const ITENS_POR_PAGINA = 20;
 
+    // --- Filtros ---
+    const [dataInicio, setDataInicio] = useState("");
+    const [dataFim, setDataFim] = useState("");
+    const [filtroParceiroId, setFiltroParceiroId] = useState("");
+    const [filtroMaterialId, setFiltroMaterialId] = useState("");
+
+    // --- Estados do Formulário ---
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [dataCompra, setDataCompra] = useState(todayISO()); // Opcional, backend gera automático
+    const [parceiroId, setParceiroId] = useState("");
+    const [materialId, setMaterialId] = useState("");
+    const [quantidade, setQuantidade] = useState("");
+    const [valorUnitario, setValorUnitario] = useState(""); // NOVO CAMPO!
+
+    // --- Opções para Selects ---
+    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
+    // Usa 'store.parceiros' para listar fornecedores (que são um tipo de parceiro)
+    const parceirosOpts = store.parceiros.map(p => ({ value: String(p.id), label: `${p.nome} (${p.tipo_info?.nome})` }));
+
+    // --- Busca de Dados ---
+    useEffect(() => {
+        const fetchCompras = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('end_date', dataFim);
+            if (filtroParceiroId) params.append('id_parceiro', filtroParceiroId);
+            if (filtroMaterialId) params.append('id_material', filtroMaterialId);
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                // Certifique-se que a rota '/compras/' existe no backend!
+                const response = await fetch(`${API_URL}/compras/?${params.toString()}`);
+                if (!response.ok) throw new Error(`Falha ao buscar compras: ${response.statusText}`);
+                const data = await response.json();
+                setCompras(data.items);
+                setTotalCompras(data.total_count);
+            } catch (error) {
+                console.error("Erro buscar compras:", error);
+                setCompras([]); setTotalCompras(0);
+            } finally { setLoading(false); }
+        };
+        fetchCompras();
+    }, [dataInicio, dataFim, filtroParceiroId, filtroMaterialId, paginaAtual, refreshTrigger]);
+
+    // --- Actions ---
+    const handleCloseDrawer = () => {
+        setOpen(false); setBusy(false);
+        setDataCompra(todayISO());
+        setMaterialId(""); setQuantidade(""); setValorUnitario(""); setParceiroId("");
+    };
+
+    const onSubmit = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        const payload = {
+            id_parceiro: Number(parceiroId),
+            id_material: Number(materialId),
+            quantidade: parseFloat(quantidade || "0"),
+            valor_pago_unitario: parseFloat(valorUnitario || "0") // NOVO!
+        };
+        try {
+            const success = await onCreate(payload);
+            if (success) { handleCloseDrawer(); setRefreshTrigger(t => t + 1); }
+        } catch (error) { } finally { setBusy(false); }
+    };
+
+    const handleCancel = async (id) => {
+        if (await onCancel(id)) setRefreshTrigger(t => t + 1);
+    };
+
+    const totalQtd = compras.reduce((s, x) => s + Number(x.quantidade || 0), 0);
+    const totalPago = compras.reduce((s, x) => s + (Number(x.quantidade || 0) * Number(x.valor_pago_unitario || 0)), 0);
+
+    return (
+        <section>
+            <Toolbar>
+                <h2 className="text-xl font-semibold">Compras (Entradas com Custo)</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Nova Compra</button>
+            </Toolbar>
+
+            <Card className="p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                    <TextInput label="Início" type="date" value={dataInicio} onChange={setDataInicio} />
+                    <TextInput label="Fim" type="date" value={dataFim} onChange={setDataFim} />
+                    <Select label="Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos" />
+                    <Select label="Fornecedor (Parceiro)" value={filtroParceiroId} onChange={setFiltroParceiroId} options={parceirosOpts} placeholder="Todos" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroMaterialId(""); setFiltroParceiroId(""); }}>Limpar</button>
+                </div>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <StatCard title="Registros (Filtrados)" value={totalCompras} />
+                <StatCard title="Qtd. Comprada" value={`${totalQtd.toFixed(1)} Kg`} subtitle="Nesta página" />
+                <StatCard title="Total Pago" value={money(totalPago)} subtitle="Nesta página" />
+            </div>
+
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando...</div>}
+            {!loading && (
+                <>
+                    <Table
+                        columns={[
+                            { key: "data_compra", header: "Data", render: v => fmtDateBR(v) },
+                            { key: "codigo_compra", header: "Cód." },
+                            { key: "parceiro", header: "Fornecedor", render: (p) => p?.nome || "-" },
+                            { key: "material", header: "Material", render: (m) => m?.nome || "-" },
+                            { key: "quantidade", header: "Qtd.", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
+                            // NOVAS COLUNAS DE VALOR
+                            { key: "valor_pago_unitario", header: "Valor Unit.", render: v => money(v) },
+                            { key: "valor_pago_total", header: "Total Pago", render: v => money(v) },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                        onClick={() => handleCancel(row.id)} title="Cancelar compra">
+                                        🚫 Cancelar
+                                    </button>
+                                )
+                            },
+                        ]}
+                        data={compras}
+                        emptyLabel="Nenhuma compra encontrada."
+                    />
+                    {/* (Bloco de Paginação igual aos outros - copie se quiser) */}
+                </>
+            )}
+
+            <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Compra">
+                <form onSubmit={onSubmit} className="space-y-4">
+                    <TextInput label="Data" type="date" value={dataCompra} onChange={setDataCompra} required />
+                    <Select label="Fornecedor (Parceiro)" value={parceiroId} onChange={setParceiroId} options={parceirosOpts} required />
+                    <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
+                    <div className="grid grid-cols-2 gap-4">
+                        <TextInput label="Quantidade" type="number" value={quantidade} onChange={setQuantidade} placeholder="Ex: 500" required />
+                        {/* NOVO INPUT DE VALOR */}
+                        <TextInput label="Valor Unit. Pago (R$)" type="number" value={valorUnitario} onChange={setValorUnitario} placeholder="Ex: 0.50" required />
+                    </div>
+                    <div className="p-3 bg-slate-100 rounded-lg text-right font-medium">
+                        Total a Pagar: {money((parseFloat(quantidade || 0) * parseFloat(valorUnitario || 0)))}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvar Compra" : "Salvar"}</button>
+                    </div>
+                </form>
+            </Drawer>
+        </section>
+    );
+}
+
+
+
+// ========== App ==========
 function App() {
     const API_URL = "http://127.0.0.1:8000";
     const [active, setActive] = useState("dashboard");
+
+    // Store atualizado com os novos nomes (parceiros, tiposParceiro)
     const [store, setStore] = useState({
         materiais: [],
         associacoes: [],
-        compradores: [], 
-        tipoDoadores: [], 
-        doadores: [],
-        recebimentos: [], 
-        vendas: [],       
+        compradores: [],
+        tiposParceiro: [], // Renomeado de tipoDoadores
+        parceiros: [],     // Renomeado de doadores
+        recebimentos: [],
+        vendas: [],
     });
     const [loading, setLoading] = useState(true);
 
-    // --- Funções de Busca Reutilizáveis ---
-    const fetchMaterialsWithStock = async () => {
-        try {
-            const response = await fetch(`${API_URL}/estoque/`);
-            if (!response.ok) throw new Error(`Fetch Estoque: ${response.statusText}`);
-            return await response.json();
-        } catch (error) { console.error("Erro fetchMaterialsWithStock:", error); throw error; }
-    };
-    const fetchAssociacoes = async () => {
-        try {
-            const response = await fetch(`${API_URL}/associacoes/`);
-            if (!response.ok) throw new Error(`Fetch Associações: ${response.statusText}`);
-            return await response.json();
-        } catch (error) { console.error("Erro fetchAssociacoes:", error); throw error; }
-    };
-    // NOVO: Fetch Compradores
-    const fetchCompradores = async () => {
-        try {
-            const response = await fetch(`${API_URL}/compradores/`);
-            if (!response.ok) throw new Error(`Fetch Compradores: ${response.statusText}`);
-            return await response.json();
-        } catch (error) { console.error("Erro fetchCompradores:", error); throw error; }
-    };
-    // NOVO: Fetch Tipos de Doador
-    const fetchTipoDoadores = async () => {
-        try {
-            const response = await fetch(`${API_URL}/tipo_doador/`);
-            if (!response.ok) throw new Error(`Fetch Tipos Doador: ${response.statusText}`);
-            return await response.json();
-        } catch (error) { console.error("Erro fetchTipoDoadores:", error); throw error; }
+    // Helper genérico de fetch
+    const fetchAPI = async (endpoint) => {
+        const res = await window.fetch(`${API_URL}${endpoint}`);
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText} em ${endpoint}`);
+        return res.json();
     };
 
-    const fetchDoadores = async () => {
-        try {
-            const response = await fetch(`${API_URL}/doadores/`);
-            if (!response.ok)
-                throw new Error(`Fetch Doadores: ${response.statusText}`);
-            return await response.json();
-        } catch (error) {
-            console.error("Erro fetchDoadores:", error);
-            throw error;
-        }
-    };
-    // REMOVIDO: fetchEntradas e fetchVendas (agora são locais)
-
-    // --- Busca de Dados Iniciais ---
+    // --- Busca Inicial de Dados ---
     useEffect(() => {
         const loadInitialData = async () => {
             setLoading(true);
-            console.log("Buscando dados cadastrais (Materiais, Associações, Compradores, Tipos)...");
+            console.log("Buscando dados cadastrais V3 (Parceiros)...");
             try {
-                // ATUALIZADO: Busca os dados mestres
-                const [materiaisData, associacoesData, compradoresData, tipoDoadoresData, doadoresData] =
-                    await Promise.all([
-                        fetchMaterialsWithStock(),
-                        fetchAssociacoes(),
-                        fetchCompradores(),
-                        fetchTipoDoadores(),
-                        fetchDoadores(),
-                    ]);
+                // Busca paralela usando as NOVAS rotas
+                const [mats, assocs, comps, tipos, parcs] = await Promise.all([
+                    fetchAPI('/estoque/'),
+                    fetchAPI('/associacoes/'),
+                    fetchAPI('/compradores/'),
+                    fetchAPI('/tipos_parceiro/'),
+                    fetchAPI('/parceiros/')
+                ]);
+
                 setStore({
-                    materiais: materiaisData,
-                    associacoes: associacoesData,
-                    compradores: compradoresData.items, 
-                    tipoDoadores: tipoDoadoresData,
-                    doadores: doadoresData,
-                    recebimentos: [], 
-                    vendas: [],       
+                    materiais: mats.items || mats,
+                    associacoes: assocs.items || assocs,
+                    compradores: comps.items || comps,
+                    tiposParceiro: tipos,           // Salva em tiposParceiro
+                    parceiros: parcs.items || parcs, // Salva em parceiros
+                    recebimentos: [], // Carregados sob demanda pela View
+                    vendas: []        // Carregados sob demanda pela View
                 });
-                console.log("Dados cadastrais carregados com sucesso!");
-            } catch (error) {
-                console.error("Falha GERAL ao carregar dados cadastrais:", error);
-                alert(`Não foi possível carregar os dados de cadastro.\nErro: ${error.message}`);
+                console.log("Dados V3 carregados com sucesso!");
+            } catch (err) {
+                console.error("Erro fatal no carregamento inicial:", err);
+                alert(`Erro ao conectar com o backend V3.\nVerifique se o servidor está rodando e se as rotas '/parceiros/' e '/tipos_parceiro/' existem.\nErro: ${err.message}`);
             } finally {
                 setLoading(false);
             }
@@ -1227,328 +1383,257 @@ function App() {
         loadInitialData();
     }, []);
 
-    // --- Função Helper para Atualizar Estoque ---
-    const refreshMateriaisComEstoque = async () => {
+    // --- Helpers de Refresh ---
+    const refreshEstoque = async () => {
         try {
-            const updatedMaterials = await fetchMaterialsWithStock();
-            setStore((s) => ({ ...s, materiais: updatedMaterials }));
-        } catch (error) {
-            console.error("Falha ao re-buscar estoque após ação:", error);
-        }
+            const data = await fetchAPI('/estoque/');
+            setStore(s => ({ ...s, materiais: data.items || data }));
+        } catch (e) { console.error("Erro refresh estoque:", e); }
     };
-    // Função Helper para Atualizar Associações (após criar/editar)
     const refreshAssociacoes = async () => {
         try {
-            const updatedData = await fetchAssociacoes();
-            setStore((s) => ({ ...s, associacoes: updatedData }));
-        } catch (error) {
-            console.error("Falha ao re-buscar associações:", error);
-        }
+            const data = await fetchAPI('/associacoes/');
+            setStore(s => ({ ...s, associacoes: data.items || data }));
+        } catch (e) { console.error("Erro refresh associacoes:", e); }
     };
-    // Função Helper para Atualizar Compradores
     const refreshCompradores = async () => {
         try {
-            const updatedData = await fetchCompradores();
-            setStore((s) => ({ ...s, compradores: updatedData.items })); // Assume paginação
-        } catch (error) {
-            console.error("Falha ao re-buscar compradores:", error);
-        }
+            const data = await fetchAPI('/compradores/');
+            setStore(s => ({ ...s, compradores: data.items || data }));
+        } catch (e) { console.error("Erro refresh compradores:", e); }
     };
-    // Função Helper para Atualizar Tipos de Doador
-    const refreshTipoDoadores = async () => {
+    const refreshTiposParceiro = async () => {
         try {
-            const updatedData = await fetchTipoDoadores();
-            setStore((s) => ({ ...s, tipoDoadores: updatedData }));
-        } catch (error) {
-            console.error("Falha ao re-buscar tipos de doador:", error);
-        }
+            const data = await fetchAPI('/tipos_parceiro/');
+            setStore(s => ({ ...s, tiposParceiro: data }));
+        } catch (e) { console.error("Erro refresh tipos parceiro:", e); }
+    };
+    const refreshParceiros = async () => {
+        try {
+            const data = await fetchAPI('/parceiros/');
+            setStore(s => ({ ...s, parceiros: data.items || data }));
+        } catch (e) { console.error("Erro refresh parceiros:", e); }
     };
 
-    // --- Funções CREATE ---
+    // --- Funções de Ação (CREATE/UPDATE/DELETE) ---
+
+    // MATERIAIS
     const createMaterial = async (payload) => {
-        const payloadParaAPI = { ...payload }; // 'unidade' já é 'unidade_medida' no form
+        const payloadAPI = { ...payload, unidade_medida: payload.unidade };
         try {
-            const response = await fetch(`${API_URL}/materiais/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshMateriaisComEstoque();
-            return true;
-        } catch (error) { console.error("Erro criar material:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/materiais/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadAPI) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const updateMaterial = async (id, payload) => {
+        const payloadAPI = { ...payload, unidade_medida: payload.unidade };
+        try {
+            const res = await window.fetch(`${API_URL}/materiais/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadAPI) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    // NOVO: createTipoDoador
-    const createTipoDoador = async (payload) => {
+    // TIPOS DE PARCEIRO (Novo)
+    const createTipoParceiro = async (payload) => {
         try {
-            const response = await fetch(`${API_URL}/tipo_doador/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshTipoDoadores(); // Re-busca a lista
-            return true;
-        } catch (error) { console.error("Erro criar tipo doador:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/tipos_parceiro/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshTiposParceiro(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    // NOVO: createComprador
+    // COMPRADORES
     const createComprador = async (payload) => {
         try {
-            const response = await fetch(`${API_URL}/compradores/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshCompradores(); // Re-busca a lista
-            return true;
-        } catch (error) { console.error("Erro criar comprador:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/compradores/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshCompradores(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const updateComprador = async (id, payload) => {
+        try {
+            const res = await window.fetch(`${API_URL}/compradores/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshCompradores(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const deleteComprador = async (id) => {
+        if (!confirm("Inativar comprador?")) return false;
+        try {
+            const res = await window.fetch(`${API_URL}/compradores/${id}`, { method: 'DELETE' });
+            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshCompradores(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    // REFATORADO: createAssociacao
+    // ASSOCIAÇÕES (Agora cria Parceiro + Associacao)
     const createAssociacao = async (payload) => {
         try {
-            const response = await fetch(`${API_URL}/associacoes/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshAssociacoes(); // Re-busca a lista
-            return true;
-        } catch (error) { console.error("Erro criar associação:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/associacoes/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshAssociacoes(); await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
-
-    // REFATORADO: createRecebimento
-    const createRecebimento = async (payload) => {
-        // A lógica de criar 'Outro Doador' deve ser tratada ANTES de chamar esta função
-        // Esta função agora espera um 'id_doador' válido
-        const payloadParaAPI = {
-            quantidade: payload.quantidade,
-            id_material: payload.materialId,
-            id_doador: payload.id_doador,
-        };
-        try {
-            const response = await fetch(`${API_URL}/entradas/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) {
-                const errorData = await response.json();
-                let errorMsg = "Falha ao registrar recebimento.";
-                if (errorData.detail && Array.isArray(errorData.detail)) { errorMsg = errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; '); }
-                else if (errorData.detail) { errorMsg = errorData.detail; }
-                throw new Error(errorMsg);
-            }
-            // Não precisa mais atualizar o store local (pois a view re-busca)
-            // Apenas atualiza o estoque
-            await refreshMateriaisComEstoque();
-            return true;
-        } catch (error) {
-            console.error("Erro criar recebimento:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
-    };
-
-    // REFATORADO: createVenda
-    const createVenda = async (payload) => {
-        const payloadParaAPI = {
-            id_comprador: payload.id_comprador, // Agora espera ID
-            concluida: true,
-            itens: payload.itens,
-        };
-        console.log("Enviando para API (Venda):", JSON.stringify(payloadParaAPI, null, 2));
-        try {
-            const response = await fetch(`${API_URL}/vendas/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) {
-                const errorData = await response.json();
-                let errorMsg = `Falha ao registrar venda (Status: ${response.status})`;
-                if (errorData.detail && Array.isArray(errorData.detail)) {
-                    errorMsg += `: ${errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('; ')}`;
-                } else if (errorData.detail) { errorMsg += `: ${errorData.detail}`; }
-                throw new Error(errorMsg);
-            }
-            // Não precisa mais atualizar o store local (pois a view re-busca)
-            await refreshMateriaisComEstoque();
-            return true;
-        } catch (error) {
-            console.error("Erro criar venda:", error);
-            alert(`Erro: ${error.message}`);
-            return false;
-        }
-    };
-
-    // --- Funções UPDATE ---
-    const updateMaterial = async (id, payload) => {
-        const payloadParaAPI = { ...payload }; // 'unidade' já é 'unidade_medida' no form
-        try {
-            const response = await fetch(`${API_URL}/materiais/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshMateriaisComEstoque();
-            return true;
-        } catch (error) { console.error("Erro atualizar material:", error); alert(`Erro: ${error.message}`); return false; }
-    };
-
     const updateAssociacao = async (id, payload) => {
-        const payloadParaAPI = { ...payload };
         try {
-            const response = await fetch(`${API_URL}/associacoes/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshAssociacoes(); // Re-busca a lista de associações
-            return true;
-        } catch (error) { console.error("Erro atualizar associação:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/associacoes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshAssociacoes(); await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
-
-    // NOVO: updateComprador
-    const updateComprador = async (id, payload) => {
-        const payloadParaAPI = { ...payload };
-        try {
-            const response = await fetch(`${API_URL}/compradores/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadParaAPI) });
-            if (!response.ok) { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-            await refreshCompradores(); // Re-busca a lista de compradores
-            return true;
-        } catch (error) { console.error("Erro atualizar comprador:", error); alert(`Erro: ${error.message}`); return false; }
-    };
-
-    // --- Funções DELETE / CANCEL ---
     const deleteAssociacao = async (id) => {
-        if (!confirm("Tem certeza que deseja INATIVAR esta associação?")) return false;
+        if (!confirm("Inativar associação?")) return false;
         try {
-            const response = await fetch(`${API_URL}/associacoes/${id}`, { method: "DELETE" });
-            if (response.status === 204) {
-                await refreshAssociacoes(); // Re-busca a lista
-                return true;
-            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-        } catch (error) { console.error("Erro inativar associação:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/associacoes/${id}`, { method: 'DELETE' });
+            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshAssociacoes(); await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    // NOVO: deleteComprador (Soft Delete)
-    const deleteComprador = async (id) => {
-        if (!confirm("Tem certeza que deseja INATIVAR este comprador?")) return false;
+    // RECEBIMENTOS (Agora usa /recebimentos/ e id_parceiro)
+    const createRecebimento = async (payload) => {
+        // Payload esperado: { id_parceiro, id_material, quantidade }
         try {
-            const response = await fetch(`${API_URL}/compradores/${id}`, { method: "DELETE" });
-            if (response.status === 204) {
-                await refreshCompradores(); // Re-busca a lista
-                return true;
-            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-        } catch (error) { console.error("Erro inativar comprador:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/recebimentos/`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro ao criar recebimento"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const cancelRecebimento = async (id) => {
+        if (!confirm("Cancelar recebimento?")) return false;
+        try {
+            const res = await window.fetch(`${API_URL}/recebimentos/${id}`, { method: 'DELETE' });
+            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    const cancelEntrada = async (id) => {
-        if (!confirm("Tem certeza que deseja CANCELAR este recebimento? O estoque será recalculado.")) return false;
+    // VENDAS (Usa id_comprador)
+    const createVenda = async (payload) => {
         try {
-            const response = await fetch(`${API_URL}/entradas/${id}`, { method: "DELETE" });
-            if (response.status === 204) {
-                // A view vai re-buscar automaticamente
-                await refreshMateriaisComEstoque(); // Atualiza estoque
-                return true;
-            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-        } catch (error) { console.error("Erro cancelar recebimento:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/vendas/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro ao criar venda"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
     };
-
     const cancelVenda = async (id) => {
-        if (!confirm("Tem certeza que deseja CANCELAR esta venda? O estoque será recalculado.")) return false;
+        if (!confirm("Cancelar venda?")) return false;
         try {
-            const response = await fetch(`${API_URL}/vendas/${id}`, { method: "DELETE" });
-            if (response.status === 204) {
-                // A view vai re-buscar automaticamente
-                await refreshMateriaisComEstoque(); // Atualiza estoque
-                return true;
-            } else { const d = await response.json(); throw new Error(d.detail || "Erro"); }
-        } catch (error) { console.error("Erro cancelar venda:", error); alert(`Erro: ${error.message}`); return false; }
+            const res = await window.fetch(`${API_URL}/vendas/${id}`, { method: 'DELETE' });
+            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshEstoque(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const createCompra = async (payload) => {
+
+        try {
+            const res = await window.fetch(`${API_URL}/compras/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || "Erro ao registrar compra");
+            }
+            await refreshMateriaisComEstoque();
+            return true;
+        } catch (e) { alert(e.message); return false; }
     };
 
-    // --- Renderização ---
+
+    const cancelCompra = async (id) => {
+        if (!confirm("Cancelar esta compra? O estoque será reduzido e o valor estornado nos relatórios.")) return false;
+        try {
+            const res = await window.fetch(`${API_URL}/compras/${id}`, { method: 'DELETE' });
+            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await refreshMateriaisComEstoque(); // Atualiza estoque!
+            return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+
     return (
-        <div className="min-h-screen">
-            <header className="backdrop-blur bg-white/70 border-b border-black/5 sticky top-0 z-40">
+        <div className="min-h-screen bg-slate-50">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-2xl bg-emerald-600 grid place-items-center text-white font-bold">RC</div>
+                    <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">RC</div>
                     <div className="flex-1">
-                        <div className="font-semibold leading-tight">Rede de Catadores – Gestão</div>
-                        <div className="text-xs text-neutral-500">v2.0 (Doador/Comprador)</div>
+                        <div className="font-semibold leading-tight text-slate-900">Rede de Catadores</div>
+                        <div className="text-xs text-slate-500">Sistema de Gestão v3.0</div>
                     </div>
                 </div>
             </header>
 
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[240px,1fr] gap-6 px-4 py-6">
-                <aside className="md:sticky md:top-16 h-max">
-                    <nav className="bg-white/80 rounded-2xl border border-black/5 shadow-sm p-3 space-y-4">
-
-                        {/* GRUPO 1: Navegação Principal */}
+                <aside className="md:sticky md:top-20 h-max">
+                    <nav className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-6">
                         <div>
-                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Navegação</div>
-                            <div className="flex flex-wrap md:flex-col gap-2">
-                                <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>Dashboard</Pill>
-                                <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>Relatórios</Pill>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Principal</div>
+                            <div className="flex flex-col gap-1">
+                                <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>📊 Dashboard</Pill>
                             </div>
                         </div>
-
-                        {/* GRUPO 2: Cadastros (Comprador antes de Associação) */}
                         <div>
-                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Cadastros</div>
-                            <div className="flex flex-wrap md:flex-col gap-2">
-                                <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>Materiais/Estoque</Pill>
-                                <Pill active={active === "compradores"} onClick={() => setActive("compradores")}>Compradores</Pill>
-                                <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>Associações</Pill>
-                                <Pill active={active === "tipoDoadores"} onClick={() => setActive("tipoDoadores")}>Tipos de Doador</Pill>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Operação</div>
+                            <div className="flex flex-col gap-1">
+                                <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>📥 Recebimentos</Pill>
+                                <Pill active={active === "compras"} onClick={() => setActive("compras")}>💸 Compras</Pill>
+                                <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>📤 Vendas</Pill>
                             </div>
                         </div>
-
-                        {/* GRUPO 3: Comercialização (Sua nova ideia) */}
                         <div>
-                            <div className="text-xs uppercase tracking-wide text-neutral-500 px-2 pb-2">Comercialização</div>
-                            <div className="flex flex-wrap md:flex-col gap-2">
-                                <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>Vendas</Pill>
-                                <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>Recebimentos</Pill>
-
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Cadastros</div>
+                            <div className="flex flex-col gap-1">
+                                <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>📦 Materiais</Pill>
+                                <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>🤝 Associações</Pill>
+                                <Pill active={active === "compradores"} onClick={() => setActive("compradores")}>💰 Compradores</Pill>
+                                {/* Pill para Tipos de Parceiro (opcional, pode ficar escondido se não for usado sempre) */}
+                                <Pill active={active === "tipoParceiros"} onClick={() => setActive("tipoParceiros")}>🏷️ Tipos de Parceiro</Pill>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Análise</div>
+                            <div className="flex flex-col gap-1">
+                                <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>📈 Relatórios</Pill>
                             </div>
                         </div>
                     </nav>
                 </aside>
 
-                <main className="space-y-6">
-                    {loading && (<div className="text-center p-6 text-xl text-emerald-600"> Carregando dados... </div>)}
-
-                    {!loading && active === "dashboard" && (<DashboardView store={store} />)}
-                    {!loading && active === "materiais" && (
-                        <MateriaisView
-                            data={store.materiais}
-                            onCreate={createMaterial}
-                            onUpdate={updateMaterial}
-                        />
-                    )}
-                    {!loading && active === "associacoes" && (
-                        <AssociacoesView
-                            store={store} // Passa o store para ler os tipoDoadores
-                            data={store.associacoes}
-                            onCreate={createAssociacao}
-                            onUpdate={updateAssociacao}
-                            onDelete={deleteAssociacao}
-                        />
-                    )}
-                    {!loading && active === "compradores" && (
-                        <CompradoresView
-                            data={store.compradores}
-                            onCreate={createComprador}
-                            onUpdate={updateComprador}
-                            onDelete={deleteComprador}
-                        />
-                    )}
-                    {!loading && active === "tipoDoadores" && (
-                        <TipoDoadorView
-                            data={store.tipoDoadores}
-                            onCreate={createTipoDoador}
-                        />
-                    )}
-                    {!loading && active === "recebimentos" && (
-                        <RecebimentosView
-                            store={store}
-                            setActive={setActive}
-                            onCreate={createRecebimento}
-                            onCancel={cancelEntrada}
-                        />
-                    )}
-                    {!loading && active === "vendas" && (
-                        <VendasView
-                            store={store}
-                            setActive={setActive}
-                            onCreate={createVenda}
-                            onCancel={cancelVenda}
-                        />
-                    )}
-                    {!loading && active === "relatorios" && (
-                        <RelatoriosView store={store} />
+                <main>
+                    {loading ? (
+                        <div className="flex items-center justify-center h-64 text-slate-500">
+                            <svg className="animate-spin h-8 w-8 text-emerald-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Carregando dados...
+                        </div>
+                    ) : (
+                        <>
+                            {active === "dashboard" && <DashboardView store={store} />}
+                            {active === "materiais" && <MateriaisView data={store.materiais} onCreate={createMaterial} onUpdate={updateMaterial} />}
+                            {/* Passamos 'store' para AssociacoesView poder ler 'tiposParceiro' */}
+                            {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} />}
+                            {active === "compradores" && <CompradoresView data={store.compradores} onCreate={createComprador} onUpdate={updateComprador} onDelete={deleteComprador} />}
+                            {/* View para Tipos de Parceiro (você precisará criar ou adaptar TipoDoadorView) */}
+                            {active === "tipoParceiros" && <TipoParceiroView data={store.tiposParceiro} onCreate={createTipoParceiro} />}
+                            {active === "recebimentos" && <RecebimentosView store={store} setActive={setActive} onCreate={createRecebimento} onCancel={cancelRecebimento} />}
+                            {active === "compras" && (
+                                <ComprasView
+                                    store={store}
+                                    setActive={setActive}
+                                    onCreate={createCompra}
+                                    onCancel={cancelCompra}
+                                />
+                            )}
+                            {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} />}
+                            {active === "relatorios" && <RelatoriosView store={store} />}
+                        </>
                     )}
                 </main>
             </div>
-            <footer className="py-8 text-center text-xs text-neutral-500">
-                Sistema de Gestão - v2.0
-            </footer>
         </div>
     );
 }
