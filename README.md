@@ -69,25 +69,71 @@ O sistema diferencia duas formas de entrada de material, ambas alimentando o mes
 O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é dividido em camadas claras de responsabilidade, facilitando manutenção e escalabilidade.
 
 ```plaintext
-backend/app/
-├── core/         # Configurações (env) e Segurança (Auth JWT)
-├── models.py     # Definição das Tabelas (SQLAlchemy ORM)
-├── schemas/      # Contratos de Dados (Pydantic) - Validação de Entrada/Saída
-│   ├── schema_parceiro.py
-│   ├── schema_venda.py
-│   └── ...
-├── crud/         # Regras de Negócio e Acesso ao Banco
-│   ├── crud_estoque.py   # Lógica complexa de cálculo de estoque
-│   ├── crud_relatorio.py # Agregações para dashboards
-│   └── ...
-└── routers/      # Endpoints da API (Controllers)
-    ├── auth.py
-    ├── recebimentos.py
-    └── ...
+backend/
+├── alembic
+│   ├── versions
+│   │   
+│   ├── README
+│   ├── env.py
+│   └── script.py.mako
+├── app
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   └── security.py
+│   ├── crud
+│   │   ├── __init__.py
+│   │   ├── associacao.py
+│   │   ├── compra.py
+│   │   ├── comprador.py
+│   │   ├── material.py
+│   │   ├── parceiro.py
+│   │   ├── recebimento.py
+│   │   ├── relatorio.py
+│   │   ├── tipo_parceiro.py
+│   │   ├── usuario.py
+│   │   └── venda.py
+│   ├── routers
+│   │   ├── __init__.py
+│   │   ├── associacoes.py
+│   │   ├── auth.py
+│   │   ├── compradores.py
+│   │   ├── compras.py
+│   │   ├── estoque.py
+│   │   ├── materiais.py
+│   │   ├── parceiros.py
+│   │   ├── recebimentos.py
+│   │   ├── relatorio.py
+│   │   ├── tipos_parceiro.py
+│   │   └── vendas.py
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   ├── schema_associacao.py
+│   │   ├── schema_compra.py
+│   │   ├── schema_comprador.py
+│   │   ├── schema_estoque.py
+│   │   ├── schema_material.py
+│   │   ├── schema_parceiro.py
+│   │   ├── schema_recebimento.py
+│   │   ├── schema_relatorio.py
+│   │   ├── schema_tipo_parceiro.py
+│   │   ├── schema_usuario.py
+│   │   └── schema_venda.py
+│   ├── __init__.py
+│   ├── database.py
+│   ├── dependecies.py
+│   ├── main.py
+│   └── models.py
+├── .gitignore
+├── alembic.ini
+├── criar_usuario.py
+└── requirements.txt
 
+```
+---
 
-⚙️ Instalação e Execução
-🧩 Pré-requisitos
+## Instalação e Execução
+    🧩 Pré-requisitos
 
 Python 3.11+
 
@@ -95,33 +141,41 @@ PostgreSQL (Banco de dados local rodando)
 
 Git
 
-1️⃣ Configuração do Backend (API)
-# 1. Clone o repositório
+### 1️⃣ Configuração do Backend (API)
+#### 1. Clone o repositório
+```
 git clone https://github.com/SEU_USUARIO/rede-catadores.git
 cd rede-catadores/backend
-
-# 2. Crie e ative o ambiente virtual
+```
+#### 2. Crie e ative o ambiente virtual
+```
 python -m venv venv
-# Windows: .\venv\Scripts\activate
-# Linux/Mac: source venv/bin/activate
-
-# 3. Instale as dependências
+Windows: .\venv\Scripts\activate
+Linux/Mac: source venv/bin/activate
+```
+#### 3. Instale as dependências
+```
 pip install -r requirements.txt
-
-# 4. Configure as variáveis de ambiente
-# Crie um arquivo .env na pasta backend/ com o conteúdo:
-# DATABASE_URL="postgresql+psycopg://USUARIO:SENHA@localhost/rede_catadores_db"
-# SECRET_KEY="sua_chave_super_secreta"
-# ALGORITHM="HS256"
-
-# 5. Crie o Banco de Dados
-# (Certifique-se que o banco 'rede_catadores_db' existe no seu Postgres)
+```
+#### 4. Configure as variáveis de ambiente
+```
+#Crie um arquivo .env na pasta backend/ com o conteúdo:
+DATABASE_URL="postgresql+psycopg://USUARIO:SENHA@localhost/rede_catadores_db"
+SECRET_KEY="sua_chave_super_secreta"
+ALGORITHM="HS256"
+```
+#### 5. Crie o Banco de Dados
+```
+#(Certifique-se que o banco 'rede_catadores_db' existe no seu Postgres)
 alembic upgrade head
-
-# 6. Inicie o Servidor
+```
+#### 6. Inicie o Servidor
+```
 uvicorn app.main:app --reload
+```
+--- 
 
-
+``` 
 🔗 A API estará disponível em: http://127.0.0.1:8000
 
 📘 Documentação interativa: http://127.0.0.1:8000/docs
@@ -134,9 +188,9 @@ cd ../frontend
 
 # Inicie um servidor HTTP simples
 python -m http.server 8001
+``` 
 
-
-🛣️ Roadmap (Próximos Passos)
+## 🛣️ Roadmap (Próximos Passos)
 [x] V1.0: CRUDs básicos de Materiais e Associações.
 
 [x] V2.0: Implementação de Vendas e Controle de Estoque Dinâmico.
