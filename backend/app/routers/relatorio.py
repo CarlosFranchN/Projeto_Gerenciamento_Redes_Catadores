@@ -6,10 +6,12 @@ from typing import List, Optional
 from datetime import date
 from .. import crud, schemas 
 from ..database import get_db
+from ..dependecies import get_current_user
 
 router = APIRouter(
     prefix="/relatorio",
-    tags=["Relatorio"]
+    tags=["Relatorio"],
+    dependencies=[Depends(get_current_user)]
 )
 
 @router.get("/summary", response_model=schemas.ReportSummaryResponse)

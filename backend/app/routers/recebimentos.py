@@ -5,10 +5,12 @@ from typing import List, Optional
 from datetime import date
 from .. import crud, schemas 
 from ..database import get_db
+from ..dependecies import get_current_user
 
 router = APIRouter(
     prefix="/entradas", 
-    tags=["Recebimentos"]
+    tags=["Recebimentos"],
+    dependencies=[Depends(get_current_user)]
 )
 @router.post("/", response_model=schemas.RecebimentoDoacao, status_code=status.HTTP_201_CREATED)
 def create_recebimento(recebimento: schemas.RecebimentoDoacaoCreate, db: Session = Depends(get_db)):

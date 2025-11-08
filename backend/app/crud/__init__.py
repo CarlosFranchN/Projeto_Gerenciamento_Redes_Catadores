@@ -7,3 +7,4 @@ from .recebimento import *
 from .venda import *
 from .relatorio import *
 from .compra import *
+from .usuario import *

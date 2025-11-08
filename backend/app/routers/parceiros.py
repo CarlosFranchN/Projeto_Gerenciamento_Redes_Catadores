@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, schemas
 from ..database import get_db
+from ..dependecies import get_current_user
 
 router = APIRouter(
     prefix="/parceiros",
-    tags=["Parceiros (Geral)"]
+    tags=["Parceiros (Geral)"],
+    dependencies=[Depends(get_current_user)]
 )
 
 @router.get("/", response_model=schemas.ParceirosPaginadosResponse) # 👈 MUDANÇA AQUI

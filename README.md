@@ -1,164 +1,155 @@
-# Sistema de Gestão da Rede de Catadores
+# Sistema de Gestão da Rede de Catadores ♻️
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=for-the-badge&logo=postgresql)
-
-## 📜 Sobre o Projeto
-
-Este repositório contém o código-fonte da aplicação full-stack para o Sistema de Gestão e Análise da Rede de Catadores de Resíduos Sólidos de Fortaleza. O objetivo é criar uma solução completa, com um backend robusto e um frontend reativo, para digitalizar e otimizar todo o fluxo de recebimento de materiais, controle de estoque, vendas e geração de relatórios estratégicos.
-
-O projeto segue uma arquitetura monolítica modular no backend e um padrão de design MVC (Model-Schema-Endpoint) para garantir um código limpo, organizado e de fácil manutenção.
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![Status](https://img.shields.io/badge/Status-MVP%20v3.0-success?style=for-the-badge)
 
 ---
 
-## 🚀 Tecnologias Principais
+## 📖 Sobre o Projeto
 
-* **Backend:**
-    * **Linguagem:** Python 3.11+
-    * **Framework Web:** FastAPI
-    * **Banco de Dados:** PostgreSQL
-    * **ORM:** SQLAlchemy 2.0
-    * **Migrações:** Alembic
-    * **Validação:** Pydantic V2
-* **Frontend:**
-    * **Biblioteca:** React 18 (via UMD)
-    * **Estilização:** TailwindCSS (via CDN)
+Este é um sistema **full-stack** desenvolvido para profissionalizar a gestão da **Rede de Catadores de Resíduos Sólidos**.  
+O sistema substitui planilhas manuais por uma aplicação web robusta que controla o fluxo completo de materiais — desde a **entrada (por doação ou compra)** até a **venda para a indústria recicladora**.
+
+A versão atual (**v3.0**) introduziu uma **arquitetura híbrida** capaz de gerenciar diferentes tipos de parceiros e operações financeiras complexas, mantendo um controle de **estoque auditável em tempo real**.
 
 ---
 
-## ⚙️ Configuração do Ambiente de Desenvolvimento
+## ✨ Funcionalidades Principais (v3.0)
 
-Siga os passos abaixo para configurar o ambiente e rodar o projeto completo em sua máquina local.
+### 🏗️ Gestão de Parceiros & Compradores
 
-### 1. Pré-requisitos
+- **Base Unificada de Parceiros:** Cadastro centralizado de quem fornece material, classificado por tipo:
+  - 🤝 **Associações/Cooperativas:** Com dados detalhados (Líder, CNPJ, Telefone).
+  - 🏛️ **Órgãos Públicos:** Prefeituras, Secretarias.
+  - 🏭 **Empresas Privadas:** Geradores de resíduos comerciais.
+  - 👤 **Catadores Individuais:** Autônomos.
+- **Gestão de Compradores:** Cadastro de clientes (indústrias, depósitos) para quem a rede vende o material consolidado.
 
-Antes de começar, garanta que você tenha as seguintes ferramentas instaladas:
-* [Python 3.11+](https://www.python.org/downloads/)
-* [Git](https://git-scm.com/downloads)
-* [PostgreSQL](https://www.postgresql.org/download/) (um servidor rodando localmente)
+---
 
-### 2. Clonando o Repositório
-```bash
-git clone [URL_DO_SEU_REPOSITORIO_AQUI]
-cd nome-do-repositorio
-```
+### 🚚 Operações de Entrada (Híbridas)
 
-### 3. Configurando o Backend
-Navegue até a pasta do backend para configurar o ambiente Python.
-```bash
-cd backend
+O sistema diferencia duas formas de entrada de material, ambas alimentando o mesmo estoque físico:
 
-# Crie o ambiente virtual
+1. **📥 Recebimentos (Doações):** Entradas sem custo financeiro para a Rede (vindas de Associações, Órgãos Públicos, etc.).  
+2. **💸 Compras:** Aquisições de material com registro de valor pago (R$), permitindo cálculo de custos.
+
+---
+
+### 📤 Operações de Saída
+
+- **Vendas:** Registro de saída de material para Compradores, com cálculo automático de receita.
+
+---
+
+### 📊 Inteligência & Controle
+
+- **Estoque em Tempo Real:** Calculado dinamicamente (`Entradas + Compras - Vendas`), garantindo integridade sem depender de um campo estático.
+- **Relatórios Gerenciais:**
+  - Balanço por período.
+  - Performance por Material (Kg recebidos vs. vendidos).
+  - Ranking de Parceiros (Quem mais doou/vendeu para a rede).
+  - **Lucro Bruto:** `Receita Total de Vendas - Custo Total de Compras`.
+
+---
+
+### 🔐 Segurança (Backend Ready)
+
+- Estrutura de autenticação JWT (JSON Web Tokens) implementada no Backend.  
+- Hash de senhas com Bcrypt.  
+- *(Integração com frontend em andamento).*
+
+---
+
+## 🛠️ Arquitetura Técnica
+
+O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é dividido em camadas claras de responsabilidade, facilitando manutenção e escalabilidade.
+
+```plaintext
+backend/app/
+├── core/         # Configurações (env) e Segurança (Auth JWT)
+├── models.py     # Definição das Tabelas (SQLAlchemy ORM)
+├── schemas/      # Contratos de Dados (Pydantic) - Validação de Entrada/Saída
+│   ├── schema_parceiro.py
+│   ├── schema_venda.py
+│   └── ...
+├── crud/         # Regras de Negócio e Acesso ao Banco
+│   ├── crud_estoque.py   # Lógica complexa de cálculo de estoque
+│   ├── crud_relatorio.py # Agregações para dashboards
+│   └── ...
+└── routers/      # Endpoints da API (Controllers)
+    ├── auth.py
+    ├── recebimentos.py
+    └── ...
+
+
+⚙️ Instalação e Execução
+🧩 Pré-requisitos
+
+Python 3.11+
+
+PostgreSQL (Banco de dados local rodando)
+
+Git
+
+1️⃣ Configuração do Backend (API)
+# 1. Clone o repositório
+git clone https://github.com/SEU_USUARIO/rede-catadores.git
+cd rede-catadores/backend
+
+# 2. Crie e ative o ambiente virtual
 python -m venv venv
+# Windows: .\venv\Scripts\activate
+# Linux/Mac: source venv/bin/activate
 
-# Ative o ambiente
-# No Windows (PowerShell):
-.\venv\Scripts\activate
-# No Mac/Linux:
-source venv/bin/activate
-
-# Instale todas as dependências do backend
+# 3. Instale as dependências
 pip install -r requirements.txt
-```
 
-### 4. Configurando as Variáveis de Ambiente
-As configurações sensíveis são gerenciadas por um arquivo `.env` dentro da pasta `backend`.
+# 4. Configure as variáveis de ambiente
+# Crie um arquivo .env na pasta backend/ com o conteúdo:
+# DATABASE_URL="postgresql+psycopg://USUARIO:SENHA@localhost/rede_catadores_db"
+# SECRET_KEY="sua_chave_super_secreta"
+# ALGORITHM="HS256"
 
-**Arquivo: `backend/.env`**
-```env
-# Lembre-se de adicionar o .env ao seu .gitignore!
-DATABASE_URL="postgresql+psycopg://SEU_USUARIO:SUA_SENHA@localhost/rede_catadores_db"
-```
-> **Atenção:** Substitua `SEU_USUARIO` e `SUA_SENHA` pelas suas credenciais do PostgreSQL. `rede_catadores_db` é o nome do banco de dados que você deve criar manualmente no seu PostgreSQL via pgAdmin ou outro cliente.
-
----
-
-## 🏗️ Configurando o Banco de Dados
-
-Com o ambiente do backend pronto, precisamos criar a estrutura de tabelas no banco de dados.
-
-Dentro da pasta `backend/` (com o `venv` ativado), rode o seguinte comando:
-```bash
+# 5. Crie o Banco de Dados
+# (Certifique-se que o banco 'rede_catadores_db' existe no seu Postgres)
 alembic upgrade head
-```
-Isso irá criar todas as tabelas definidas em `app/models.py`.
 
----
+# 6. Inicie o Servidor
+uvicorn app.main:app --reload
 
-## ▶️ Rodando a Aplicação (Backend e Frontend)
 
-Para rodar o sistema completo, você precisará de **dois terminais abertos simultaneamente**.
+🔗 A API estará disponível em: http://127.0.0.1:8000
 
-### **Terminal 1: Rodando o Backend (API)**
-Neste terminal, você iniciará o servidor FastAPI.
+📘 Documentação interativa: http://127.0.0.1:8000/docs
 
-```bash
-# Navegue até a pasta do backend
-cd backend
+2️⃣ Execução do Frontend (Interface)
 
-# Ative o ambiente virtual (se ainda não estiver)
-.\venv\Scripts\activate
+O frontend foi construído para ser ultra-leve, sem necessidade de npm ou build complexos para o MVP.
+# Abra um novo terminal e navegue para a pasta frontend
+cd ../frontend
 
-# Inicie o servidor Uvicorn
-uvicorn app.main:app --reload --port 8000
-```
-* O servidor da API estará rodando em `http://127.0.0.1:8000`.
-* A documentação interativa (Swagger UI) estará disponível em `http://127.0.0.1:8000/docs`.
-
-### **Terminal 2: Rodando o Frontend (Interface)**
-Neste segundo terminal, você servirá o arquivo `index.html`.
-
-```bash
-# Navegue até a pasta do frontend
-cd frontend
-
-# Inicie um servidor HTTP simples do Python
+# Inicie um servidor HTTP simples
 python -m http.server 8001
-```
-* A interface do usuário estará acessível em `http://127.0.0.1:8001`.
 
-Abra `http://127.0.0.1:8001` no seu navegador para usar a aplicação.
 
----
+🛣️ Roadmap (Próximos Passos)
+[x] V1.0: CRUDs básicos de Materiais e Associações.
 
-## 🌐 Principais Endpoints da API
+[x] V2.0: Implementação de Vendas e Controle de Estoque Dinâmico.
 
-A API do backend expõe os seguintes endpoints principais para manipulação dos dados:
+[x] V3.0: Arquitetura de Parceiros Híbridos e Módulo de Compras.
 
-* `POST /materiais/` - Cria um novo tipo de material.
-* `GET /materiais/` - Lista todos os materiais.
-* `POST /associacoes/` - Cadastra uma nova associação.
-* `GET /associacoes/` - Lista todas as associações ativas.
-* `POST /compradores/` - Cadastra um novo comprador.
-* `GET /compradores/` - Lista todos os compradores.
-* `POST /entradas/` - Registra uma nova entrada de material.
-* `GET /entradas/` - Lista o histórico de entradas.
-* `POST /vendas/` - Registra uma nova venda com seus itens.
-* `GET /vendas/` - Lista o histórico de vendas.
+[ ] V3.1: Integração do Login (JWT) no Frontend.
 
----
+[ ] V3.2: Implementação de Testes Automatizados (pytest) no Backend.
 
-## 🏛️ Estrutura do Projeto
+[ ] V4.0: Deploy em produção (Render + GitHub Pages/Vercel).
 
-O projeto é dividido em duas pastas principais na raiz: `backend` e `frontend`.
+📄 Licença
 
-```
-projeto_raiz/
-├── backend/      # Aplicação FastAPI (API)
-│   ├── .env
-│   ├── alembic.ini
-│   ├── app/
-│   │   ├── core/
-│   │   ├── crud.py
-│   │   ├── database.py
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── routers/
-│   │   └── schemas.py
-│   └── alembic/
-└── frontend/     # Aplicação React/HTML (Interface do Usuário)
-    └── index.html
-```
----
+Este projeto está sob a licença MIT.
+Sinta-se livre para usar, modificar e distribuir.

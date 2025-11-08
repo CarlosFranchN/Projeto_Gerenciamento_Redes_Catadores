@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, models, schemas
 from ..database import SessionLocal
-
+from ..dependecies import get_current_user
 def get_db():
     db = SessionLocal()
     try:
@@ -14,7 +14,8 @@ def get_db():
 
 router = APIRouter(
     prefix="/compradores",
-    tags=["Compradores"]
+    tags=["Compradores"],
+    dependencies=[Depends(get_current_user)]
 )
 
 @router.post("/", response_model=schemas.Comprador)

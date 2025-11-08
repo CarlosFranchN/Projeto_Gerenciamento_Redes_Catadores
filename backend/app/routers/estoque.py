@@ -5,12 +5,14 @@ from typing import List
 from app import crud, models
 from app.database import get_db
 from .. import schemas
+from ..dependecies import get_current_user
 
 
 
 router = APIRouter(
     prefix="/estoque",
-    tags=["Estoque"]
+    tags=["Estoque"],
+    dependencies=[Depends(get_current_user)]
 )
 
 

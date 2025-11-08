@@ -2,6 +2,18 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, F
 from sqlalchemy.orm import relationship
 from .database import Base 
 
+class Usuario(Base):
+    __tablename__ = "usuarios"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False) 
+    nome = Column(String)
+    ativo = Column(Boolean,default=True)
+
+    def __repr__(self):
+        return f"<Usuario(email='{self.email}', role='{self.role}')>"
+
 class Material(Base):
     __tablename__ = "materiais"
     
