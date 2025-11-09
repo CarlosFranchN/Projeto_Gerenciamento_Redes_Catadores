@@ -289,7 +289,7 @@
       <h3 class="text-2xl font-semibold text-green-700 mb-4">Login</h3>
       <input type="text" placeholder="Usuário" class="w-full mb-3 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
       <input type="password" placeholder="Senha" class="w-full mb-4 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
-      <button class="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 w-full">Entrar</button>
+      <button type="button" class="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 w-full">Entrar</button>
       <button id="closeLogin" class="mt-4 text-sm text-gray-600 hover:text-red-600">✖ Fechar</button>
     </div>
   </div>
@@ -373,25 +373,82 @@
 
   <!-- SCRIPTS -->
   <script>
+
+    const API_URL = "http://127.0.0.1:8000"
+
     // Login modal
     const modalLogin = document.getElementById('modalLogin');
     const btnLogin = document.getElementById('btnLogin');
     const closeLogin = document.getElementById('closeLogin');
 
-    btnLogin.addEventListener('click', () => modalLogin.classList.remove('hidden'));
+
+    const loginBtnAction = modalLogin.querySelector("button.bg-green-700");
+    const inputUser = modalLogin.querySelector("input[type='text']");
+    const inputPass = modalLogin.querySelector("input[type='password']");
+
+    btnLogin.onclick = () => {
+      modalLogin.classList.remove('hidden')
+      inputUser.focus()
+    }
+
     closeLogin.addEventListener('click', () => modalLogin.classList.add('hidden'));
 
-    const USERNAME = "admin";
-    const PASSWORD = "12345";
-    modalLogin.querySelector("button.bg-green-700").onclick = () => {
-      const user = modalLogin.querySelector("input[type='text']").value.trim();
-      const pass = modalLogin.querySelector("input[type='password']").value;
-      if (user === USERNAME && pass === PASSWORD) {
-        window.location.href = "index.html";
-      } else {
-        alert("Usuário ou senha incorretos!");
+    modalLogin.onclick = (e) => {
+      if (e.target === modalLogin) modalLogin.classList.add('hidden')
+    }
+
+    loginBtnAction.onclick = async (e) => {
+      if (e) e.preventDefault()
+      const username = inputUser.value.trim()
+      const password = inputPass.value
+
+      if (!username || !password){
+        alert("Por favor, preencha o usuário e a senha")
+        return
       }
-    };
+
+      const originalText = loginBtnAction.innerText
+      loginBtnAction.innerText = "Entrandoooo..."
+      loginBtnAction.disabled = true
+    
+      try{
+        const formData = new URLSearchParams()
+        formData.append('username' , username)
+        formData.append('password' , password)
+
+        const response = await fetch(`${API_URL}/token`,{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData
+        })
+        if (!response.ok){
+          throw new Error("Usuário ou senha incorretos!")
+        }
+
+        const data = await response.json()
+        const token = data.access_token
+
+        alert(token)
+        localStorage.setItem("rc_token",token)
+
+        window.location.href = "index.html"
+      }catch(error){
+        alert(error.message)
+
+        loginBtnAction.innerText = originalText
+        loginBtnAction.disabled = false
+      }
+    }
+    inputPass.addEventListener("keypress" , (e) => {
+      if(e.key === "Enter"){
+        e.preventDefault()
+        loginBtnAction.click()
+      } 
+    })
+
+
 
     // Afiliados modal + tabs
     const modalAfiliados = document.getElementById('modalAfiliados');

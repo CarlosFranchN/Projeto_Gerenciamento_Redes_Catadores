@@ -15,15 +15,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), 
     db: Session = Depends(get_db)
 ) -> models.Usuario:
-    """
-    Esta função é o 'Guarda-Costas'. Ela:
-    1. Tenta pegar o token do cabeçalho 'Authorization'.
-    2. Tenta decodificar o token usando nossa SECRET_KEY.
-    3. Se conseguir, extrai o username (sub).
-    4. Busca o usuário no banco de dados.
-    5. Se tudo der certo, retorna o objeto usuário.
-    Se algo der errado em qualquer passo, ela chuta a pessoa (Erro 401).
-    """
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Não foi possível validar as credenciais",
@@ -31,18 +23,20 @@ async def get_current_user(
     )
     
     try:
-        # Tenta decodificar o token
+        print(f"DEBUG: Tentando validar token: {token[:20]}...")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
+            print("DEBUG: Token sem username (sub)")
             raise credentials_exception
         token_data = schemas.TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        print(f"DEBUG: Erro na decodificação JWT: {e}")
         raise credentials_exception
         
-    # Busca o usuário no banco
     user = crud.get_usuario_por_username(db, username=token_data.username)
     if user is None:
+        print(f"DEBUG: Usuário '{token_data.username}' não encontrado no banco")
         raise credentials_exception
         
     return user

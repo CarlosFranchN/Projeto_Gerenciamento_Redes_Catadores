@@ -27,7 +27,8 @@ const Card = ({ children, className }) => (<div className={cls("rounded-2xl bord
 const StatCard = ({ title, value, subtitle }) => (<div className="bg-white/80 rounded-2xl shadow-sm p-5 border border-black/5"> <div className="text-sm text-neutral-500">{title}</div> <div className="text-3xl font-semibold mt-1">{value}</div> {subtitle && <div className="text-xs mt-2 text-neutral-400">{subtitle}</div>} </div>);
 const Toolbar = ({ children }) => (<div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">{children}</div>);
 const Pill = ({ active, onClick, children }) => (<button onClick={onClick} className={cls("px-4 py-2 rounded-full border text-sm transition", active ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50")} > {children} </button>);
-const Table = ({ columns, data, emptyLabel = "Sem dados" }) => (<div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"> <div className="overflow-x-auto"> <table className="min-w-full text-sm"> <thead className="bg-neutral-50"> <tr> {columns.map(c => (<th key={c.key} className="text-left px-4 py-3 font-medium text-neutral-600">{c.header}</th>))} </tr> </thead> <tbody> {data.length === 0 ? (<tr><td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-400">{emptyLabel}</td></tr>) : (data.map((row, i) => (<tr key={row.id ?? i} className={i % 2 ? "bg-white" : "bg-neutral-50/40"}> {columns.map(c => (<td key={c.key} className="px-4 py-3 text-neutral-800"> {c.render ? c.render(row[c.key], row) : row[c.key]} </td>))} </tr>)))} </tbody> </table> </div> </div>);
+const Table = ({ columns, data, emptyLabel = "Sem dados" }) => {const safeData = data || [] 
+    return (<div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"> <div className="overflow-x-auto"> <table className="min-w-full text-sm"> <thead className="bg-neutral-50"> <tr> {columns.map(c => (<th key={c.key} className="text-left px-4 py-3 font-medium text-neutral-600">{c.header}</th>))} </tr> </thead> <tbody> {safeData.length === 0 ? (<tr><td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-400">{emptyLabel}</td></tr>) : (data.map((row, i) => (<tr key={row.id ?? i} className={i % 2 ? "bg-white" : "bg-neutral-50/40"}> {columns.map(c => (<td key={c.key} className="px-4 py-3 text-neutral-800"> {c.render ? c.render(row[c.key], row) : row[c.key]} </td>))} </tr>)))} </tbody> </table> </div> </div>)};
 const Drawer = ({ open, onClose, title, children }) => (<div className={cls("fixed inset-0 z-50 transition", open ? "pointer-events-auto" : "pointer-events-none")}> <div className={cls("absolute inset-0 bg-black/40 transition-opacity", open ? "opacity-100" : "opacity-0")} onClick={onClose} /> <div className={cls("absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl border-l border-neutral-200 p-6 transition-transform", open ? "translate-x-0" : "translate-x-full")} role="dialog" aria-modal="true"> <div className="flex items-start justify-between mb-4"> <h3 className="text-lg font-semibold">{title}</h3> <button onClick={onClose} className="rounded-full w-8 h-8 grid place-items-center border border-neutral-200 hover:bg-neutral-50" aria-label="Fechar">×</button> </div> {children} </div> </div>);
 const TextInput = ({ label, value, onChange, placeholder, type = "text", required }) => { const id = useMemo(() => Math.random().toString(36).slice(2), []); return (<label className="block"> <span className="text-sm text-neutral-600">{label}</span> <input id={id} type={type} value={value} required={required} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500" /> </label>); };
 const Select = ({ label, value, onChange, options, placeholder = "Selecione...", required }) => { const id = useMemo(() => Math.random().toString(36).slice(2), []); return (<label className="block"> <span className="text-sm text-neutral-600">{label}</span> <select id={id} value={value} required={required} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500" > <option value="">{placeholder}</option> {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)} </select> </label>); };
@@ -57,7 +58,7 @@ function DashboardView({ store }) {
     );
 }
 
-function MateriaisView({ data, onCreate, onUpdate }) {
+function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nome, setNome] = useState("");
@@ -77,7 +78,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
 
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome, categoria, unidade_medida: unidade }; // Envia unidade_medida
+        const payload = { nome, categoria, unidade_medida: unidade }; 
         let success = false;
         try {
             if (editingId) {
@@ -142,6 +143,7 @@ function MateriaisView({ data, onCreate, onUpdate }) {
     );
 }
 function TipoParceiroView({ data, onCreate }) {
+    console.log("TipoParceiroView recebeu dados:", data);
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nome, setNome] = useState("");
@@ -170,7 +172,7 @@ function TipoParceiroView({ data, onCreate }) {
                     { key: "id", header: "ID" },
                     { key: "nome", header: "Nome" },
                 ]}
-                data={data}
+                data={data || []}
                 emptyLabel="Nenhum tipo cadastrado."
             />
             <Drawer open={open} onClose={handleCloseDrawer} title="Novo Tipo de Parceiro">
@@ -296,7 +298,7 @@ function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
     );
 }
 
-function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
+function AssociacoesView({ store, onCreate, onUpdate, onDelete , fetchAPI}) {
     // --- Estados Locais (Dados, Loading, Paginação, Filtros) ---
     const [associacoes, setAssociacoes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -319,6 +321,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
 
     // Busca o ID do tipo "ASSOCIACAO" no store global (necessário para criar)
     const tipoParceiroAssociacaoId = useMemo(() => {
+        if (!store.tiposParceiro) return null;
         const tipoAssoc = store.tiposParceiro.find(t => t.nome === "ASSOCIACAO");
         return tipoAssoc ? tipoAssoc.id : null;
     }, [store.tiposParceiro]);
@@ -333,9 +336,9 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                const response = await fetch(`${API_URL}/associacoes/?${params.toString()}`);
-                if (!response.ok) throw new Error(`Falha ao buscar associações: ${response.statusText}`);
-                const data = await response.json();
+                const data = await fetchAPI(`/associacoes/?${params.toString()}`);
+                
+                // fetchAPI já joga erro se falhar e já faz o .json()!
                 setAssociacoes(data.items);
                 setTotalAssociacoes(data.total_count);
             } catch (error) {
@@ -368,7 +371,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
     const handleEdit = (assoc) => {
         setEditingId(assoc.id);
         // CORREÇÃO: O nome agora vem do objeto aninhado 'doador_info'
-        setNome(assoc.doador_info?.nome || "");
+        setNome(assoc.parceiro_info?.nome || "");
         setLider(assoc.lider || "");
         setTelefone(assoc.telefone || "");
         setCnpj(assoc.cnpj || "");
@@ -491,7 +494,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete }) {
 }
 
 // --- RECEBIMENTOSVIEW REFATORADA ---
-function RecebimentosView({ store, setActive, onCreate, onCancel }) {
+function RecebimentosView({ store, setActive, onCreate, onCancel,fetchAPI }) {
     // --- Estados Locais ---
     const [recebimentos, setRecebimentos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -536,12 +539,9 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                // 👇 URL CORRETA: /recebimentos/ (se você renomeou no backend) ou /entradas/
-                // Vou assumir /recebimentos/ conforme nossa última conversa de backend.
-                // SE DER 404, TROQUE DE VOLTA PARA /entradas/
-                const response = await fetch(`${API_URL}/entradas/?${params.toString()}`);
-                if (!response.ok) throw new Error(`Falha ao buscar: ${response.statusText}`);
-                const data = await response.json();
+                const data = await fetchAPI(`/entradas/?${params.toString()}`);
+                
+                // fetchAPI já joga erro se falhar e já faz o .json()!
                 setRecebimentos(data.items);
                 setTotalRecebimentos(data.total_count);
             } catch (error) {
@@ -684,7 +684,7 @@ function RecebimentosView({ store, setActive, onCreate, onCancel }) {
     );
 }
 
-function VendasView({ store, setActive, onCreate, onCancel }) {
+function VendasView({ store, setActive, onCreate, onCancel,fetchAPI }) {
     // Estados locais de dados, filtros e paginação
     const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -729,9 +729,7 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                const response = await fetch(`${API_URL}/vendas/?${params.toString()}`);
-                if (!response.ok) throw new Error(`Falha ao buscar vendas: ${response.statusText}`);
-                const data = await response.json();
+                const data = await fetchAPI(`/vendas/?${params.toString()}`);
                 setVendas(data.items);
                 setTotalVendas(data.total_count);
             } catch (error) {
@@ -1010,12 +1008,22 @@ function VendasView({ store, setActive, onCreate, onCancel }) {
         </section>
     );
 }
-function RelatoriosView({ store }) {
+
+function RelatoriosView({ store,fetchAPI }) {
     const [start, setStart] = useState("");
     const [end, setEnd] = useState("");
-    const [summaryData, setSummaryData] = useState({ total_recebido: 0, total_vendido: 0, receita_periodo: 0 });
+    
+    // Estados para dados (inicializados com valores seguros)
+    const [summaryData, setSummaryData] = useState({ 
+        total_recebido: 0, 
+        total_comprado_qtd: 0, 
+        total_vendido: 0, 
+        receita_periodo: 0, 
+        total_gasto_compras: 0, 
+        lucro_bruto: 0 
+    });
     const [porMaterialData, setPorMaterialData] = useState([]);
-    const [porAssociacaoData, setPorAssociacaoData] = useState([]);
+    const [porParceiroData, setPorParceiroData] = useState([]); // Renomeado para Parceiro
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -1027,65 +1035,94 @@ function RelatoriosView({ store }) {
                 if (end) params.append('end_date', end);
                 const queryString = params.toString();
 
-                const [summaryRes, porMaterialRes, porAssocRes] = await Promise.all([
-                    fetch(`${API_URL}/relatorio/summary?${queryString}`),
-                    fetch(`${API_URL}/relatorio/por-material?${queryString}`),
-                    fetch(`${API_URL}/relatorio/por-doador?${queryString}`)
-                ]);
-
-                if (!summaryRes.ok) { throw new Error(`Erro Sumário: ${summaryRes.statusText}`); }
-                if (!porMaterialRes.ok) { throw new Error(`Erro Por Material: ${porMaterialRes.statusText}`); }
-                if (!porAssocRes.ok) { throw new Error(`Erro Por Doador: ${porAssocRes.statusText}`); }
-
-                const summaryJson = await summaryRes.json();
-                const porMaterialJson = await porMaterialRes.json();
-                const porAssocJson = await porAssocRes.json();
-
-                setSummaryData(summaryJson);
-                setPorMaterialData(porMaterialJson);
-                setPorAssociacaoData(porAssocJson);
+            const [summary, porMaterial, porParceiro] = await Promise.all([
+                        fetchAPI(`/relatorio/summary?${queryString}`),
+                        fetchAPI(`/relatorio/por-material?${queryString}`),
+                        fetchAPI(`/relatorio/por-doador?${queryString}`)
+                    ]);
+            setSummaryData(summary);
+            setPorMaterialData(porMaterial);
+            setPorParceiroData(porParceiro);
 
             } catch (error) {
-                console.error("Erro ao buscar dados dos relatórios:", error);
-                // alert(`Erro ao carregar relatórios: ${error.message}`); // Opcional: comentar para não spammar alertas em dev
+                console.error("Erro ao buscar relatórios:", error);
+                // Zerar dados em caso de erro para não mostrar informações antigas
+                setSummaryData({ total_recebido: 0, total_comprado_qtd: 0, total_vendido: 0, receita_periodo: 0, total_gasto_compras: 0, lucro_bruto: 0 });
+                setPorMaterialData([]);
+                setPorParceiroData([]);
             } finally {
                 setLoading(false);
             }
         };
         fetchDataForReports();
-    }, [start, end]);
+    }, [start, end,fetchAPI]);
 
+    // --- Gráficos (Chart.js) ---
     const recChartRef = useRef(null), recChartInstance = useRef(null);
     const revChartRef = useRef(null), revChartInstance = useRef(null);
 
     useEffect(() => {
         if (!window.Chart || !porMaterialData) return;
 
-        const recLabels = porMaterialData.map(m => m.nome);
-        const recData = porMaterialData.map(m => m.recebido);
-        const revLabels = porMaterialData.map(m => m.nome);
-        const revData = porMaterialData.map(m => m.receita);
+        // Preparar dados para os gráficos
+        const labels = porMaterialData.map(m => m.nome);
+        const dataRecebido = porMaterialData.map(m => m.recebido);
+        const dataComprado = porMaterialData.map(m => m.comprado || 0); // Novo dado V3
+        const dataReceita = porMaterialData.map(m => m.receita);
 
+        // Limpeza dos gráficos anteriores
         if (recChartInstance.current) recChartInstance.current.destroy();
         if (revChartInstance.current) revChartInstance.current.destroy();
 
+        // Gráfico 1: Entradas (Doação vs Compra) - Stacked Bar seria legal aqui, mas vamos de simples por enquanto
         if (recChartRef.current && porMaterialData.length > 0) {
             recChartInstance.current = new Chart(recChartRef.current, {
-                type: "bar",
-                data: { labels: recLabels, datasets: [{ label: "Recebido (Kg)", data: recData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }] },
-                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Doado (Kg)',
+                            data: dataRecebido,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        },
+                        {
+                            label: 'Comprado (Kg)',
+                            data: dataComprado,
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { stacked: true }, // Barras empilhadas para ver o total de entrada
+                        y: { beginAtZero: true, stacked: true }
+                    }
+                }
             });
         }
+
+        // Gráfico 2: Receita
         if (revChartRef.current && porMaterialData.length > 0) {
             revChartInstance.current = new Chart(revChartRef.current, {
-                type: "bar",
-                data: { labels: revLabels, datasets: [{ label: "Receita (R$)", data: revData, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Receita de Vendas (R$)',
+                        data: dataReceita,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                    }]
+                },
                 options: {
-                    responsive: true, plugins: { legend: { display: false } },
+                    responsive: true,
+                    plugins: { legend: { display: false } },
                     scales: { y: { beginAtZero: true, ticks: { callback: (v) => money(v) } } }
                 }
             });
         }
+
         return () => {
             if (recChartInstance.current) recChartInstance.current.destroy();
             if (revChartInstance.current) revChartInstance.current.destroy();
@@ -1095,63 +1132,84 @@ function RelatoriosView({ store }) {
     return (
         <section>
             <Toolbar>
-                <h2 className="text-xl font-semibold">Relatórios</h2>
+                <h2 className="text-xl font-semibold">Relatórios Gerenciais</h2>
                 <div className="flex flex-wrap gap-2 items-end">
                     <TextInput label="Início" type="date" value={start} onChange={setStart} />
                     <TextInput label="Fim" type="date" value={end} onChange={setEnd} />
-                    <button className="px-3 py-2 rounded-xl border bg-white" onClick={() => { setStart(""); setEnd(""); }}>Limpar Datas</button>
+                    <button className="px-3 py-2 rounded-xl border bg-white" onClick={() => { setStart(""); setEnd(""); }}>Limpar</button>
                 </div>
             </Toolbar>
-            {loading && <div className="text-center p-4 text-emerald-600">Carregando relatórios...</div>}
+
+            {loading && <div className="text-center p-4 text-emerald-600">Calculando indicadores...</div>}
+
             {!loading && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-                        <StatCard title="Total recebido" value={`${Number(summaryData.total_recebido || 0).toFixed(1)} Kg`} subtitle="No período selecionado" />
-                        <StatCard title="Total vendido" value={`${Number(summaryData.total_vendido || 0).toFixed(1)} Kg`} subtitle="No período selecionado" />
-                        <StatCard title="Receita no período" value={money(summaryData.receita_periodo)} />
+                    {/* --- CARDS V3 (Expandidos) --- */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <StatCard 
+                            title="Entradas (Doação)" 
+                            value={`${Number(summaryData.total_recebido || 0).toFixed(1)} Kg`} 
+                            subtitle="Custo Zero"
+                        />
+                        <StatCard 
+                            title="Entradas (Compra)" 
+                            value={`${Number(summaryData.total_comprado_qtd || 0).toFixed(1)} Kg`} 
+                            subtitle={`Custo: ${money(summaryData.total_gasto_compras || 0)}`}
+                        />
+                        <StatCard 
+                            title="Saídas (Vendas)" 
+                            value={`${Number(summaryData.total_vendido || 0).toFixed(1)} Kg`} 
+                            subtitle={`Receita: ${money(summaryData.receita_periodo || 0)}`}
+                        />
+                        <StatCard 
+                            title="Lucro Bruto" 
+                            value={money(summaryData.lucro_bruto || 0)} 
+                            subtitle="Receita - Custo de Compras"
+                        />
                     </div>
 
-
+                    {/* --- GRÁFICOS --- */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         <Card className="p-6">
-                            <div className="text-sm text-neutral-500 mb-2">Recebidos por Material (Kg)</div>
+                            <div className="text-sm text-neutral-500 mb-2">Entradas por Material (Kg)</div>
                             <canvas ref={recChartRef} height="140"></canvas>
-                            {porMaterialData.length === 0 && !loading && <div className="text-neutral-400 text-sm mt-4 text-center">Sem dados de recebimento no período.</div>}
                         </Card>
                         <Card className="p-6">
-                            <div className="text-sm text-neutral-500 mb-2">Receita por Material (R$)</div>
+                            <div className="text-sm text-neutral-500 mb-2">Receita de Vendas por Material (R$)</div>
                             <canvas ref={revChartRef} height="140"></canvas>
-                            {porMaterialData.length === 0 && !loading && <div className="text-neutral-400 text-sm mt-4 text-center">Sem dados de receita no período.</div>}
                         </Card>
                     </div>
 
+                    {/* --- TABELAS --- */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Tabela 1: Por Material (V3) */}
                         <Card className="p-6">
-                            <div className="text-sm text-neutral-500 mb-3">Resumo por Material</div>
+                            <div className="text-sm text-neutral-500 mb-3">Balanço por Material</div>
                             <Table
                                 columns={[
                                     { key: "nome", header: "Material" },
-                                    // 👇 PROTEÇÃO APLICADA AQUI 👇
-                                    { key: "recebido", header: "Recebido", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
-                                    { key: "vendido", header: "Vendido", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
-                                    { key: "saldo", header: "Saldo", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || ''}` },
-                                    { key: "receita", header: "Receita", render: v => money(v) },
+                                    { key: "recebido", header: "Doado", render: (v, r) => `${Number(v || 0).toFixed(1)}` },
+                                    { key: "comprado", header: "Comprado", render: (v, r) => `${Number(v || 0).toFixed(1)}` },
+                                    { key: "vendido", header: "Vendido", render: (v, r) => `${Number(v || 0).toFixed(1)}` },
+                                    { key: "saldo", header: "Saldo (+/-)", render: (v, r) => `${Number(v || 0).toFixed(1)} ${r.unidade_medida || ''}` },
                                 ]}
                                 data={porMaterialData}
-                                emptyLabel="Sem dados no período"
+                                emptyLabel="Sem movimentação no período."
                             />
                         </Card>
+
+                        {/* Tabela 2: Por Parceiro (V3) */}
                         <Card className="p-6">
-                            <div className="text-sm text-neutral-500 mb-3">Recebido por Doador (Kg)</div>
+                            <div className="text-sm text-neutral-500 mb-3">Movimentação por Parceiro</div>
                             <Table
                                 columns={[
-                                    { key: "nome", header: "Doador" },
-                                    { key: "tipo_parceiro", header: "Tipo", render: (v) => <span className="text-xs bg-slate-100 px-2 py-1 rounded">{v}</span> },
-                                    { key: "quantidade_recebida", header: "Doou (Kg)", render: (v) => Number(v || 0).toFixed(1) }
+                                    { key: "nome", header: "Parceiro" },
+                                    { key: "tipo_parceiro", header: "Tipo", render: (v) => <span className="text-xs bg-slate-100 px-2 py-1 rounded">{v || '-'}</span> },
+                                    { key: "quantidade_recebida", header: "Doou (Kg)", render: (v) => Number(v || 0).toFixed(1) },
+                                    { key: "quantidade_comprada", header: "Vendeu (Kg)", render: (v) => Number(v || 0).toFixed(1) },
                                 ]}
-                                data={porAssociacaoData}
-                                emptyLabel="Sem recebimentos no período"
+                                data={porParceiroData}
+                                emptyLabel="Nenhum parceiro ativo no período."
                             />
                         </Card>
                     </div>
@@ -1161,7 +1219,7 @@ function RelatoriosView({ store }) {
     );
 }
 
-function ComprasView({ store, setActive, onCreate, onCancel }) {
+function ComprasView({ store, setActive, onCreate, onCancel , fetchAPI }) {
     // --- Estados Locais ---
     const [compras, setCompras] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1179,15 +1237,16 @@ function ComprasView({ store, setActive, onCreate, onCancel }) {
     // --- Estados do Formulário ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [dataCompra, setDataCompra] = useState(todayISO()); // Opcional, backend gera automático
+    const [dataCompra, setDataCompra] = useState(todayISO()); 
     const [parceiroId, setParceiroId] = useState("");
     const [materialId, setMaterialId] = useState("");
     const [quantidade, setQuantidade] = useState("");
-    const [valorUnitario, setValorUnitario] = useState(""); // NOVO CAMPO!
+    const [valorUnitario, setValorUnitario] = useState(""); 
 
-    // --- Opções para Selects ---
+
+
+
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-    // Usa 'store.parceiros' para listar fornecedores (que são um tipo de parceiro)
     const parceirosOpts = store.parceiros.map(p => ({ value: String(p.id), label: `${p.nome} (${p.tipo_info?.nome})` }));
 
     // --- Busca de Dados ---
@@ -1203,10 +1262,9 @@ function ComprasView({ store, setActive, onCreate, onCancel }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                // Certifique-se que a rota '/compras/' existe no backend!
-                const response = await fetch(`${API_URL}/compras/?${params.toString()}`);
-                if (!response.ok) throw new Error(`Falha ao buscar compras: ${response.statusText}`);
-                const data = await response.json();
+                const data = await fetchAPI(`/compras/?${params.toString()}`);
+                    
+                // fetchAPI já joga erro se falhar e já faz o .json()!
                 setCompras(data.items);
                 setTotalCompras(data.total_count);
             } catch (error) {
@@ -1327,34 +1385,69 @@ function ComprasView({ store, setActive, onCreate, onCancel }) {
 // ========== App ==========
 function App() {
     const API_URL = "http://127.0.0.1:8000";
+
+    const [token,setToken] = useState(() => localStorage.getItem("rc_token") )
+
+    useEffect(() => {
+        console.log(token);
+        
+        if (!token) {
+            window.location.href = "landpage.html";
+        }
+    }, [token]);
+    
     const [active, setActive] = useState("dashboard");
 
-    // Store atualizado com os novos nomes (parceiros, tiposParceiro)
+
+
     const [store, setStore] = useState({
         materiais: [],
         associacoes: [],
         compradores: [],
-        tiposParceiro: [], // Renomeado de tipoDoadores
-        parceiros: [],     // Renomeado de doadores
+        tiposParceiro: [], 
+        parceiros: [],     
         recebimentos: [],
         vendas: [],
     });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    // Helper genérico de fetch
-    const fetchAPI = async (endpoint) => {
-        const res = await window.fetch(`${API_URL}${endpoint}`);
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText} em ${endpoint}`);
-        return res.json();
-    };
+    useEffect(() => {
+        if (!token) {
+            window.localStorage.href = "landpage.html"
+        }
+    }, [token])
+
+    const fetchAPI = async (endpoint, options = {}) => {
+            if (!token) return; 
+            const headers = { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}`, 
+                ...options.headers 
+            };
+            console.log(`[FETCH] Enviando para ${endpoint}`, headers.Authorization);
+            const res = await window.fetch(`${API_URL}${endpoint}`, { ...options, headers });
+            if (res.status === 401) { 
+                alert("Sessão expirada. Faça login novamente.");
+                localStorage.removeItem("rc_token");
+                window.location.href = "landPage.html";
+                throw new Error("Sessão expirada");
+            }
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.detail || `${res.status} ${res.statusText}`);
+            }
+            if (res.status === 204) return null;
+            return res.json();
+        };
 
     // --- Busca Inicial de Dados ---
     useEffect(() => {
+        if (!token) return; 
+
         const loadInitialData = async () => {
             setLoading(true);
-            console.log("Buscando dados cadastrais V3 (Parceiros)...");
+            console.log("Token verificado. Buscando dados ...");
             try {
-                // Busca paralela usando as NOVAS rotas
                 const [mats, assocs, comps, tipos, parcs] = await Promise.all([
                     fetchAPI('/estoque/'),
                     fetchAPI('/associacoes/'),
@@ -1362,26 +1455,25 @@ function App() {
                     fetchAPI('/tipos_parceiro/'),
                     fetchAPI('/parceiros/')
                 ]);
-
                 setStore({
                     materiais: mats.items || mats,
                     associacoes: assocs.items || assocs,
+                    parceiros: parcs.items || parcs,
+                    tipoParceiro: tipos.items || tipos,
                     compradores: comps.items || comps,
-                    tiposParceiro: tipos,           // Salva em tiposParceiro
-                    parceiros: parcs.items || parcs, // Salva em parceiros
-                    recebimentos: [], // Carregados sob demanda pela View
-                    vendas: []        // Carregados sob demanda pela View
+                    recebimentos: [], vendas: []
                 });
-                console.log("Dados V3 carregados com sucesso!");
             } catch (err) {
-                console.error("Erro fatal no carregamento inicial:", err);
-                alert(`Erro ao conectar com o backend V3.\nVerifique se o servidor está rodando e se as rotas '/parceiros/' e '/tipos_parceiro/' existem.\nErro: ${err.message}`);
+                
+                if (err.message !== "Sessão expirada") {
+                    console.error("Erro no carregamento:", err);
+                }
             } finally {
                 setLoading(false);
             }
         };
         loadInitialData();
-    }, []);
+    }, [token]);
 
     // --- Helpers de Refresh ---
     const refreshEstoque = async () => {
@@ -1405,6 +1497,8 @@ function App() {
     const refreshTiposParceiro = async () => {
         try {
             const data = await fetchAPI('/tipos_parceiro/');
+            console.log(data);
+            
             setStore(s => ({ ...s, tiposParceiro: data }));
         } catch (e) { console.error("Erro refresh tipos parceiro:", e); }
     };
@@ -1555,16 +1649,27 @@ function App() {
             return true;
         } catch (e) { alert(e.message); return false; }
     };
+    const handleLogout = () => {
+        localStorage.removeItem("rc_token");
+        window.location.href = "landpage.html";
+    };
+
+    if (!token) return null;
 
     return (
         <div className="min-h-screen bg-slate-50">
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">RC</div>
-                    <div className="flex-1">
-                        <div className="font-semibold leading-tight text-slate-900">Rede de Catadores</div>
-                        <div className="text-xs text-slate-500">Sistema de Gestão v3.0</div>
+             <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">RC</div>
+                        <div className="flex-1">
+                            <div className="font-semibold leading-tight text-slate-900">Rede de Catadores</div>
+                            <div className="text-xs text-slate-500">Sistema de Gestão v3.0</div>
+                        </div>
                     </div>
+                    <button onClick={handleLogout} className="text-sm text-slate-500 hover:text-red-600 flex items-center gap-1 font-medium">
+                        Sair 🚪
+                    </button>
                 </div>
             </header>
 
@@ -1574,36 +1679,35 @@ function App() {
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Principal</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>📊 Dashboard</Pill>
+                                <Pill active={active==="dashboard"} onClick={()=>setActive("dashboard")}>📊 Dashboard</Pill>
                             </div>
                         </div>
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Operação</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>📥 Recebimentos</Pill>
-                                <Pill active={active === "compras"} onClick={() => setActive("compras")}>💸 Compras</Pill>
-                                <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>📤 Vendas</Pill>
+                                <Pill active={active==="recebimentos"} onClick={()=>setActive("recebimentos")}>📥 Recebimentos (Doações)</Pill>
+                                <Pill active={active==="compras"} onClick={()=>setActive("compras")}>💸 Compras</Pill>
+                                <Pill active={active==="vendas"} onClick={()=>setActive("vendas")}>📤 Vendas</Pill>
                             </div>
                         </div>
                         <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Cadastros</div>
-                            <div className="flex flex-col gap-1">
-                                <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>📦 Materiais</Pill>
-                                <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>🤝 Associações</Pill>
-                                <Pill active={active === "compradores"} onClick={() => setActive("compradores")}>💰 Compradores</Pill>
-                                {/* Pill para Tipos de Parceiro (opcional, pode ficar escondido se não for usado sempre) */}
-                                <Pill active={active === "tipoParceiros"} onClick={() => setActive("tipoParceiros")}>🏷️ Tipos de Parceiro</Pill>
-                            </div>
+                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Cadastros</div>
+                             <div className="flex flex-col gap-1">
+                                <Pill active={active==="materiais"} onClick={()=>setActive("materiais")}>📦 Materiais</Pill>
+                                <Pill active={active==="associacoes"} onClick={()=>setActive("associacoes")}>🤝 Associações</Pill>
+                                <Pill active={active==="compradores"} onClick={()=>setActive("compradores")}>💰 Compradores</Pill>
+                                <Pill active={active==="tipoParceiros"} onClick={()=>setActive("tipoParceiros")}>🏷️ Tipos de Parceiro</Pill>
+                             </div>
                         </div>
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Análise</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>📈 Relatórios</Pill>
+                                <Pill active={active==="relatorios"} onClick={()=>setActive("relatorios")}>📈 Relatórios</Pill>
                             </div>
                         </div>
                     </nav>
                 </aside>
-
+                
                 <main>
                     {loading ? (
                         <div className="flex items-center justify-center h-64 text-slate-500">
@@ -1614,22 +1718,13 @@ function App() {
                         <>
                             {active === "dashboard" && <DashboardView store={store} />}
                             {active === "materiais" && <MateriaisView data={store.materiais} onCreate={createMaterial} onUpdate={updateMaterial} />}
-                            {/* Passamos 'store' para AssociacoesView poder ler 'tiposParceiro' */}
-                            {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} />}
+                            {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} fetchAPI={fetchAPI}  />}
                             {active === "compradores" && <CompradoresView data={store.compradores} onCreate={createComprador} onUpdate={updateComprador} onDelete={deleteComprador} />}
-                            {/* View para Tipos de Parceiro (você precisará criar ou adaptar TipoDoadorView) */}
                             {active === "tipoParceiros" && <TipoParceiroView data={store.tiposParceiro} onCreate={createTipoParceiro} />}
-                            {active === "recebimentos" && <RecebimentosView store={store} setActive={setActive} onCreate={createRecebimento} onCancel={cancelRecebimento} />}
-                            {active === "compras" && (
-                                <ComprasView
-                                    store={store}
-                                    setActive={setActive}
-                                    onCreate={createCompra}
-                                    onCancel={cancelCompra}
-                                />
-                            )}
-                            {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} />}
-                            {active === "relatorios" && <RelatoriosView store={store} />}
+                            {active === "recebimentos" && <RecebimentosView store={store} setActive={setActive} onCreate={createRecebimento} onCancel={cancelRecebimento} fetchAPI={fetchAPI} />}
+                            {active === "compras" && <ComprasView store={store} setActive={setActive} onCreate={createCompra} onCancel={cancelCompra} fetchAPI={fetchAPI}/>}
+                            {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} fetchAPI={fetchAPI}/>}
+                            {active === "relatorios" && <RelatoriosView store={store} fetchAPI={fetchAPI}/>}
                         </>
                     )}
                 </main>
