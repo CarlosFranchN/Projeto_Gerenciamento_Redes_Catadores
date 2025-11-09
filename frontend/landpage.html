@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Associação COOPMARES</title>
+  <title>Rede de Catadores do Estado do Ceará</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Favicon -->
+  <!-- Chart.js para o gráfico -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="icon" href="logo.png" />
+  <meta name="description" content="Rede de Catadores(as) de Materiais Recicláveis do Estado do Ceará — reciclagem, inclusão socioeconômica e educação ambiental.">
 </head>
 
 <body class="bg-green-50 text-gray-800">
@@ -14,98 +16,277 @@
   <header class="bg-green-700 text-white shadow-md sticky top-0 z-50">
     <nav class="max-w-7xl mx-auto flex justify-between items-center p-4">
       <div class="flex items-center gap-2">
-        <!-- Logo da associação -->
-        <img src="logo.png" alt="Logo" class="w-9 h-9">
-        <h1 class="font-bold text-xl">Associação de Catadores de Resíduos Sólidos</h1>
+        <img src="logo.png" alt="Logo" class="w-9 h-9 rounded-md">
+        <h1 class="font-bold text-lg sm:text-xl leading-tight">
+          Rede de Catadores do Estado do Ceará
+        </h1>
       </div>
-      <ul class="flex gap-6 font-medium">
+      <ul class="flex gap-4 sm:gap-6 font-medium">
         <li><a href="#sobre" class="hover:text-yellow-300">Sobre</a></li>
-        <li><a href="#projetos" class="hover:text-yellow-300">Projetos</a></li>
+        <li><a href="#projetos" class="hover:text-yellow-300">Iniciativas</a></li>
+        <li><a href="#rede" class="hover:text-yellow-300">Nossa Rede</a></li>
         <li><a href="#contato" class="hover:text-yellow-300">Contato</a></li>
         <li><button id="btnLogin" class="hover:text-yellow-300">Login</button></li>
-        <li><button class="cursor-not-allowed opacity-60">Afiliados</button></li>
+        <li>
+          <button id="btnAfiliados"
+                  class="bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-3 py-1">
+            Afiliados
+          </button>
+        </li>
       </ul>
     </nav>
   </header>
 
   <!-- HERO -->
   <section class="bg-gradient-to-br from-green-800 to-green-600 text-white">
-    <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 items-center py-20 px-6">
+    <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 items-center py-16 sm:py-20 px-6">
       <div class="text-center md:text-left">
-        <h2 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">Transforme o lixo em esperança 🌎</h2>
-        <p class="text-lg md:text-xl mb-6 max-w-xl">Junte-se à Rede dos Catadores/as do Ceará para promover reciclagem, renda e preservação ambiental.</p>
-        <a href="#projetos" class="inline-block bg-yellow-400 hover:bg-yellow-300 text-green-900 font-semibold px-6 py-3 rounded-full transition">Conheça nossos projetos</a>
+        <h2 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+          Transformando resíduos em renda e dignidade ♻
+        </h2>
+        <p class="text-lg md:text-xl mb-6 max-w-xl mx-auto md:mx-0">
+          Catadores e catadoras organizados em prol da coleta seletiva, inclusão socioeconômica e preservação ambiental em todo o Ceará.
+        </p>
+        <div class="flex gap-3 justify-center md:justify-start">
+          <a href="#projetos" class="inline-block bg-yellow-400 hover:bg-yellow-300 text-green-900 font-semibold px-6 py-3 rounded-full transition">
+            Conheça nossas iniciativas
+          </a>
+          <a href="#contato" class="inline-block bg-white/10 hover:bg-white/20 border border-white/30 font-semibold px-6 py-3 rounded-full transition">
+            Seja parceiro(a)
+          </a>
+        </div>
       </div>
       <div class="flex justify-center md:justify-end">
-        <!-- Logo grande -->
-        <img src="logo.png" alt="Logo Rede de Catadores" class="w-[360px] h-[360px] drop-shadow-2xl">
+        <img src="logo.png" alt="Logo Rede de Catadores" class="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] drop-shadow-2xl rounded-xl bg-white/5 p-3">
       </div>
     </div>
   </section>
 
   <!-- SOBRE -->
-  <section id="sobre" class="max-w-6xl mx-auto py-20 px-6">
-    <h2 class="text-3xl font-bold text-center text-green-800 mb-8">Quem Somos</h2>
-    <div class="grid md:grid-cols-2 gap-10 items-center">
-      <img src="https://images.unsplash.com/photo-1565372918675-6c9c3db4bca7" alt="Equipe de reciclagem" class="rounded-2xl shadow-lg">
+  <section id="sobre" class="max-w-7xl mx-auto py-16 px-6">
+    <div class="grid lg:grid-cols-2 gap-10 items-center">
       <div>
+        <h3 class="text-3xl font-bold text-green-800 mb-4">Quem Somos</h3>
         <p class="mb-4 text-lg leading-relaxed">
-          A <strong>COOPMARES</strong> é uma organização sem fins lucrativos dedicada à coleta seletiva, reciclagem e educação ambiental.
-          Atuamos em comunidades locais, promovendo sustentabilidade e inclusão social por meio do trabalho dos catadores.
+          A Rede de Catadores(as) de Materiais Recicláveis do Estado do Ceará iniciou sua articulação no início dos anos 2000 e se formalizou em 2007, participando de eventos e espaços de mobilização social ligados ao meio ambiente e à reciclagem. Com o respaldo da <strong>Lei 12.305/2010</strong>, qualificou-se para atuar como co-gestora do gerenciamento de resíduos, incluindo experiências como co-gestão de galpões públicos e prestação de serviços de coleta seletiva.
         </p>
         <p class="text-lg leading-relaxed">
-          Nosso objetivo é reduzir o impacto ambiental e transformar resíduos recicláveis em oportunidades de vida.
+          Hoje, a rede representa <strong>17 organizações</strong> em Fortaleza e diversas filiações em municípios do interior, com centenas de catadores(as) organizados, além de milhares que atuam de forma individual. Defendemos políticas públicas estruturantes para infraestrutura, EPIs, logística, qualificação e a inclusão socioeconômica da categoria na coleta seletiva.
         </p>
+        <div class="mt-6 grid sm:grid-cols-2 gap-3">
+          <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+            <div class="text-sm text-green-700">Coordenação Geral</div>
+            <div class="font-semibold">Leina Mara Rodrigues da Silva Duarte</div>
+          </div>
+          <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+            <div class="text-sm text-green-700">CNPJ</div>
+            <div class="font-semibold">09.000.185/0001-09</div>
+          </div>
+          <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+            <div class="text-sm text-green-700">Sede</div>
+            <div class="font-semibold">Rua Valdemar Holanda, 474 — João XXIII, Fortaleza/CE</div>
+          </div>
+          <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+            <div class="text-sm text-green-700">E-mail</div>
+            <div class="font-semibold break-all">redeestadual.catadores@gmail.com</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl shadow-lg overflow-hidden border border-green-100 bg-white">
+        <img src="foto5.jpg" alt="Equipe de reciclagem" class="w-full h-64 object-cover">
+        <div class="p-6">
+          <h4 class="text-xl font-semibold text-green-700 mb-2">Programa Auxílio Catador</h4>
+          <p class="text-gray-700">
+            Em parceria com a SEMA desde 2019, o programa repassa apoio financeiro direto aos catadores(as) associados, estimulando a coleta seletiva, ampliando volumes comercializados e fortalecendo o associativismo. Em 2023 foram abertas <strong>3.655 vagas</strong> e ocupadas <strong>3.644</strong> (Edital 01/2023 – SEMA).
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- PROJETOS -->
-  <section id="projetos" class="bg-green-100 py-20 px-6">
-    <h2 class="text-3xl font-bold text-center text-green-800 mb-12">Nossos Projetos</h2>
-    <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
-      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
-        <img src="https://images.unsplash.com/photo-1604328698692-59728eaf1c90" alt="Coleta Seletiva" class="rounded-xl mb-4">
-        <h3 class="text-xl font-semibold mb-2 text-green-700">Coleta Seletiva</h3>
-        <p class="text-gray-700">Promovemos a coleta seletiva em bairros e escolas, incentivando a separação correta dos materiais recicláveis.</p>
+  <!-- INICIATIVAS / PROJETOS -->
+  <section id="projetos" class="bg-green-100 py-16 px-6">
+    <div class="max-w-7xl mx-auto">
+      <h3 class="text-3xl font-bold text-center text-green-800 mb-10">Nossas Iniciativas</h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- 1) Coleta Seletiva: fachada/galpão -->
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-green-100">
+          <img src="foto1.png" alt="Fachada do galpão da Rede de Catadores" class="rounded-xl mb-4 w-full h-48 object-cover" loading="lazy">
+          <h4 class="text-xl font-semibold mb-2 text-green-700">Coleta Seletiva com Inclusão</h4>
+          <p class="text-gray-700">Estruturas, rotas e parcerias para ampliar a coleta com participação direta dos catadores(as).</p>
+        </div>
+        <!-- 2) Educação & Oficinas: reunião/formação -->
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-green-100">
+          <img src="foto4.png" alt="Oficina e reunião de formação dos catadores" class="rounded-xl mb-4 w-full h-48 object-cover" loading="lazy">
+          <h4 class="text-xl font-semibold mb-2 text-green-700">Educação & Oficinas</h4>
+          <p class="text-gray-700">Capacitações em reciclagem, segurança do trabalho, gestão e economia solidária.</p>
+        </div>
+        <!-- 3) Beneficiamento: triagem e manejo dos materiais -->
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-green-100">
+          <img src="foto2.png" alt="Triagem e beneficiamento de materiais recicláveis" class="rounded-xl mb-4 w-full h-48 object-cover" loading="lazy">
+          <h4 class="text-xl font-semibold mb-2 text-green-700">Beneficiamento & Artesanato</h4>
+          <p class="text-gray-700">Do beneficiamento ao reuso criativo: renda e valorização dos materiais.</p>
+        </div>
+      </div>
+      <div class="mt-10 grid sm:grid-cols-3 gap-4">
+        <div class="rounded-2xl bg-white p-5 border border-green-100 text-center">
+          <div class="text-sm text-green-700">Organizações em Fortaleza</div>
+          <div class="text-3xl font-bold mt-1">17</div>
+        </div>
+        <div class="rounded-2xl bg-white p-5 border border-green-100 text-center">
+          <div class="text-sm text-green-700">Toneladas/ano (amostra 2024)</div>
+          <div class="text-3xl font-bold mt-1">436.992,7 kg</div>
+        </div>
+        <div class="rounded-2xl bg-white p-5 border border-green-100 text-center">
+          <div class="text-sm text-green-700">Municípios com filiações</div>
+          <div class="text-3xl font-bold mt-1">20+</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOSSA REDE -->
+  <section id="rede" class="max-w-7xl mx-auto py-16 px-6">
+    <div class="grid lg:grid-cols-2 gap-8">
+      <div>
+        <h3 class="text-3xl font-bold text-green-800 mb-4">Nossa Rede em Fortaleza</h3>
+        <p class="text-lg mb-6">
+          Associações filiadas (nome, CNPJ e bairro):
+        </p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <!-- Lista resumida para a página (com botão “ver tudo” no modal) -->
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Rede de Catadores</div>
+            <div class="text-sm text-gray-600">09.000.185/0001-09 — João XXIII</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">ACORES</div>
+            <div class="text-sm text-gray-600">04.989.221/0001-95 — Serrinha</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">ARAN</div>
+            <div class="text-sm text-gray-600">07.475.187/0001-29 — Bom Sucesso</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">ASCAJAN</div>
+            <div class="text-sm text-gray-600">08.612.882/0001-58 — Jangurussu</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Moura Brasil</div>
+            <div class="text-sm text-gray-600">24.293.438/0001-73 — Moura Brasil</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Maravilha</div>
+            <div class="text-sm text-gray-600">11.058.865/0001-25 — Vila União</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Raio de Sol</div>
+            <div class="text-sm text-gray-600">23.668.402/0001-64 — Genibaú</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Rosa Virgínia</div>
+            <div class="text-sm text-gray-600">09.635.604/0001-89 — Santa Terezinha</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">SOCRELP</div>
+            <div class="text-sm text-gray-600">00.118.784/0001-57 — Pirambu</div>
+          </div>
+          <div class="rounded-xl border bg-white p-4">
+            <div class="font-semibold">Viva a Vida</div>
+            <div class="text-sm text-gray-600">07.865.301/0001-27 — Farias Brito</div>
+          </div>
+        </div>
+        <button id="btnVerAfiliados"
+                class="mt-4 inline-flex items-center gap-2 rounded-full border px-4 py-2 bg-white hover:bg-neutral-50">
+          Ver todos os afiliados
+          <span aria-hidden>→</span>
+        </button>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
-        <img src="https://images.unsplash.com/photo-1595974465563-e5c856f8d30c" alt="Oficinas Educativas" class="rounded-xl mb-4">
-        <h3 class="text-xl font-semibold mb-2 text-green-700">Oficinas Educativas</h3>
-        <p class="text-gray-700">Capacitamos jovens e adultos em práticas de reciclagem e reutilização de materiais.</p>
-      </div>
+      <div class="rounded-2xl border bg-white p-6">
+        <h4 class="text-xl font-semibold text-green-700 mb-2">Produção (amostra 2024)</h4>
+        <p class="text-gray-700 mb-4">
+          Registros mensais de diferentes associações ao longo do ano, totalizando <strong>436.992,7 kg</strong>.
+        </p>
+        <div class="overflow-hidden rounded-xl border">
+          <table id="tabelaProducao" class="min-w-full text-sm">
+            <thead class="bg-neutral-50 text-left">
+              <tr>
+                <th class="px-4 py-2 font-medium text-neutral-700">Mês</th>
+                <th class="px-4 py-2 font-medium text-neutral-700">Associação</th>
+                <th class="px-4 py-2 font-medium text-neutral-700">Bairro</th>
+                <th class="px-4 py-2 font-medium text-neutral-700">Kg</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Jan</td><td class="px-4 py-2">Rede</td><td class="px-4 py-2">João XXIII</td><td class="px-4 py-2">37.655,0</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Fev</td><td class="px-4 py-2">Raio de Sol</td><td class="px-4 py-2">João XXIII</td><td class="px-4 py-2">32.626,5</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Mar</td><td class="px-4 py-2">Moura Brasil</td><td class="px-4 py-2">Moura Brasil</td><td class="px-4 py-2">26.805,9</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Abr</td><td class="px-4 py-2">Viva a Vida</td><td class="px-4 py-2">Farias Brito</td><td class="px-4 py-2">35.855,0</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Mai</td><td class="px-4 py-2">Rosa Virgínia</td><td class="px-4 py-2">Santa Rosa</td><td class="px-4 py-2">38.118,0</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Jun</td><td class="px-4 py-2">Maravilha</td><td class="px-4 py-2">Vila União</td><td class="px-4 py-2">36.184,5</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Jul</td><td class="px-4 py-2">ACORES</td><td class="px-4 py-2">Serrinha</td><td class="px-4 py-2">49.744,0</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Ago</td><td class="px-4 py-2">Mulheres Luta em Cena</td><td class="px-4 py-2">Serrinha</td><td class="px-4 py-2">39.233,5</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Set</td><td class="px-4 py-2">CATAVIP</td><td class="px-4 py-2">Vicente Pinzón</td><td class="px-4 py-2">36.517,0</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Out</td><td class="px-4 py-2">SOCRELP</td><td class="px-4 py-2">Pirambu</td><td class="px-4 py-2">41.127,5</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Nov</td><td class="px-4 py-2">Palmares</td><td class="px-4 py-2">Palmeira</td><td class="px-4 py-2">30.212,5</td></tr>
+              <tr class="odd:bg-white even:bg-neutral-50"><td class="px-4 py-2">Dez</td><td class="px-4 py-2">Machado de Assis</td><td class="px-4 py-2">Paupina</td><td class="px-4 py-2">32.913,3</td></tr>
+              <tr class="bg-green-50 font-semibold"><td class="px-4 py-2">Total</td><td class="px-4 py-2" colspan="2">—</td><td class="px-4 py-2">436.992,7</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition">
-        <img src="https://images.unsplash.com/photo-1560179707-f14e90ef3623" alt="Artesanato Sustentável" class="rounded-xl mb-4">
-        <h3 class="text-xl font-semibold mb-2 text-green-700">Artesanato Sustentável</h3>
-        <p class="text-gray-700">Transformamos resíduos em arte, criando produtos reciclados que geram renda e consciência ambiental.</p>
+        <!-- Gráfico gerado a partir da tabela acima -->
+        <div class="mt-6">
+          <h5 class="text-sm text-green-700 font-medium mb-2">Gráfico — Produção mensal (kg)</h5>
+          <canvas id="graficoMensal" height="140" aria-label="Gráfico de barras da produção mensal"></canvas>
+        </div>
+
+        <p class="text-xs text-neutral-500 mt-3">
+          *O gráfico lê automaticamente os valores (kg) da tabela de produção exibida acima.
+        </p>
       </div>
     </div>
   </section>
 
   <!-- CONTATO -->
-  <section id="contato" class="max-w-4xl mx-auto py-20 px-6 text-center">
-    <h2 class="text-3xl font-bold text-green-800 mb-6">Entre em Contato</h2>
-    <p class="text-lg mb-6">Quer ser voluntário ou parceiro? Fale conosco!</p>
-    <form class="space-y-4 max-w-md mx-auto">
-      <input type="text" placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600">
-      <input type="email" placeholder="Seu e-mail" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600">
-      <textarea placeholder="Sua mensagem" rows="4" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600"></textarea>
+  <section id="contato" class="max-w-4xl mx-auto py-16 px-6 text-center">
+    <h3 class="text-3xl font-bold text-green-800 mb-3">Entre em Contato</h3>
+    <p class="text-lg mb-6">Parcerias, doações e projetos: fale com a gente.</p>
+    <form class="space-y-4 max-w-md mx-auto" onsubmit="event.preventDefault(); alert('Mensagem enviada! Obrigado pelo contato.');">
+      <input type="text" placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600" required>
+      <input type="email" placeholder="Seu e-mail" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600" required>
+      <textarea placeholder="Sua mensagem" rows="4" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-600" required></textarea>
       <button type="submit" class="bg-green-700 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-800 transition">Enviar Mensagem</button>
     </form>
+    <div class="mt-6 text-sm text-neutral-600">
+      ou envie um e-mail: <a class="underline hover:text-green-700" href="mailto:redeestadual.catadores@gmail.com">redeestadual.catadores@gmail.com</a>
+    </div>
   </section>
 
   <!-- FOOTER -->
-  <footer class="bg-green-700 text-white py-6 text-center">
-    <p>&copy; 2025 Associação COOPMARES. Todos os direitos reservados.</p>
-    <p class="text-sm mt-1">Feito com ♻️ e amor pelo meio ambiente.</p>
+  <footer class="bg-green-700 text-white py-8">
+    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-6 text-sm">
+      <div>
+        <div class="font-semibold">Rede de Catadores do Estado do Ceará</div>
+        <div>CNPJ: 09.000.185/0001-09</div>
+      </div>
+      <div>
+        <div class="font-semibold">Endereço</div>
+        <div>Rua Valdemar Holanda, 474 — João XXIII, Fortaleza/CE</div>
+      </div>
+      <div>
+        <div class="font-semibold">Acesso</div>
+        <a href="index.html" class="underline hover:text-yellow-200">Ir para o sistema de gestão</a>
+      </div>
+    </div>
+    <p class="text-center mt-6 text-xs opacity-80">© 2025 Rede de Catadores. Feito com ♻ e respeito ao meio ambiente.</p>
   </footer>
 
   <!-- MODAL LOGIN -->
   <div id="modalLogin" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     <div class="bg-white rounded-2xl p-8 w-80 text-center shadow-lg">
-      <h3 class="text-2xl font-semibold text-green-700 mb-4">Login da Associação</h3>
+      <h3 class="text-2xl font-semibold text-green-700 mb-4">Login</h3>
       <input type="text" placeholder="Usuário" class="w-full mb-3 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
       <input type="password" placeholder="Senha" class="w-full mb-4 border rounded-lg p-2 focus:ring-2 focus:ring-green-600">
       <button class="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 w-full">Entrar</button>
@@ -113,23 +294,95 @@
     </div>
   </div>
 
-  <!-- SCRIPT -->
+  <!-- MODAL AFILIADOS -->
+  <div id="modalAfiliados" class="hidden fixed inset-0 bg-black/60 z-50 p-4 overflow-y-auto">
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-neutral-200 p-6">
+      <div class="flex items-start justify-between gap-4">
+        <h3 class="text-xl font-bold text-green-800">Afiliados da Rede</h3>
+        <button id="btnFecharAfiliados" class="rounded-full w-9 h-9 grid place-items-center border hover:bg-neutral-50">✖</button>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button data-tab="tab-associacoes" class="tab-btn px-3 py-1.5 rounded-full border bg-green-600 text-white">Associações (Fortaleza)</button>
+          <button data-tab="tab-grupos" class="tab-btn px-3 py-1.5 rounded-full border bg-white">Grupos</button>
+          <button data-tab="tab-municipios" class="tab-btn px-3 py-1.5 rounded-full border bg-white">Municípios Filiados</button>
+        </div>
+
+        <!-- Associações -->
+        <div id="tab-associacoes" class="tab-pane grid md:grid-cols-2 gap-3">
+          <!-- preenchido via HTML estático para leveza -->
+          <div class="rounded-xl border p-3"><div class="font-semibold">Rede de Catadores</div><div class="text-sm text-gray-600">09.000.185/0001-09 — João XXIII</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ACORES</div><div class="text-sm text-gray-600">04.989.221/0001-95 — Serrinha</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ARAN</div><div class="text-sm text-gray-600">07.475.187/0001-29 — Bom Sucesso</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ASCAJAN</div><div class="text-sm text-gray-600">08.612.882/0001-58 — Jangurussu</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Moura Brasil</div><div class="text-sm text-gray-600">24.293.438/0001-73 — Moura Brasil</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Maravilha</div><div class="text-sm text-gray-600">11.058.865/0001-25 — Vila União</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Raio de Sol</div><div class="text-sm text-gray-600">23.668.402/0001-64 — Genibaú</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Rosa Virgínia</div><div class="text-sm text-gray-600">09.635.604/0001-89 — Santa Terezinha</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">SOCRELP</div><div class="text-sm text-gray-600">00.118.784/0001-57 — Pirambu</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Viva a Vida</div><div class="text-sm text-gray-600">07.865.301/0001-27 — Farias Brito</div></div>
+        </div>
+
+        <!-- Grupos -->
+        <div id="tab-grupos" class="tab-pane hidden">
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="rounded-xl border p-3"><div class="font-semibold">ASCABOMJA</div><div class="text-sm text-gray-600">14 integrantes (doc.)</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">ASCAROSA</div><div class="text-sm text-gray-600">08</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">CATAVIP</div><div class="text-sm text-gray-600">33</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">José de Alencar</div><div class="text-sm text-gray-600">37</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Lagoa Redonda</div><div class="text-sm text-gray-600">12</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Machado de Assis</div><div class="text-sm text-gray-600">04</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Mulheres Luta em Cena</div><div class="text-sm text-gray-600">50</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Palmares</div><div class="text-sm text-gray-600">22</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Viva a Vida (grupo)</div><div class="text-sm text-gray-600">05</div></div>
+          </div>
+          <p class="text-xs text-neutral-500 mt-3">*Números citados no documento.</p>
+        </div>
+
+        <!-- Municípios -->
+        <div id="tab-municipios" class="tab-pane hidden">
+          <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div class="rounded-xl border p-3"><div class="font-semibold">Metropolitano</div><div class="text-sm text-gray-600">08</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Amontada</div><div class="text-sm text-gray-600">22</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Aracoiaba</div><div class="text-sm text-gray-600">17</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Aratuba</div><div class="text-sm text-gray-600">01</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Barreira</div><div class="text-sm text-gray-600">05</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Baturité</div><div class="text-sm text-gray-600">18</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Boa Viagem</div><div class="text-sm text-gray-600">38</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Chorozinho</div><div class="text-sm text-gray-600">12</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Granja</div><div class="text-sm text-gray-600">06</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Guaramiranga</div><div class="text-sm text-gray-600">02</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Icó</div><div class="text-sm text-gray-600">27</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Itapipoca</div><div class="text-sm text-gray-600">14</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Itapiúna</div><div class="text-sm text-gray-600">02</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Miraíma</div><div class="text-sm text-gray-600">17</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Ocara</div><div class="text-sm text-gray-600">18</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Pacatuba</div><div class="text-sm text-gray-600">30</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Paracuru</div><div class="text-sm text-gray-600">12</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Quixelô</div><div class="text-sm text-gray-600">19</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Redenção</div><div class="text-sm text-gray-600">19</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Tururu</div><div class="text-sm text-gray-600">13</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Ubajara</div><div class="text-sm text-gray-600">03</div></div>
+          </div>
+          <p class="text-xs text-neutral-500 mt-3">*Lista resumida do documento (há mais cidades filiadas/associadas, incluindo Cariri).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
   <script>
+    // Login modal
     const modalLogin = document.getElementById('modalLogin');
     const btnLogin = document.getElementById('btnLogin');
     const closeLogin = document.getElementById('closeLogin');
 
-    // Abrir modal
-    btnLogin.onclick = () => modalLogin.classList.remove('hidden');
+    btnLogin.addEventListener('click', () => modalLogin.classList.remove('hidden'));
+    closeLogin.addEventListener('click', () => modalLogin.classList.add('hidden'));
 
-    // Fechar modal
-    closeLogin.onclick = () => modalLogin.classList.add('hidden');
-
-    // Credenciais fixas (demo)
     const USERNAME = "admin";
     const PASSWORD = "12345";
-
-    // Login da Associação
     modalLogin.querySelector("button.bg-green-700").onclick = () => {
       const user = modalLogin.querySelector("input[type='text']").value.trim();
       const pass = modalLogin.querySelector("input[type='password']").value;
@@ -139,6 +392,96 @@
         alert("Usuário ou senha incorretos!");
       }
     };
+
+    // Afiliados modal + tabs
+    const modalAfiliados = document.getElementById('modalAfiliados');
+    const btnAfiliados = document.getElementById('btnAfiliados');
+    const btnVerAfiliados = document.getElementById('btnVerAfiliados');
+    const btnFecharAfiliados = document.getElementById('btnFecharAfiliados');
+
+    function openAfiliados() { modalAfiliados.classList.remove('hidden'); }
+    function closeAfiliados() { modalAfiliados.classList.add('hidden'); }
+
+    [btnAfiliados, btnVerAfiliados].forEach(b => b && b.addEventListener('click', openAfiliados));
+    btnFecharAfiliados.addEventListener('click', closeAfiliados);
+    modalAfiliados.addEventListener('click', (e) => {
+      if (e.target === modalAfiliados) closeAfiliados();
+    });
+
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panes = document.querySelectorAll('.tab-pane');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-tab');
+        tabBtns.forEach(b => b.classList.toggle('bg-green-600', b === btn));
+        tabBtns.forEach(b => b.classList.toggle('text-white', b === btn));
+        tabBtns.forEach(b => b.classList.toggle('bg-white', b !== btn));
+        panes.forEach(p => p.classList.toggle('hidden', p.id !== id));
+      });
+    });
+
+    // ========= Gráfico baseado na TABELA (Produção mensal) =========
+    (function makeGraficoMensal() {
+      const tabela = document.getElementById('tabelaProducao');
+      const canvas = document.getElementById('graficoMensal');
+      if (!tabela || !canvas || !window.Chart) return;
+
+      const parsePtBR = (txt) => Number(String(txt).replace(/\./g, '').replace(',', '.'));
+
+      const linhas = Array.from(tabela.querySelectorAll('tbody tr'))
+        .filter(tr => {
+          const mes = tr.querySelector('td')?.textContent?.trim()?.toLowerCase();
+          return mes && mes !== 'total';
+        });
+
+      const meses = [];
+      const valores = [];
+      linhas.forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        const mes = tds[0].textContent.trim();
+        const kg = parsePtBR(tds[3].textContent.trim());
+        meses.push(mes);
+        valores.push(kg);
+      });
+
+      new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: meses,
+          datasets: [{
+            label: 'Kg por mês',
+            data: valores,
+            borderWidth: 1,
+            borderRadius: 8,
+            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+            borderColor: 'rgba(16, 185, 129, 1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => Intl.NumberFormat('pt-BR').format(ctx.parsed.y) + ' kg'
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(0,0,0,0.06)' },
+              ticks: {
+                callback: (v) => Intl.NumberFormat('pt-BR').format(v) + ' kg'
+              }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    })();
+    // ==============================================================
   </script>
 </body>
 </html>
