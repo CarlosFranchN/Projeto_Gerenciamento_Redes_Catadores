@@ -97,8 +97,8 @@ def create_material(db: Session, material: schemas.MaterialCreate):
     db.commit()
     db.refresh(db_material)
     
-    cod_gerado = f"{db_material.id:04d}"
-    db_material.codigo_material = cod_gerado
+    cod_gerado = f"MAT-{db_material.id:04d}"
+    db_material.codigo = cod_gerado
     
     db.commit()
     db.refresh(db_material)

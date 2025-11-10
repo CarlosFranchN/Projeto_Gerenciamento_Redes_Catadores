@@ -27,8 +27,10 @@ const Card = ({ children, className }) => (<div className={cls("rounded-2xl bord
 const StatCard = ({ title, value, subtitle }) => (<div className="bg-white/80 rounded-2xl shadow-sm p-5 border border-black/5"> <div className="text-sm text-neutral-500">{title}</div> <div className="text-3xl font-semibold mt-1">{value}</div> {subtitle && <div className="text-xs mt-2 text-neutral-400">{subtitle}</div>} </div>);
 const Toolbar = ({ children }) => (<div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">{children}</div>);
 const Pill = ({ active, onClick, children }) => (<button onClick={onClick} className={cls("px-4 py-2 rounded-full border text-sm transition", active ? "bg-emerald-600 text-white border-emerald-700" : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50")} > {children} </button>);
-const Table = ({ columns, data, emptyLabel = "Sem dados" }) => {const safeData = data || [] 
-    return (<div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"> <div className="overflow-x-auto"> <table className="min-w-full text-sm"> <thead className="bg-neutral-50"> <tr> {columns.map(c => (<th key={c.key} className="text-left px-4 py-3 font-medium text-neutral-600">{c.header}</th>))} </tr> </thead> <tbody> {safeData.length === 0 ? (<tr><td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-400">{emptyLabel}</td></tr>) : (data.map((row, i) => (<tr key={row.id ?? i} className={i % 2 ? "bg-white" : "bg-neutral-50/40"}> {columns.map(c => (<td key={c.key} className="px-4 py-3 text-neutral-800"> {c.render ? c.render(row[c.key], row) : row[c.key]} </td>))} </tr>)))} </tbody> </table> </div> </div>)};
+const Table = ({ columns, data, emptyLabel = "Sem dados" }) => {
+    const safeData = data || []
+    return (<div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"> <div className="overflow-x-auto"> <table className="min-w-full text-sm"> <thead className="bg-neutral-50"> <tr> {columns.map(c => (<th key={c.key} className="text-left px-4 py-3 font-medium text-neutral-600">{c.header}</th>))} </tr> </thead> <tbody> {safeData.length === 0 ? (<tr><td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-400">{emptyLabel}</td></tr>) : (data.map((row, i) => (<tr key={row.id ?? i} className={i % 2 ? "bg-white" : "bg-neutral-50/40"}> {columns.map(c => (<td key={c.key} className="px-4 py-3 text-neutral-800"> {c.render ? c.render(row[c.key], row) : row[c.key]} </td>))} </tr>)))} </tbody> </table> </div> </div>)
+};
 const Drawer = ({ open, onClose, title, children }) => (<div className={cls("fixed inset-0 z-50 transition", open ? "pointer-events-auto" : "pointer-events-none")}> <div className={cls("absolute inset-0 bg-black/40 transition-opacity", open ? "opacity-100" : "opacity-0")} onClick={onClose} /> <div className={cls("absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl border-l border-neutral-200 p-6 transition-transform", open ? "translate-x-0" : "translate-x-full")} role="dialog" aria-modal="true"> <div className="flex items-start justify-between mb-4"> <h3 className="text-lg font-semibold">{title}</h3> <button onClick={onClose} className="rounded-full w-8 h-8 grid place-items-center border border-neutral-200 hover:bg-neutral-50" aria-label="Fechar">×</button> </div> {children} </div> </div>);
 const TextInput = ({ label, value, onChange, placeholder, type = "text", required }) => { const id = useMemo(() => Math.random().toString(36).slice(2), []); return (<label className="block"> <span className="text-sm text-neutral-600">{label}</span> <input id={id} type={type} value={value} required={required} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500" /> </label>); };
 const Select = ({ label, value, onChange, options, placeholder = "Selecione...", required }) => { const id = useMemo(() => Math.random().toString(36).slice(2), []); return (<label className="block"> <span className="text-sm text-neutral-600">{label}</span> <select id={id} value={value} required={required} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500" > <option value="">{placeholder}</option> {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)} </select> </label>); };
@@ -78,7 +80,7 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
 
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome, categoria, unidade_medida: unidade }; 
+        const payload = { nome, categoria, unidade_medida: unidade };
         let success = false;
         try {
             if (editingId) {
@@ -142,21 +144,46 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
         </section>
     );
 }
-function TipoParceiroView({ data, onCreate }) {
-    console.log("TipoParceiroView recebeu dados:", data);
+function TipoParceiroView({ onCreate, fetchAPI }) { // 👈 Não recebe mais 'data' do store
+    const [tipos, setTipos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nome, setNome] = useState("");
 
+    // --- Busca de Dados ---
+    useEffect(() => {
+        const fetchTipos = async () => {
+            setLoading(true);
+            try {
+                // Usa o fetchAPI que já tem o token!
+                const data = await fetchAPI('/tipos_parceiro/');
+                setTipos(data);
+            } catch (error) {
+                console.error("Erro ao buscar tipos de parceiro:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTipos();
+    }, [refreshTrigger, fetchAPI]);
+
+    // --- Actions ---
     const handleCloseDrawer = () => {
         setOpen(false); setBusy(false); setNome("");
     };
 
     const submit = async (e) => {
-        e.preventDefault(); setBusy(true);
+        e.preventDefault();
+        setBusy(true);
         try {
             const success = await onCreate({ nome });
-            if (success) { handleCloseDrawer(); }
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1); // Recarrega a lista
+            }
         } catch (error) { console.error("Falha submit tipo:", error); }
         finally { setBusy(false); }
     };
@@ -167,14 +194,19 @@ function TipoParceiroView({ data, onCreate }) {
                 <h2 className="text-xl font-semibold">Tipos de Parceiro</h2>
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo Tipo</button>
             </Toolbar>
-            <Table
-                columns={[
-                    { key: "id", header: "ID" },
-                    { key: "nome", header: "Nome" },
-                ]}
-                data={data || []}
-                emptyLabel="Nenhum tipo cadastrado."
-            />
+
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando tipos...</div>}
+            {!loading && (
+                <Table
+                    columns={[
+                        { key: "id", header: "ID" },
+                        { key: "nome", header: "Nome" },
+                    ]}
+                    data={tipos}
+                    emptyLabel="Nenhum tipo cadastrado."
+                />
+            )}
+
             <Drawer open={open} onClose={handleCloseDrawer} title="Novo Tipo de Parceiro">
                 <form onSubmit={submit} className="space-y-3">
                     <TextInput label="Nome do Tipo" value={nome} onChange={setNome} placeholder="Ex: ORGAO_PUBLICO" required />
@@ -298,7 +330,173 @@ function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
     );
 }
 
-function AssociacoesView({ store, onCreate, onUpdate, onDelete , fetchAPI}) {
+function ParceirosView({ store, onCreate, onUpdate, onDelete, fetchAPI }) {
+    // --- Estados Locais ---
+    const [parceiros, setParceiros] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalParceiros, setTotalParceiros] = useState(0);
+    const ITENS_POR_PAGINA = 20;
+
+    // --- Filtros ---
+    const [filtroNome, setFiltroNome] = useState("");
+    const [filtroTipo, setFiltroTipo] = useState("");
+
+    // --- Estados do Formulário ---
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [nome, setNome] = useState("");
+    const [tipoId, setTipoId] = useState("");
+
+    console.log("ParceirosView: store.tiposParceiro é:", store.tiposParceiro);
+    console.log("ParceirosView: É array?", Array.isArray(store.tipoParceiro));
+
+    const tiposGenericOpts = useMemo(() => {
+        if (!store.tipoParceiro || !Array.isArray(store.tipoParceiro)) return [];
+        return store.tipoParceiro
+            .filter(t => t.nome !== "ASSOCIACAO") // Remove ASSOCIAÇÃO (pois tem tela própria)
+            .map(t => ({ value: String(t.id), label: t.nome }));
+    }, [store.tipoParceiro]);
+
+    const todosTiposOpts = useMemo(() => {
+        if (!store.tipoParceiro || !Array.isArray(store.tipoParceiro)) return [];
+        return store.tipoParceiro.map(t => ({ value: String(t.id), label: t.nome }));
+    }, [store.tipoParceiro]);
+
+    // --- Busca de Dados ---
+    useEffect(() => {
+        const fetchParceirosData = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (filtroNome) params.append('nome', filtroNome);
+            // Nota: Seu backend precisa suportar 'id_tipo_parceiro' no filtro para isso funcionar
+            if (filtroTipo) params.append('id_tipo_parceiro', filtroTipo);
+
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                const data = await fetchAPI(`/parceiros/?${params.toString()}`);
+                // Suporte a resposta paginada ou lista simples
+                setParceiros(data.items || data);
+                setTotalParceiros(data.total_count || (data.items || data).length);
+            } catch (error) {
+                console.error("Erro buscar parceiros:", error);
+                setParceiros([]); setTotalParceiros(0);
+            } finally { setLoading(false); }
+        };
+        fetchParceirosData();
+    }, [filtroNome, filtroTipo, paginaAtual, refreshTrigger, fetchAPI]);
+
+    // --- Actions ---
+    const handleCloseDrawer = () => {
+        setOpen(false); setBusy(false); setEditingId(null);
+        setNome(""); setTipoId("");
+    };
+
+    const handleEdit = (parceiro) => {
+        setEditingId(parceiro.id);
+        setNome(parceiro.nome);
+        setTipoId(String(parceiro.id_tipo_parceiro));
+        setOpen(true);
+    };
+
+    const submit = async (e) => {
+        e.preventDefault(); setBusy(true);
+        const payload = { nome, id_tipo_parceiro: Number(tipoId) };
+        try {
+            let success = false;
+            if (editingId) {
+                // Nota: Seu backend precisa ter PUT /parceiros/{id} implementado para isso funcionar
+                success = await onUpdate(editingId, payload);
+            } else {
+                success = await onCreate(payload);
+            }
+            if (success) { handleCloseDrawer(); setRefreshTrigger(t => t + 1); }
+        } catch (error) { } finally { setBusy(false); }
+    };
+
+    const handleDelete = async (id) => {
+        if (await onDelete(id)) setRefreshTrigger(t => t + 1);
+    };
+
+    return (
+        <section>
+            <Toolbar>
+                <h2 className="text-xl font-semibold">Outros Parceiros (Geral)</h2>
+                <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setOpen(true)}>+ Novo Parceiro</button>
+            </Toolbar>
+
+            <Card className="p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                    <div className="md:col-span-2">
+                        <TextInput label="Filtrar por Nome" value={filtroNome} onChange={setFiltroNome} placeholder="Nome..." />
+                    </div>
+                    <div className="md:col-span-2">
+                        <Select label="Filtrar por Tipo" value={filtroTipo} onChange={setFiltroTipo} options={todosTiposOpts} placeholder="Todos os Tipos" />
+                    </div>
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setFiltroNome(""); setFiltroTipo(""); }}>Limpar</button>
+                </div>
+            </Card>
+
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando parceiros...</div>}
+            {!loading && (
+                <>
+                    <Table
+                        columns={[
+                            { key: "id", header: "ID" },
+                            { key: "nome", header: "Nome" },
+                            { key: "tipo_info", header: "Tipo", render: (t) => <span className="text-xs bg-slate-100 px-2 py-1 rounded">{t?.nome || '-'}</span> },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <div className="flex gap-2">
+                                        {/* Só permite editar/excluir se NÃO for associação por aqui */}
+                                        {row.tipo_info?.nome !== 'ASSOCIACAO' ? (
+                                            <>
+                                                <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEdit(row)}>✏️ Editar</button>
+                                                <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDelete(row.id)}>🗑️ Excluir</button>
+                                            </>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic">Gerenciar na aba Associações</span>
+                                        )}
+                                    </div>
+                                )
+                            },
+                        ]}
+                        data={parceiros}
+                        emptyLabel="Nenhum parceiro encontrado."
+                    />
+                    {/* Paginação */}
+                    {totalParceiros > ITENS_POR_PAGINA && (
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-3 py-1 rounded border bg-white disabled:opacity-50">&larr; Anterior</button>
+                            <span className="px-3 py-1 text-sm text-neutral-600">Pág. {paginaAtual + 1}</span>
+                            <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalParceiros} className="px-3 py-1 rounded border bg-white disabled:opacity-50">Próxima &rarr;</button>
+                        </div>
+                    )}
+                </>
+            )}
+
+            <Drawer open={open} onClose={handleCloseDrawer} title={editingId ? "Editar Parceiro" : "Novo Parceiro"}>
+                <form onSubmit={submit} className="space-y-4">
+                    <div className="p-3 bg-blue-50 text-blue-800 text-sm rounded-lg mb-4">
+                        Use este formulário para parceiros que <strong>NÃO</strong> são Associações (ex: Prefeituras, Empresas, Catadores Individuais).
+                    </div>
+                    <TextInput label="Nome do Parceiro" value={nome} onChange={setNome} required />
+                    <Select label="Tipo de Parceiro" value={tipoId} onChange={setTipoId} options={tiposGenericOpts} required />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvando..." : "Salvar"}</button>
+                    </div>
+                </form>
+            </Drawer>
+        </section>
+    );
+}
+
+function AssociacoesView({ store, onCreate, onUpdate, onDelete, fetchAPI }) {
     // --- Estados Locais (Dados, Loading, Paginação, Filtros) ---
     const [associacoes, setAssociacoes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -337,7 +535,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete , fetchAPI}) {
 
             try {
                 const data = await fetchAPI(`/associacoes/?${params.toString()}`);
-                
+
                 // fetchAPI já joga erro se falhar e já faz o .json()!
                 setAssociacoes(data.items);
                 setTotalAssociacoes(data.total_count);
@@ -430,7 +628,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete , fetchAPI}) {
                 <>
                     <Table
                         columns={[
-                            { key: "doador_info", header: "Nome", render: (doador) => doador?.nome || "-" },
+                            { key: "parceiro_info", header: "Nome", render: (parceiro) => parceiro?.nome || "-" },
                             { key: "lider", header: "Líder" },
                             { key: "telefone", header: "Telefone" },
                             { key: "cnpj", header: "CNPJ" },
@@ -494,7 +692,7 @@ function AssociacoesView({ store, onCreate, onUpdate, onDelete , fetchAPI}) {
 }
 
 // --- RECEBIMENTOSVIEW REFATORADA ---
-function RecebimentosView({ store, setActive, onCreate, onCancel,fetchAPI }) {
+function RecebimentosView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     // --- Estados Locais ---
     const [recebimentos, setRecebimentos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -540,7 +738,7 @@ function RecebimentosView({ store, setActive, onCreate, onCancel,fetchAPI }) {
 
             try {
                 const data = await fetchAPI(`/entradas/?${params.toString()}`);
-                
+
                 // fetchAPI já joga erro se falhar e já faz o .json()!
                 setRecebimentos(data.items);
                 setTotalRecebimentos(data.total_count);
@@ -684,7 +882,7 @@ function RecebimentosView({ store, setActive, onCreate, onCancel,fetchAPI }) {
     );
 }
 
-function VendasView({ store, setActive, onCreate, onCancel,fetchAPI }) {
+function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     // Estados locais de dados, filtros e paginação
     const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1009,18 +1207,18 @@ function VendasView({ store, setActive, onCreate, onCancel,fetchAPI }) {
     );
 }
 
-function RelatoriosView({ store,fetchAPI }) {
+function RelatoriosView({ store, fetchAPI }) {
     const [start, setStart] = useState("");
     const [end, setEnd] = useState("");
-    
+
     // Estados para dados (inicializados com valores seguros)
-    const [summaryData, setSummaryData] = useState({ 
-        total_recebido: 0, 
-        total_comprado_qtd: 0, 
-        total_vendido: 0, 
-        receita_periodo: 0, 
-        total_gasto_compras: 0, 
-        lucro_bruto: 0 
+    const [summaryData, setSummaryData] = useState({
+        total_recebido: 0,
+        total_comprado_qtd: 0,
+        total_vendido: 0,
+        receita_periodo: 0,
+        total_gasto_compras: 0,
+        lucro_bruto: 0
     });
     const [porMaterialData, setPorMaterialData] = useState([]);
     const [porParceiroData, setPorParceiroData] = useState([]); // Renomeado para Parceiro
@@ -1035,14 +1233,14 @@ function RelatoriosView({ store,fetchAPI }) {
                 if (end) params.append('end_date', end);
                 const queryString = params.toString();
 
-            const [summary, porMaterial, porParceiro] = await Promise.all([
-                        fetchAPI(`/relatorio/summary?${queryString}`),
-                        fetchAPI(`/relatorio/por-material?${queryString}`),
-                        fetchAPI(`/relatorio/por-doador?${queryString}`)
-                    ]);
-            setSummaryData(summary);
-            setPorMaterialData(porMaterial);
-            setPorParceiroData(porParceiro);
+                const [summary, porMaterial, porParceiro] = await Promise.all([
+                    fetchAPI(`/relatorio/summary?${queryString}`),
+                    fetchAPI(`/relatorio/por-material?${queryString}`),
+                    fetchAPI(`/relatorio/por-doador?${queryString}`)
+                ]);
+                setSummaryData(summary);
+                setPorMaterialData(porMaterial);
+                setPorParceiroData(porParceiro);
 
             } catch (error) {
                 console.error("Erro ao buscar relatórios:", error);
@@ -1055,7 +1253,7 @@ function RelatoriosView({ store,fetchAPI }) {
             }
         };
         fetchDataForReports();
-    }, [start, end,fetchAPI]);
+    }, [start, end, fetchAPI]);
 
     // --- Gráficos (Chart.js) ---
     const recChartRef = useRef(null), recChartInstance = useRef(null);
@@ -1146,24 +1344,24 @@ function RelatoriosView({ store,fetchAPI }) {
                 <>
                     {/* --- CARDS V3 (Expandidos) --- */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <StatCard 
-                            title="Entradas (Doação)" 
-                            value={`${Number(summaryData.total_recebido || 0).toFixed(1)} Kg`} 
+                        <StatCard
+                            title="Entradas (Doação)"
+                            value={`${Number(summaryData.total_recebido || 0).toFixed(1)} Kg`}
                             subtitle="Custo Zero"
                         />
-                        <StatCard 
-                            title="Entradas (Compra)" 
-                            value={`${Number(summaryData.total_comprado_qtd || 0).toFixed(1)} Kg`} 
+                        <StatCard
+                            title="Entradas (Compra)"
+                            value={`${Number(summaryData.total_comprado_qtd || 0).toFixed(1)} Kg`}
                             subtitle={`Custo: ${money(summaryData.total_gasto_compras || 0)}`}
                         />
-                        <StatCard 
-                            title="Saídas (Vendas)" 
-                            value={`${Number(summaryData.total_vendido || 0).toFixed(1)} Kg`} 
+                        <StatCard
+                            title="Saídas (Vendas)"
+                            value={`${Number(summaryData.total_vendido || 0).toFixed(1)} Kg`}
                             subtitle={`Receita: ${money(summaryData.receita_periodo || 0)}`}
                         />
-                        <StatCard 
-                            title="Lucro Bruto" 
-                            value={money(summaryData.lucro_bruto || 0)} 
+                        <StatCard
+                            title="Lucro Bruto"
+                            value={money(summaryData.lucro_bruto || 0)}
                             subtitle="Receita - Custo de Compras"
                         />
                     </div>
@@ -1219,7 +1417,7 @@ function RelatoriosView({ store,fetchAPI }) {
     );
 }
 
-function ComprasView({ store, setActive, onCreate, onCancel , fetchAPI }) {
+function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     // --- Estados Locais ---
     const [compras, setCompras] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1237,11 +1435,11 @@ function ComprasView({ store, setActive, onCreate, onCancel , fetchAPI }) {
     // --- Estados do Formulário ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [dataCompra, setDataCompra] = useState(todayISO()); 
+    const [dataCompra, setDataCompra] = useState(todayISO());
     const [parceiroId, setParceiroId] = useState("");
     const [materialId, setMaterialId] = useState("");
     const [quantidade, setQuantidade] = useState("");
-    const [valorUnitario, setValorUnitario] = useState(""); 
+    const [valorUnitario, setValorUnitario] = useState("");
 
 
 
@@ -1263,7 +1461,7 @@ function ComprasView({ store, setActive, onCreate, onCancel , fetchAPI }) {
 
             try {
                 const data = await fetchAPI(`/compras/?${params.toString()}`);
-                    
+
                 // fetchAPI já joga erro se falhar e já faz o .json()!
                 setCompras(data.items);
                 setTotalCompras(data.total_count);
@@ -1386,16 +1584,16 @@ function ComprasView({ store, setActive, onCreate, onCancel , fetchAPI }) {
 function App() {
     const API_URL = "http://127.0.0.1:8000";
 
-    const [token,setToken] = useState(() => localStorage.getItem("rc_token") )
+    const [token, setToken] = useState(() => localStorage.getItem("rc_token"))
 
     useEffect(() => {
         console.log(token);
-        
+
         if (!token) {
             window.location.href = "landpage.html";
         }
     }, [token]);
-    
+
     const [active, setActive] = useState("dashboard");
 
 
@@ -1404,8 +1602,8 @@ function App() {
         materiais: [],
         associacoes: [],
         compradores: [],
-        tiposParceiro: [], 
-        parceiros: [],     
+        tiposParceiro: [],
+        parceiros: [],
         recebimentos: [],
         vendas: [],
     });
@@ -1418,31 +1616,31 @@ function App() {
     }, [token])
 
     const fetchAPI = async (endpoint, options = {}) => {
-            if (!token) return; 
-            const headers = { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}`, 
-                ...options.headers 
-            };
-            console.log(`[FETCH] Enviando para ${endpoint}`, headers.Authorization);
-            const res = await window.fetch(`${API_URL}${endpoint}`, { ...options, headers });
-            if (res.status === 401) { 
-                alert("Sessão expirada. Faça login novamente.");
-                localStorage.removeItem("rc_token");
-                window.location.href = "landPage.html";
-                throw new Error("Sessão expirada");
-            }
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.detail || `${res.status} ${res.statusText}`);
-            }
-            if (res.status === 204) return null;
-            return res.json();
+        if (!token) return;
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...options.headers
         };
+        console.log(`[FETCH] Enviando para ${endpoint}`, headers.Authorization);
+        const res = await window.fetch(`${API_URL}${endpoint}`, { ...options, headers });
+        if (res.status === 401) {
+            alert("Sessão expirada. Faça login novamente.");
+            localStorage.removeItem("rc_token");
+            window.location.href = "landPage.html";
+            throw new Error("Sessão expirada");
+        }
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.detail || `${res.status} ${res.statusText}`);
+        }
+        if (res.status === 204) return null;
+        return res.json();
+    };
 
     // --- Busca Inicial de Dados ---
     useEffect(() => {
-        if (!token) return; 
+        if (!token) return;
 
         const loadInitialData = async () => {
             setLoading(true);
@@ -1464,7 +1662,7 @@ function App() {
                     recebimentos: [], vendas: []
                 });
             } catch (err) {
-                
+
                 if (err.message !== "Sessão expirada") {
                     console.error("Erro no carregamento:", err);
                 }
@@ -1498,7 +1696,7 @@ function App() {
         try {
             const data = await fetchAPI('/tipos_parceiro/');
             console.log(data);
-            
+
             setStore(s => ({ ...s, tiposParceiro: data }));
         } catch (e) { console.error("Erro refresh tipos parceiro:", e); }
     };
@@ -1510,30 +1708,46 @@ function App() {
     };
 
     // --- Funções de Ação (CREATE/UPDATE/DELETE) ---
-
     // MATERIAIS
     const createMaterial = async (payload) => {
-        const payloadAPI = { ...payload, unidade_medida: payload.unidade };
         try {
-            const res = await window.fetch(`${API_URL}/materiais/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadAPI) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI('/materiais/', { method: 'POST', body: JSON.stringify({ ...payload, unidade_medida: payload.unidade }) });
             await refreshEstoque(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const updateMaterial = async (id, payload) => {
-        const payloadAPI = { ...payload, unidade_medida: payload.unidade };
         try {
-            const res = await window.fetch(`${API_URL}/materiais/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadAPI) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI(`/materiais/${id}`, { method: 'PUT', body: JSON.stringify({ ...payload, unidade_medida: payload.unidade }) });
             await refreshEstoque(); return true;
         } catch (e) { alert(e.message); return false; }
     };
 
-    // TIPOS DE PARCEIRO (Novo)
+    //PARCEIRO
+    const createParceiro = async (payload) => {
+        try {
+            await fetchAPI('/parceiros/', { method: 'POST', body: JSON.stringify(payload) });
+            await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const updateParceiro = async (id, payload) => {
+        try {
+            // Nota: O backend precisa ter suporte a PUT /parceiros/{id}
+            await fetchAPI(`/parceiros/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+            await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+    const deleteParceiro = async (id) => {
+        if (!confirm("Excluir este parceiro? Só é possível se ele não tiver histórico.")) return false;
+        try {
+            await fetchAPI(`/parceiros/${id}`, { method: 'DELETE' });
+            await refreshParceiros(); return true;
+        } catch (e) { alert(e.message); return false; }
+    };
+
+    // TIPOS DE PARCEIRO
     const createTipoParceiro = async (payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/tipos_parceiro/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI('/tipos_parceiro/', { method: 'POST', body: JSON.stringify(payload) });
             await refreshTiposParceiro(); return true;
         } catch (e) { alert(e.message); return false; }
     };
@@ -1541,112 +1755,89 @@ function App() {
     // COMPRADORES
     const createComprador = async (payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/compradores/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI('/compradores/', { method: 'POST', body: JSON.stringify(payload) });
             await refreshCompradores(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const updateComprador = async (id, payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/compradores/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI(`/compradores/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
             await refreshCompradores(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const deleteComprador = async (id) => {
         if (!confirm("Inativar comprador?")) return false;
         try {
-            const res = await window.fetch(`${API_URL}/compradores/${id}`, { method: 'DELETE' });
-            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI(`/compradores/${id}`, { method: 'DELETE' });
             await refreshCompradores(); return true;
         } catch (e) { alert(e.message); return false; }
     };
 
-    // ASSOCIAÇÕES (Agora cria Parceiro + Associacao)
+    // ASSOCIAÇÕES
     const createAssociacao = async (payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/associacoes/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI('/associacoes/', { method: 'POST', body: JSON.stringify(payload) });
             await refreshAssociacoes(); await refreshParceiros(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const updateAssociacao = async (id, payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/associacoes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI(`/associacoes/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
             await refreshAssociacoes(); await refreshParceiros(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const deleteAssociacao = async (id) => {
         if (!confirm("Inativar associação?")) return false;
         try {
-            const res = await window.fetch(`${API_URL}/associacoes/${id}`, { method: 'DELETE' });
-            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
+            await fetchAPI(`/associacoes/${id}`, { method: 'DELETE' });
             await refreshAssociacoes(); await refreshParceiros(); return true;
         } catch (e) { alert(e.message); return false; }
     };
 
-    // RECEBIMENTOS (Agora usa /recebimentos/ e id_parceiro)
+    // RECEBIMENTOS
     const createRecebimento = async (payload) => {
-        // Payload esperado: { id_parceiro, id_material, quantidade }
         try {
-            const res = await window.fetch(`${API_URL}/recebimentos/`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro ao criar recebimento"); }
-            await refreshEstoque(); return true;
+            await fetchAPI('/recebimentos/', { method: 'POST', body: JSON.stringify(payload) });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const cancelRecebimento = async (id) => {
         if (!confirm("Cancelar recebimento?")) return false;
         try {
-            const res = await window.fetch(`${API_URL}/recebimentos/${id}`, { method: 'DELETE' });
-            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
-            await refreshEstoque(); return true;
+            // 👇 CORREÇÃO: Usa APENAS fetchAPI
+            await fetchAPI(`/recebimentos/${id}`, { method: 'DELETE' });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
 
-    // VENDAS (Usa id_comprador)
+    // VENDAS
     const createVenda = async (payload) => {
         try {
-            const res = await window.fetch(`${API_URL}/vendas/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Erro ao criar venda"); }
-            await refreshEstoque(); return true;
+            await fetchAPI('/vendas/', { method: 'POST', body: JSON.stringify(payload) });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const cancelVenda = async (id) => {
         if (!confirm("Cancelar venda?")) return false;
         try {
-            const res = await window.fetch(`${API_URL}/vendas/${id}`, { method: 'DELETE' });
-            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
-            await refreshEstoque(); return true;
+            await fetchAPI(`/vendas/${id}`, { method: 'DELETE' });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
+
+    // COMPRAS
     const createCompra = async (payload) => {
-
         try {
-            const res = await window.fetch(`${API_URL}/compras/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.detail || "Erro ao registrar compra");
-            }
-            await refreshMateriaisComEstoque();
-            return true;
+            await fetchAPI('/compras/', { method: 'POST', body: JSON.stringify(payload) });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
-
-
     const cancelCompra = async (id) => {
-        if (!confirm("Cancelar esta compra? O estoque será reduzido e o valor estornado nos relatórios.")) return false;
+        if (!confirm("Cancelar compra?")) return false;
         try {
-            const res = await window.fetch(`${API_URL}/compras/${id}`, { method: 'DELETE' });
-            if (res.status !== 204) { const d = await res.json(); throw new Error(d.detail || "Erro"); }
-            await refreshMateriaisComEstoque(); // Atualiza estoque!
-            return true;
+            // 👇 CORREÇÃO: Usa APENAS fetchAPI
+            await fetchAPI(`/compras/${id}`, { method: 'DELETE' });
+            await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const handleLogout = () => {
@@ -1658,7 +1849,7 @@ function App() {
 
     return (
         <div className="min-h-screen bg-slate-50">
-             <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">RC</div>
@@ -1679,35 +1870,36 @@ function App() {
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Principal</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active==="dashboard"} onClick={()=>setActive("dashboard")}>📊 Dashboard</Pill>
+                                <Pill active={active === "dashboard"} onClick={() => setActive("dashboard")}>📊 Dashboard</Pill>
                             </div>
                         </div>
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Operação</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active==="recebimentos"} onClick={()=>setActive("recebimentos")}>📥 Recebimentos (Doações)</Pill>
-                                <Pill active={active==="compras"} onClick={()=>setActive("compras")}>💸 Compras</Pill>
-                                <Pill active={active==="vendas"} onClick={()=>setActive("vendas")}>📤 Vendas</Pill>
+                                <Pill active={active === "recebimentos"} onClick={() => setActive("recebimentos")}>📥 Recebimentos (Doações)</Pill>
+                                <Pill active={active === "compras"} onClick={() => setActive("compras")}>💸 Compras</Pill>
+                                <Pill active={active === "vendas"} onClick={() => setActive("vendas")}>📤 Vendas</Pill>
                             </div>
                         </div>
                         <div>
-                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Cadastros</div>
-                             <div className="flex flex-col gap-1">
-                                <Pill active={active==="materiais"} onClick={()=>setActive("materiais")}>📦 Materiais</Pill>
-                                <Pill active={active==="associacoes"} onClick={()=>setActive("associacoes")}>🤝 Associações</Pill>
-                                <Pill active={active==="compradores"} onClick={()=>setActive("compradores")}>💰 Compradores</Pill>
-                                <Pill active={active==="tipoParceiros"} onClick={()=>setActive("tipoParceiros")}>🏷️ Tipos de Parceiro</Pill>
-                             </div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Cadastros</div>
+                            <div className="flex flex-col gap-1">
+                                <Pill active={active === "materiais"} onClick={() => setActive("materiais")}>📦 Materiais</Pill>
+                                <Pill active={active === "associacoes"} onClick={() => setActive("associacoes")}>🤝 Associações</Pill>
+                                <Pill active={active === "parceiros"} onClick={() => setActive("parceiros")}>🏢 Outros Parceiros</Pill>
+                                <Pill active={active === "compradores"} onClick={() => setActive("compradores")}>💰 Compradores</Pill>
+                                <Pill active={active === "tipoParceiros"} onClick={() => setActive("tipoParceiros")}>🏷️ Tipos de Parceiro</Pill>
+                            </div>
                         </div>
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Análise</div>
                             <div className="flex flex-col gap-1">
-                                <Pill active={active==="relatorios"} onClick={()=>setActive("relatorios")}>📈 Relatórios</Pill>
+                                <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>📈 Relatórios</Pill>
                             </div>
                         </div>
                     </nav>
                 </aside>
-                
+
                 <main>
                     {loading ? (
                         <div className="flex items-center justify-center h-64 text-slate-500">
@@ -1718,13 +1910,15 @@ function App() {
                         <>
                             {active === "dashboard" && <DashboardView store={store} />}
                             {active === "materiais" && <MateriaisView data={store.materiais} onCreate={createMaterial} onUpdate={updateMaterial} />}
-                            {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} fetchAPI={fetchAPI}  />}
+                            {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} fetchAPI={fetchAPI} />}
+                            {active === "parceiros" && (<ParceirosView store={store} fetchAPI={fetchAPI} onCreate={createParceiro} onUpdate={updateParceiro} onDelete={deleteParceiro} />
+                            )}
                             {active === "compradores" && <CompradoresView data={store.compradores} onCreate={createComprador} onUpdate={updateComprador} onDelete={deleteComprador} />}
-                            {active === "tipoParceiros" && <TipoParceiroView data={store.tiposParceiro} onCreate={createTipoParceiro} />}
+                            {active === "tipoParceiros" && <TipoParceiroView onCreate={createTipoParceiro} fetchAPI={fetchAPI} />}
                             {active === "recebimentos" && <RecebimentosView store={store} setActive={setActive} onCreate={createRecebimento} onCancel={cancelRecebimento} fetchAPI={fetchAPI} />}
-                            {active === "compras" && <ComprasView store={store} setActive={setActive} onCreate={createCompra} onCancel={cancelCompra} fetchAPI={fetchAPI}/>}
-                            {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} fetchAPI={fetchAPI}/>}
-                            {active === "relatorios" && <RelatoriosView store={store} fetchAPI={fetchAPI}/>}
+                            {active === "compras" && <ComprasView store={store} setActive={setActive} onCreate={createCompra} onCancel={cancelCompra} fetchAPI={fetchAPI} />}
+                            {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} fetchAPI={fetchAPI} />}
+                            {active === "relatorios" && <RelatoriosView store={store} fetchAPI={fetchAPI} />}
                         </>
                     )}
                 </main>
