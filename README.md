@@ -152,17 +152,6 @@ O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é divid
 ```
 ---
 
-### .env
-Como o .env deve ficar para q der certo
-```
-#.env
-
-DATABASE_URL="postgresql+psycopg://postgres:[password]@localhost/rede_catadores_db"
-
-SECRET_KEY="rede123"
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-```
 
 ## Programas Necessários (Ambiente)
 🚀 Começando
@@ -222,9 +211,21 @@ ALGORITHM="HS256"
 #(Certifique-se que o banco 'rede_catadores_db' existe no seu Postgres)
 alembic upgrade head
 ```
-#### 6. Inicie o Servidor
+
+#### 6. Crie o usuario 
+```
+  # no terminal
+  python criar_usuario.py
+```
+#### 7. Inicie o Servidor
 ```
 uvicorn app.main:app --reload
+```
+
+#### 8. Executar o Front
+```
+  cd Projeto_Gerenciamento_Redes_Catadores/frontend
+  python -m http.server 8001
 ```
 --- 
 
@@ -244,17 +245,19 @@ python -m http.server 8001
 ``` 
 
 ## 🛣️ Roadmap (Próximos Passos)
-[x] V1.0: CRUDs básicos de Materiais e Associações.
+[x] V1.0: CRUDs básicos (Materiais, Associações).
 
-[x] V2.0: Implementação de Vendas e Controle de Estoque Dinâmico.
+[x] V2.0: Implementação de Vendas e Estoque Dinâmico.
 
 [x] V3.0: Arquitetura de Parceiros Híbridos e Módulo de Compras.
 
-[ ] V3.1: Integração do Login (JWT) no Frontend.
+[x] V3.1: Implementação de Autenticação JWT (Backend + Frontend).
 
-[ ] V3.2: Implementação de Testes Automatizados (pytest) no Backend.
+[x] V3.2: Implementação do Módulo Financeiro (Livro Caixa) com Compras/Vendas automáticas.
 
-[ ] V4.0: Deploy em produção (Render + GitHub Pages/Vercel).
+[ ] V3.3: Implementação de Testes Automatizados (pytest) no Backend.
+
+[ ] V4.0: Deploy em produção (Render + Vercel/GitHub Pages).
 
 📄 Licença
 
