@@ -978,7 +978,7 @@ function RecebimentosView({ store, setActive, onCreate, onCancel, fetchAPI }) {
 }
 
 function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
-    // Estados locais de dados, filtros e paginação
+    // --- Estados Locais ---
     const [vendas, setVendas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -986,150 +986,123 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     const [totalVendas, setTotalVendas] = useState(0);
     const ITENS_POR_PAGINA = 20;
 
+    // --- Filtros (CORRIGIDO) ---
     const [dataInicio, setDataInicio] = useState("");
     const [dataFim, setDataFim] = useState("");
-    const [filtroComprador, setFiltroComprador] = useState("");
+    const [filtroCompradorId, setFiltroCompradorId] = useState(""); // 👈 CORREÇÃO: Filtro por ID
     const [filtroMaterialId, setFiltroMaterialId] = useState("");
 
-    // Estados do formulário (Drawer)
+    // --- Estados do Formulário ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [dataVenda, setDataVenda] = useState(todayISO());
-    const [compradorId, setCompradorId] = useState(""); // MUDANÇA: de string 'comprador' para 'compradorId'
+    const [compradorId, setCompradorId] = useState("");
     const [itemAtualMaterialId, setItemAtualMaterialId] = useState("");
     const [itemAtualQuantidade, setItemAtualQuantidade] = useState("");
     const [itemAtualPrecoUnit, setItemAtualPrecoUnit] = useState("");
     const [estoqueDisponivel, setEstoqueDisponivel] = useState(null);
     const [itens, setItens] = useState([]);
 
-    // Opções dos Selects (do store global)
+    // --- Opções para Selects ---
+    console.log(store);
+
     const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-    const compradoresOpts = store.compradores.map(c => ({ value: String(c.id), label: c.nome })); // Para o novo Select
+    const compradoresOpts = store.compradores.map(c => ({ value: String(c.id), label: c.nome }));
     const getMat = (id) => store.materiais.find(m => m.id === Number(id));
+
+
+    useEffect(() => {
+        const fetchVendasData = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('end_date', dataFim);
+            if (filtroCompradorId) params.append('id_comprador', filtroCompradorId); // 👈 CORREÇÃO: Envia id_comprador
+            if (filtroMaterialId) params.append('id_material', filtroMaterialId);
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                const data = await fetchAPI(`/vendas/?${params.toString()}`);
+                setVendas(data.items);
+                setTotalVendas(data.total_count);
+            } catch (error) {
+                console.error("Erro ao buscar vendas:", error);
+                setVendas([]); setTotalVendas(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchVendasData();
+    }, [dataInicio, dataFim, filtroCompradorId, filtroMaterialId, paginaAtual, refreshTrigger, fetchAPI]); // 👈 CORREÇÃO: Depende de filtroCompradorId
 
     useEffect(() => {
         const fetchEstoque = async () => {
-            if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
-                try {
-                    setEstoqueDisponivel(null);
-                    // ✅ CORREÇÃO: Usa fetchAPI (que já tem o token e a API_URL)
-                    const data = await fetchAPI(`/estoque/${itemAtualMaterialId}`);
-                    setEstoqueDisponivel(data);
-                } catch (error) {
-                    console.error("Erro ao buscar estoque do item:", error.message);
-                    setEstoqueDisponivel(null);
-                }
-            } else {
+            if (!itemAtualMaterialId || isNaN(Number(itemAtualMaterialId))) {
+                setEstoqueDisponivel(null); return;
+            }
+            try {
+                setEstoqueDisponivel(null);
+                const data = await fetchAPI(`/estoque/${itemAtualMaterialId}`);
+                setEstoqueDisponivel(data);
+            } catch (error) {
+                console.error("Erro ao buscar estoque:", error.message);
                 setEstoqueDisponivel(null);
             }
         };
         fetchEstoque();
     }, [itemAtualMaterialId, fetchAPI]);
 
-    // useEffect para buscar estoque (do Drawer)
-    useEffect(() => {
-        const fetchEstoque = async () => {
-            if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
-                try {
-                    setEstoqueDisponivel(null);
-                    const response = await fetch(`${API_URL}/estoque/${itemAtualMaterialId}`);
-                    if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail || 'Falha ao buscar estoque'); }
-                    const data = await response.json();
-                    setEstoqueDisponivel(data);
-                } catch (error) {
-                    console.error("Erro ao buscar estoque:", error.message);
-                    setEstoqueDisponivel(null);
-                }
-            } else {
-                setEstoqueDisponivel(null);
-            }
-        };
-        fetchEstoque();
-    }, [itemAtualMaterialId]);
-
-    // Funções do Drawer (handleAddItem, handleRemoveItem)
+    // --- Funções do Drawer (Add/Remove Item) ---
     const handleAddItem = () => {
-        if (!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit) {
-            alert("Preencha Material, Quantidade e Preço Unitário para adicionar.");
-            return;
-        }
+        if (!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit) { alert("Preencha Material, Qtd e Preço."); return; }
         const qtdNum = parseFloat(itemAtualQuantidade || "0");
         const precoNum = parseFloat(itemAtualPrecoUnit || "0");
-        if (isNaN(qtdNum) || qtdNum <= 0 || isNaN(precoNum) || precoNum <= 0) {
-            alert("Quantidade e Preço Unitário devem ser números positivos.");
-            return;
-        }
-        if (estoqueDisponivel && qtdNum > estoqueDisponivel.estoque_atual) {
-            alert(`Estoque insuficiente. Disponível: ${estoqueDisponivel.estoque_atual} ${estoqueDisponivel.unidade_medida}`);
-            return;
-        }
+        if (qtdNum <= 0 || precoNum <= 0) { alert("Qtd e Preço devem ser positivos."); return; }
+        if (estoqueDisponivel && qtdNum > estoqueDisponivel.estoque_atual) { alert(`Estoque insuficiente. Disponível: ${estoqueDisponivel.estoque_atual}`); return; }
         const novoItem = { id_material: Number(itemAtualMaterialId), quantidade_vendida: qtdNum, valor_unitario: precoNum };
         setItens(listaAnterior => [...listaAnterior, novoItem]);
-        setItemAtualMaterialId("");
-        setItemAtualQuantidade("");
-        setItemAtualPrecoUnit("");
-        setEstoqueDisponivel(null);
+        setItemAtualMaterialId(""); setItemAtualQuantidade(""); setItemAtualPrecoUnit(""); setEstoqueDisponivel(null);
     };
+    const handleRemoveItem = (index) => setItens(listaAnterior => listaAnterior.filter((_, i) => i !== index));
+    const handleCloseDrawer = () => { setOpen(false); setBusy(false); setDataVenda(todayISO()); setCompradorId(""); setItens([]); };
+    const handleOpenCreate = () => { handleCloseDrawer(); setOpen(true); };
 
-    const handleRemoveItem = (indexParaRemover) => {
-        setItens(listaAnterior => listaAnterior.filter((_, index) => index !== indexParaRemover));
-    };
-
-    const handleCloseDrawer = () => {
-        setOpen(false); setBusy(false); setDataVenda(todayISO());
-        setCompradorId(""); setItens([]); setItemAtualMaterialId(""); // MUDANÇA AQUI
-        setItemAtualQuantidade(""); setItemAtualPrecoUnit(""); setEstoqueDisponivel(null);
-    };
-
-    const handleOpenCreate = () => {
-        handleCloseDrawer();
-        setOpen(true);
-    };
-
-    // Funções de Ação
-    const handleSubmitVenda = async () => {
-        if (!compradorId) { alert("Selecione um comprador."); return; } // MUDANÇA AQUI
-        if (itens.length === 0) { alert("Adicione pelo menos um item à venda."); return; }
-
+    // --- Funções de Ação (Submit e Cancel) ---
+    const handleSubmitVenda = async (e) => {
+        e.preventDefault();
+        if (!compradorId) { alert("Selecione um comprador."); return; }
+        if (itens.length === 0) { alert("Adicione pelo menos um item."); return; }
         setBusy(true);
         try {
-            // MUDANÇA AQUI: Passa 'id_comprador'
             const success = await onCreate({ id_comprador: Number(compradorId), itens: itens });
-            if (success) {
-                handleCloseDrawer();
-                setRefreshTrigger(t => t + 1);
-            }
-        } catch (error) { /* erro já tratado em onCreate */ }
+            if (success) { handleCloseDrawer(); setRefreshTrigger(t => t + 1); }
+        } catch (error) { /* já tratado */ }
         finally { setBusy(false); }
     };
-
     const handleCancel = async (id) => {
-        const success = await onCancel(id);
-        if (success) {
-            setRefreshTrigger(t => t + 1);
-        }
+        if (await onCancel(id)) setRefreshTrigger(t => t + 1);
     };
 
-    // Cálculos de StatCard (baseados nos dados da página)
-    const totalQtdVendida = vendas.reduce((totalVendas, venda) =>
-        totalVendas + venda.itens.reduce((totalItens, item) =>
-            totalItens + Number(item.quantidade_vendida || 0), 0),
-        0);
-    const receitaTotal = vendas.reduce((totalVendas, venda) =>
-        totalVendas + venda.itens.reduce((totalItens, item) =>
-            totalItens + (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0)), 0),
-        0);
+    // --- Cálculos e Tabela (useMemo) ---
+    const { totalQtdVendida, receitaTotal } = useMemo(() => {
+        return vendas.reduce((acc, venda) => {
+            (venda.itens || []).forEach(item => {
+                acc.totalQtdVendida += Number(item.quantidade_vendida || 0);
+                acc.receitaTotal += (Number(item.quantidade_vendida || 0) * Number(item.valor_unitario || 0));
+            });
+            return acc;
+        }, { totalQtdVendida: 0, receitaTotal: 0 });
+    }, [vendas]);
 
-    // Preparação dos dados para a Tabela
     const itensVendidosData = useMemo(() => {
-        return vendas.flatMap(venda =>
-            venda.itens.map(item => ({
+        return (vendas || []).flatMap(venda =>
+            (venda.itens || []).map(item => ({
                 ...item,
                 venda_id: venda.id,
                 data_venda: venda.data_venda,
                 codigo: venda.codigo,
-                // MUDANÇA AQUI: Pega o objeto 'comprador' aninhado
-                comprador: venda.comprador,
+                comprador: venda.comprador, // Objeto aninhado
             }))
         ).sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda));
     }, [vendas]);
@@ -1141,151 +1114,171 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Nova venda</button>
             </Toolbar>
 
+            {/* --- FILTROS (CORRIGIDO) --- */}
             <Card className="p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <TextInput label="Data Início" type="date" value={dataInicio} onChange={setDataInicio} />
                     <TextInput label="Data Fim" type="date" value={dataFim} onChange={setDataFim} />
-                    <TextInput label="Filtrar por Comprador" value={filtroComprador} onChange={setFiltroComprador} placeholder="Nome do comprador..." />
-                    <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos os Materiais" />
-                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroComprador(""); setFiltroMaterialId(""); }}>Limpar Filtros</button>
+                    {/* 👈 CORREÇÃO: <Select> para filtro de Comprador */}
+                    <Select label="Filtrar por Comprador" value={filtroCompradorId} onChange={setFiltroCompradorId} options={compradoresOpts} placeholder="Todos" />
+                    <Select label="Filtrar por Material" value={filtroMaterialId} onChange={setFiltroMaterialId} options={materiaisOpts} placeholder="Todos" />
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => { setDataInicio(""); setDataFim(""); setFiltroCompradorId(""); setFiltroMaterialId(""); }}>Limpar</button>
                 </div>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <StatCard title="Vendas (Filtradas)" value={totalVendas} />
-                <StatCard title="Qtd Vendida (Página)" value={`${totalQtdVendida.toFixed(2)} Kg`} />
+                <StatCard title="Qtd Vendida (Página)" value={`${totalQtdVendida.toFixed(1)} Kg`} />
                 <StatCard title="Receita (Página)" value={money(receitaTotal)} />
             </div>
 
             {loading && <div className="text-center p-4 text-emerald-600">Carregando vendas...</div>}
-            {!loading && (
-                <Table
-                    columns={[
-                        { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
-                        { key: "codigo", header: "Cód. Venda" },
-                        // MUDANÇA AQUI: Lê o nome do objeto comprador
-                        { key: "comprador", header: "Comprador", render: (comprador) => comprador?.nome || "-" },
-                        { key: "material", header: "Material", render: (mat) => mat?.nome || "-" },
-                        { key: "quantidade_vendida", header: "Quantidade", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || "un"}` },
-                        { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
-                        { key: "total", header: "Total Item", render: (_, row) => money(Number(row.quantidade_vendida || 0) * Number(row.valor_unitario || 0)) },
-                        {
-                            key: "actions", header: "Ações", render: (_, row) => (
-                                <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
-                                    onClick={() => handleCancel(row.venda_id)}
-                                    title="Cancelar venda completa">
-                                    🚫 Cancelar Venda
-                                </button>
-                            )
-                        },
-                    ]}
-                    data={itensVendidosData}
-                    emptyLabel="Nenhuma venda encontrada para os filtros selecionados."
-                />
-            )}
 
-            {!loading && totalVendas > ITENS_POR_PAGINA && (
-                <div className="flex justify-between items-center mt-4">
-                    <span className="text-sm text-neutral-600">
-                        Mostrando {paginaAtual * ITENS_POR_PAGINA + 1} - {Math.min((paginaAtual + 1) * ITENS_POR_PAGINA, totalVendas)} de {totalVendas} vendas
-                    </span>
-                    <div className="flex gap-2">
-                        <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                            &larr; Anterior
-                        </button>
-                        <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalVendas} className="px-4 py-2 rounded-xl border bg-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                            Próxima &rarr;
-                        </button>
-                    </div>
-                </div>
+            {!loading && (
+                <>
+                    <Table
+                        columns={[
+                            { key: "data_venda", header: "Data", render: v => fmtDateBR(v) },
+                            { key: "codigo", header: "Cód. Venda" },
+                            { key: "comprador", header: "Comprador", render: (c) => c?.nome || "-" }, // 👈 Lê o nome do objeto
+                            { key: "material", header: "Material", render: (m) => m?.nome || "-" },
+                            { key: "quantidade_vendida", header: "Qtd.", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.material?.unidade_medida || "un"}` },
+                            { key: "valor_unitario", header: "Preço Unit.", render: v => money(v) },
+                            { key: "total", header: "Total Item", render: (_, row) => money(Number(row.quantidade_vendida || 0) * Number(row.valor_unitario || 0)) },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <button className="px-2 py-1 rounded-lg border text-xs text-orange-600 border-orange-200 hover:bg-orange-50"
+                                        onClick={() => handleCancel(row.venda_id)} title="Cancelar venda completa">
+                                        🚫 Cancelar Venda
+                                    </button>
+                                )
+                            },
+                        ]}
+                        data={itensVendidosData}
+                        emptyLabel="Nenhuma venda encontrada para os filtros selecionados."
+                    />
+                    {/* Paginação */}
+                    {totalVendas > ITENS_POR_PAGINA && (
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-3 py-1 rounded border bg-white disabled:opacity-50">&larr; Anterior</button>
+                            <span className="px-3 py-1 text-sm text-neutral-600">Pág. {paginaAtual + 1}</span>
+                            <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalVendas} className="px-3 py-1 rounded border bg-white disabled:opacity-50">Próxima &rarr;</button>
+                        </div>
+                    )}
+                </>
             )}
 
             <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Venda">
-                <div className="space-y-4">
-                    <TextInput label="Data" type="date" value={dataVenda} onChange={setDataVenda} required />
-                    {/* MUDANÇA AQUI: de TextInput para Select */}
-                    <Select
-                        label="Comprador"
-                        value={compradorId}
-                        onChange={setCompradorId}
-                        options={compradoresOpts}
-                        required
-                    />
-                    <hr className="my-4" />
-                    {/* ... (Resto do formulário de adicionar itens, que está correto) ... */}
-                    <h4 className="font-medium text-neutral-700">Adicionar Item</h4>
-                    <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg bg-neutral-50">
-                        <div className="col-span-3">
-                            <Select
-                                label="Material"
-                                value={itemAtualMaterialId}
-                                onChange={setItemAtualMaterialId}
-                                options={materiaisOpts}
+                {/* O <form> envolve tudo, incluindo botões */}
+                <form onSubmit={handleSubmitVenda} className="flex flex-col h-full">
+
+                    {/* Conteúdo principal do formulário (com scroll se necessário) */}
+                    <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+                        {/* <TextInput label="Data" ... /> (Removido, data é automática no back) */}
+                        <Select label="Comprador" value={compradorId} onChange={setCompradorId} options={compradoresOpts} required />
+
+                        <hr className="my-4" />
+
+                        {/* --- Seção de Adicionar Item --- */}
+                        <h4 className="font-medium text-neutral-700">Adicionar Item</h4>
+                        <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg bg-neutral-50">
+                            <div className="col-span-3">
+                                <Select
+                                    label="Material"
+                                    value={itemAtualMaterialId}
+                                    onChange={setItemAtualMaterialId}
+                                    options={materiaisOpts}
+                                    required={itens.length === 0} // Só é obrigatório se for o primeiro item
+                                />
+                                {estoqueDisponivel && (
+                                    <p className="text-xs text-emerald-700 mt-1">
+                                        Disponível: {estoqueDisponivel.estoque_atual} {estoqueDisponivel.unidade_medida}
+                                    </p>
+                                )}
+                                {!itemAtualMaterialId && <p className="text-xs text-neutral-400 mt-1">Selecione um material para ver o estoque.</p>}
+                            </div>
+                            <TextInput
+                                label="Qtd"
+                                type="number"
+                                value={itemAtualQuantidade}
+                                onChange={(value) => setItemAtualQuantidade(value)}
+                                placeholder="Kg"
                                 required={itens.length === 0}
                             />
-                            {estoqueDisponivel && (<p className="text-xs text-emerald-700 mt-1"> Disponível: {estoqueDisponivel.estoque_atual} {estoqueDisponivel.unidade_medida} </p>)}
-                            {!itemAtualMaterialId && <p className="text-xs text-neutral-400 mt-1">Selecione um material para ver o estoque.</p>}
+                            <TextInput
+                                label="Preço Unit (R$)"
+                                type="number"
+                                value={itemAtualPrecoUnit}
+                                onChange={setItemAtualPrecoUnit}
+                                placeholder="Ex: 2.5"
+                                required={itens.length === 0}
+                            />
+                            <div className="flex items-end">
+                                <button
+                                    type="button" // Importante: 'type="button"' para não enviar o form
+                                    onClick={handleAddItem}
+                                    disabled={
+                                        !itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit ||
+                                        parseFloat(itemAtualQuantidade || '0') <= 0 ||
+                                        parseFloat(itemAtualPrecoUnit || '0') <= 0 ||
+                                        (estoqueDisponivel === null && itemAtualMaterialId !== "") ||
+                                        (estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual)
+                                    }
+                                    className="w-full px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    + Adicionar
+                                </button>
+                            </div>
+                            {estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual && (
+                                <p className="text-xs text-red-600 col-span-3 mt-1">
+                                    Quantidade maior que o estoque disponível!
+                                </p>
+                            )}
                         </div>
-                        <TextInput
-                            label="Qtd" type="number" value={itemAtualQuantidade}
-                            onChange={(value) => setItemAtualQuantidade(value)}
-                            placeholder="Kg" required={itens.length === 0}
-                        />
-                        <TextInput label="Preço Unit (R$)" type="number" value={itemAtualPrecoUnit} onChange={setItemAtualPrecoUnit} placeholder="Ex: 2.5" required={itens.length === 0} />
-                        <div className="flex items-end">
-                            <button
-                                type="button"
-                                onClick={handleAddItem}
-                                disabled={!itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit || parseFloat(itemAtualQuantidade || '0') <= 0 || parseFloat(itemAtualPrecoUnit || '0') <= 0 || (estoqueDisponivel === null && itemAtualMaterialId !== "") || (estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual)}
-                                className="w-full px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                + Adicionar
-                            </button>
-                        </div>
-                        {estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual && (
-                            <p className="text-xs text-red-600 col-span-3 mt-1">
-                                Quantidade maior que o estoque disponível!
-                            </p>
+
+                        <hr className="my-4" />
+
+                        {/* --- Seção de Itens Adicionados --- */}
+                        <h4 className="font-medium text-neutral-700">Itens da Venda ({itens.length})</h4>
+                        {itens.length === 0 ? (
+                            <p className="text-sm text-neutral-500 text-center py-4">Nenhum item adicionado ainda.</p>
+                        ) : (
+                            <ul className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-neutral-50">
+                                {itens.map((item, index) => {
+                                    const materialInfo = getMat(item.id_material);
+                                    return (
+                                        <li key={index} className="flex justify-between items-center text-sm p-2 bg-white rounded shadow-sm">
+                                            <span>
+                                                {item.quantidade_vendida} {materialInfo?.unidade_medida || 'un'} de {materialInfo?.nome || '?'}
+                                                @ {money(item.valor_unitario)}
+                                            </span>
+                                            <button
+                                                type="button" // Importante: 'type="button"'
+                                                onClick={() => handleRemoveItem(index)}
+                                                className="text-red-500 hover:text-red-700 font-bold"
+                                                title="Remover Item"
+                                            >
+                                                &times;
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
                         )}
                     </div>
-                    <hr className="my-4" />
-                    <h4 className="font-medium text-neutral-700">Itens da Venda ({itens.length})</h4>
-                    {itens.length === 0 ? (
-                        <p className="text-sm text-neutral-500 text-center py-4">Nenhum item adicionado ainda.</p>
-                    ) : (
-                        <ul className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-neutral-50">
-                            {itens.map((item, index) => {
-                                const materialInfo = getMat(item.id_material);
-                                return (
-                                    <li key={index} className="flex justify-between items-center text-sm p-2 bg-white rounded shadow-sm">
-                                        <span>
-                                            {item.quantidade_vendida} {materialInfo?.unidade_medida || 'un'} de {materialInfo?.nome || '?'}
-                                            @ {money(item.valor_unitario)}
-                                        </span>
-                                        <button
-                                            onClick={() => handleRemoveItem(index)}
-                                            className="text-red-500 hover:text-red-700 font-bold"
-                                            title="Remover Item"
-                                        >
-                                            &times;
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                    <div className="flex justify-end gap-2 pt-4">
+
+                    {/* Rodapé fixo do Drawer com os botões de ação */}
+                    <div className="flex justify-end gap-2 pt-4 border-t mt-auto">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button
-                            type="button"
-                            onClick={handleSubmitVenda}
-                            disabled={busy || itens.length === 0 || !compradorId} // MUDANÇA AQUI
+                            type="submit" // Este é o botão que envia o formulário
+                            disabled={busy || itens.length === 0 || !compradorId}
                             className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60"
                         >
                             {busy ? "Salvando..." : "Finalizar Venda"}
                         </button>
                     </div>
-                </div>
+                </form>
             </Drawer>
         </section>
     );
@@ -1508,6 +1501,8 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [paginaAtual, setPaginaAtual] = useState(0);
     const [totalCompras, setTotalCompras] = useState(0);
+    const [saldoCaixa, setSaldoCaixa] = useState(0)
+
     const ITENS_POR_PAGINA = 20;
 
     // --- Filtros ---
@@ -1533,7 +1528,7 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
 
     // --- Busca de Dados ---
     useEffect(() => {
-        const fetchCompras = async () => {
+        const fetchDadosDaView = async () => {
             setLoading(true);
             const params = new URLSearchParams();
             if (dataInicio) params.append('data_inicio', dataInicio);
@@ -1544,18 +1539,22 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                const data = await fetchAPI(`/compras/?${params.toString()}`);
-
+                // const data = await fetchAPI(`/compras/?${params.toString()}`);
+                const [saldoData, comprasData] = await Promise.all([
+                    fetchAPI('/financeiro/saldo'),
+                    fetchAPI(`/compras/?${params.toString()}`)
+                ])
                 // fetchAPI já joga erro se falhar e já faz o .json()!
-                setCompras(data.items);
-                setTotalCompras(data.total_count);
+                setSaldoCaixa(saldoData.saldo_atual);
+                setCompras(comprasData.items);
+                setTotalCompras(comprasData.total_count);
             } catch (error) {
                 console.error("Erro buscar compras:", error);
-                setCompras([]); setTotalCompras(0);
+                setCompras([]); setTotalCompras(0); setSaldoCaixa(0);
             } finally { setLoading(false); }
         };
-        fetchCompras();
-    }, [dataInicio, dataFim, filtroParceiroId, filtroMaterialId, paginaAtual, refreshTrigger]);
+        fetchDadosDaView();
+    }, [dataInicio, dataFim, filtroParceiroId, filtroMaterialId, paginaAtual, refreshTrigger, fetchAPI]);
 
     // --- Actions ---
     const handleCloseDrawer = () => {
@@ -1641,6 +1640,9 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
             <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Compra">
                 <form onSubmit={onSubmit} className="space-y-4">
                     <TextInput label="Data" type="date" value={dataCompra} onChange={setDataCompra} required />
+                    <div className="p-3 bg-blue-50 text-blue-800 rounded-lg">
+                        <strong>Saldo em Caixa: {money(saldoCaixa)}</strong>
+                    </div>
                     <Select label="Fornecedor (Parceiro)" value={parceiroId} onChange={setParceiroId} options={parceirosOpts} required />
                     <Select label="Material" value={materialId} onChange={setMaterialId} options={materiaisOpts} required />
                     <div className="grid grid-cols-2 gap-4">
@@ -1655,6 +1657,152 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                     <div className="flex justify-end gap-2 pt-4">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">{busy ? "Salvar Compra" : "Salvar"}</button>
+                    </div>
+                </form>
+            </Drawer>
+        </section>
+    );
+}
+
+function FinanceiroView({ fetchAPI, onCreateTransacao }) {
+    const [saldo, setSaldo] = useState({ saldo_atual: 0, total_entradas: 0, total_saidas: 0 });
+    const [transacoes, setTransacoes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // Estados do Drawer (Formulário)
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [tipo, setTipo] = useState("ENTRADA"); // 'ENTRADA' ou 'SAIDA'
+    const [valor, setValor] = useState("");
+    const [descricao, setDescricao] = useState("");
+
+    // --- Busca de Dados ---
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                // Busca o saldo e as últimas transações ao mesmo tempo
+                const [saldoData, transacoesData] = await Promise.all([
+                    fetchAPI('/financeiro/saldo'),
+                    fetchAPI('/financeiro/transacoes/?limit=50') // Pega as últimas 50
+                ]);
+                setSaldo(saldoData);
+                setTransacoes(transacoesData.items);
+            } catch (error) {
+                console.error("Erro ao buscar dados financeiros:", error);
+                alert("Não foi possível carregar os dados financeiros.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [refreshTrigger, fetchAPI]); // Recarrega se 'refreshTrigger' mudar
+
+    // --- Ações do Drawer ---
+    const handleCloseDrawer = () => {
+        setOpen(false); setBusy(false);
+        setValor(""); setDescricao(""); setTipo("ENTRADA");
+    };
+
+    const handleOpenModal = (tipoTransacao) => {
+        setTipo(tipoTransacao); // Define se é Entrada ou Saída
+        setOpen(true);
+    };
+
+    const submit = async (e) => {
+        console.log("Função submit foi chamadaaaa... yey");
+
+        e.preventDefault();
+        setBusy(true);
+        const payload = {
+            tipo: tipo,
+            valor: parseFloat(valor || "0"),
+            descricao: descricao
+        };
+
+        try {
+            const success = await onCreateTransacao(payload);
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1); // Força o recarregamento do saldo e da lista
+            }
+        } catch (error) {
+            /* erro já tratado na App() */
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <section>
+            <Toolbar>
+                <h2 className="text-xl font-semibold">Livro Caixa (Financeiro)</h2>
+                <div className="flex gap-2">
+                    <button className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white" onClick={() => handleOpenModal("SAIDA")}>
+                        - Registrar Saída
+                    </button>
+                    <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleOpenModal("ENTRADA")}>
+                        + Registrar Entrada
+                    </button>
+                </div>
+            </Toolbar>
+
+            {/* Cards de Saldo */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <StatCard title="SALDO ATUAL" value={money(saldo.saldo_atual)} />
+                <StatCard title="Total de Entradas" value={money(saldo.total_entradas)} subtitle="Vendas + Aportes" />
+                <StatCard title="Total de Saídas" value={money(saldo.total_saidas)} subtitle="Compras + Despesas" />
+            </div>
+
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando histórico...</div>}
+
+            {!loading && (
+                <Table
+                    columns={[
+                        { key: "data", header: "Data", render: v => fmtDateBR(v) },
+                        { key: "descricao", header: "Descrição" },
+                        {
+                            key: "tipo", header: "Tipo", render: (t) => (
+                                <span className={cls("font-medium", t === "ENTRADA" ? "text-green-600" : "text-red-600")}>{t}</span>
+                            )
+                        },
+                        {
+                            key: "valor", header: "Valor", render: (v, row) => (
+                                <span className={cls("font-semibold", row.tipo === "ENTRADA" ? "text-green-600" : "text-red-600")}>
+                                    {row.tipo === "SAIDA" ? "-" : "+"}{money(v)}
+                                </span>
+                            )
+                        },
+                        // (Opcional: Adicionar colunas 'id_venda_associada' ou 'id_compra_associada' se quiser ver os links)
+                    ]}
+                    data={transacoes}
+                    emptyLabel="Nenhuma transação registrada."
+                />
+            )}
+
+            <Drawer open={open} onClose={handleCloseDrawer} title={tipo === "ENTRADA" ? "Registrar Entrada de Caixa" : "Registrar Saída de Caixa"}>
+                <form onSubmit={submit} className="space-y-4">
+                    <TextInput
+                        label="Descrição"
+                        value={descricao}
+                        onChange={setDescricao}
+                        placeholder={tipo === "ENTRADA" ? "Ex: Aporte do projeto, Verba..." : "Ex: Pagamento de aluguel, Gasolina..."}
+
+                    />
+                    <TextInput
+                        label="Valor (R$)"
+                        type="number"
+                        value={valor}
+                        onChange={setValor}
+                        placeholder="Ex: 150.00"
+                        required
+                    />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
+                        <button type="submit" disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-60">
+                            {busy ? "Salvando..." : "Salvar Transação"}
+                        </button>
                     </div>
                 </form>
             </Drawer>
@@ -1798,6 +1946,10 @@ function App() {
             const data = await fetchAPI('/categorias/');
             setStore(s => ({ ...s, categorias: data }));
         } catch (e) { console.error("Erro refresh categorias:", e); }
+    };
+
+    const refreshGlobalData = async () => {
+        await refreshEstoque();
     };
 
     // --- Funções de Ação (CREATE/UPDATE/DELETE) ---
@@ -1953,6 +2105,24 @@ function App() {
             await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
+    // --- FUNÇÃO FINANCEIRA ---
+    const createTransacao = async (payload) => {
+
+        try {
+
+            await fetchAPI('/financeiro/transacoes', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            return true;
+        } catch (e) {
+            alert(e.message);
+            return false;
+        }
+    };
+
+
     const handleLogout = () => {
         localStorage.removeItem("rc_token");
         window.location.href = "landpage.html";
@@ -2008,6 +2178,7 @@ function App() {
                             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 px-2">Análise</div>
                             <div className="flex flex-col gap-1">
                                 <Pill active={active === "relatorios"} onClick={() => setActive("relatorios")}>📈 Relatórios</Pill>
+                                <Pill active={active === "financeiro"} onClick={() => setActive("financeiro")}>💰 Financeiro</Pill>
                             </div>
                         </div>
                     </nav>
@@ -2032,6 +2203,7 @@ function App() {
                             {active === "compras" && <ComprasView store={store} setActive={setActive} onCreate={createCompra} onCancel={cancelCompra} fetchAPI={fetchAPI} />}
                             {active === "vendas" && <VendasView store={store} setActive={setActive} onCreate={createVenda} onCancel={cancelVenda} fetchAPI={fetchAPI} />}
                             {active === "relatorios" && <RelatoriosView store={store} fetchAPI={fetchAPI} />}
+                            {active === "financeiro" && <FinanceiroView fetchAPI={fetchAPI} onCreateTransacao={createTransacao} />}
                         </>
                     )}
                 </main>

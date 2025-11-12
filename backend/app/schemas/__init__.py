@@ -10,3 +10,4 @@ from .schema_venda import *
 from .schema_relatorio import *
 from .schema_estoque import *
 from .schema_usuario import *
+from .schema_financeiro import *

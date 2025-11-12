@@ -1,6 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, Float, func
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, Float, func, Enum
 from sqlalchemy.orm import relationship
 from .database import Base 
+import enum
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -12,7 +13,7 @@ class Usuario(Base):
     ativo = Column(Boolean,default=True)
 
     def __repr__(self):
-        return f"<Usuario(email='{self.email}', role='{self.role}')>"
+        return f"<Usuario(username='{self.username}')>"
 
 class CategoriaResiduo(Base):
     __tablename__ = "categoria_residuo"
@@ -146,6 +147,7 @@ class Compra(Base):
     # Relacionamentos
     parceiro = relationship("Parceiro", back_populates="compras")
     material = relationship("Material", back_populates="compras")
+    transacao_financeira = relationship("TransacaoFinanceira", back_populates="compra", uselist=False)
 
 class Venda(Base):
     """
@@ -162,6 +164,7 @@ class Venda(Base):
     comprador = relationship("Comprador", back_populates="vendas")
     
     itens = relationship("ItemVenda", back_populates="venda", cascade="all, delete-orphan")
+    transacao_financeira = relationship("TransacaoFinanceira", back_populates="venda", uselist=False)
 
 class ItemVenda(Base):
     """
@@ -178,3 +181,25 @@ class ItemVenda(Base):
     
     venda = relationship("Venda", back_populates="itens")
     material = relationship("Material", back_populates="itens_venda")
+    
+class TipoTransacaoEnum(enum.Enum):
+    ENTRADA = "ENTRADA"
+    SAIDA = "SAIDA"
+    
+class TransacaoFinanceira(Base):
+    __tablename__ = "transacoes_financeiras"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    data = Column(DateTime(timezone=True), server_default=func.now())
+    
+
+    tipo = Column(Enum(TipoTransacaoEnum), nullable=False, index=True)
+    valor = Column(Float, nullable=False)
+    descricao = Column(String, nullable=True)
+    
+    id_compra_associada = Column(Integer, ForeignKey("compras.id"), nullable=True)
+    id_venda_associada = Column(Integer, ForeignKey("vendas.id"), nullable=True)
+    
+    
+    compra = relationship("Compra",  back_populates="transacao_financeira")
+    venda = relationship("Venda" , back_populates="transacao_financeira")

@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session,joinedload
-from app import models
+
 from datetime import date
 from sqlalchemy import func,and_
 from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 import time
 import random
-from .material import calcular_estoque_material
-from .. import schemas
+# from .material import calcular_estoque_material
+from .. import schemas,models, crud
 
 MAX_RETRIES = 3
 
@@ -19,7 +19,7 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
     for item_venda in venda.itens:
         if item_venda.id_material not in materiais_map:
              raise ValueError(f"Material com ID {item_venda.id_material} não encontrado.")
-        estoque_disponivel = calcular_estoque_material(db, material_id=item_venda.id_material)
+        estoque_disponivel = crud.calcular_estoque_material(db, material_id=item_venda.id_material)
         if item_venda.quantidade_vendida <= 0:
              raise ValueError(f"Quantidade vendida para '{materiais_map[item_venda.id_material].nome}' deve ser positiva.")
         if item_venda.quantidade_vendida > estoque_disponivel:
@@ -63,6 +63,21 @@ def create_venda(db: Session, venda: schemas.VendaCreate):
             db.commit() 
             
             db.refresh(db_venda)
+            # 1. Calcula o valor total da venda que acabou de ser criada
+            total_recebido = sum(
+                item.quantidade_vendida * item.valor_unitario for item in db_venda.itens
+            )
+            
+            # 2. Prepara a transação de ENTRADA
+            transacao_entrada = schemas.TransacaoCreate(
+                tipo="ENTRADA",
+                valor=total_recebido,
+                descricao=f"Recebimento referente à Venda Cód: {db_venda.codigo}",
+                id_venda_associada=db_venda.id # Linka a transação à venda
+            )
+            
+            # 3. Salva a transação
+            crud.create_transacao(db, transacao_entrada)
             return db_venda 
 
         except IntegrityError as e:
@@ -141,17 +156,29 @@ def get_vendas(
 
 def cancel_venda(db: Session, venda_id: int):
     """Marca uma venda como não concluída/cancelada (concluida=False)."""
-    db_venda = get_venda(db, venda_id=venda_id) # Busca a venda
+    db_venda = get_venda(db, venda_id=venda_id) 
     if not db_venda: 
-        return None # Venda não encontrada
+        return None 
 
-    # Verifica se já está cancelada (concluida == False)
+
     if not db_venda.concluida: 
-        return db_venda # Já está cancelada
+        return db_venda 
 
-    # 👇 ALTERE AQUI 👇
-    db_venda.concluida = False # Marca como não concluída/cancelada
 
+    db_venda.concluida = False 
+    total_estorno = sum(
+        item.quantidade_vendida * item.valor_unitario for item in db_venda.itens
+    )
+
+    transacao_estorno = schemas.TransacaoCreate(
+        tipo="SAIDA",
+        valor=total_estorno,
+        descricao=f"Estorno referente ao Cancelamento da Venda Cód: {db_venda.codigo}",
+        id_venda_associada=db_venda.id 
+    )
+    
+
+    crud.create_transacao(db, transacao_estorno)
     db.commit()
     db.refresh(db_venda)
     return db_venda
