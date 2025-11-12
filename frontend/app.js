@@ -1822,7 +1822,7 @@ function App() {
         console.log(token);
 
         if (!token) {
-            window.location.href = "landpage.html";
+            window.location.href = "index.html";
         }
     }, [token]);
 
@@ -1844,7 +1844,7 @@ function App() {
 
     useEffect(() => {
         if (!token) {
-            window.localStorage.href = "landpage.html"
+            window.localStorage.href = "index.html"
         }
     }, [token])
 
@@ -1860,7 +1860,7 @@ function App() {
         if (res.status === 401) {
             alert("Sessão expirada. Faça login novamente.");
             localStorage.removeItem("rc_token");
-            window.location.href = "landPage.html";
+            window.location.href = "index.html";
             throw new Error("Sessão expirada");
         }
         if (!res.ok) {
@@ -2125,7 +2125,7 @@ function App() {
 
     const handleLogout = () => {
         localStorage.removeItem("rc_token");
-        window.location.href = "landpage.html";
+        window.location.href = "index.html";
     };
 
     if (!token) return null;
