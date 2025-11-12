@@ -59,18 +59,61 @@ function DashboardView({ store }) {
         </section>
     );
 }
+function MateriaisView({ store, onCreate, onUpdate, onDelete, fetchAPI }) {
+    // --- Estados Locais ---
+    const [materiais, setMateriais] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [paginaAtual, setPaginaAtual] = useState(0);
+    const [totalMateriais, setTotalMateriais] = useState(0);
+    const ITENS_POR_PAGINA = 20;
 
-function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
+    // --- Filtros ---
+    const [filtroNome, setFiltroNome] = useState("");
+
+    // --- Estados do Drawer ---
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [nome, setNome] = useState("");
-    const [categoria, setCategoria] = useState("");
-    const [unidade, setUnidade] = useState("Kg");
     const [editingId, setEditingId] = useState(null);
+    const [nome, setNome] = useState("");
+    const [idCategoria, setIdCategoria] = useState("");
+    const [unidade, setUnidade] = useState("Kg");
 
+    console.log(store);
+
+    const categoriasOpts = useMemo(() => {
+        if (!store.categorias) return [];
+        return store.categorias.map(c => ({ value: String(c.id), label: c.nome }));
+    }, [store.categorias]);
+    // --- Busca de Dados (useEffect) ---
+    useEffect(() => {
+        const fetchMateriaisData = async () => {
+            setLoading(true);
+            const params = new URLSearchParams();
+            // Seu backend precisa suportar o filtro de 'nome' na rota /estoque/
+            if (filtroNome) params.append('nome', filtroNome);
+            params.append('skip', paginaAtual * ITENS_POR_PAGINA);
+            params.append('limit', ITENS_POR_PAGINA);
+
+            try {
+                // Usa o fetchAPI autenticado para pegar /estoque/
+                const data = await fetchAPI(`/estoque/?${params.toString()}`);
+                setMateriais(data.items);
+                setTotalMateriais(data.total_count);
+            } catch (error) {
+                console.error("Erro ao buscar materiais/estoque:", error);
+                setMateriais([]); setTotalMateriais(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMateriaisData();
+    }, [filtroNome, paginaAtual, refreshTrigger, fetchAPI]); // Depende do fetchAPI
+
+    // --- Actions ---
     const handleCloseDrawer = () => {
-        setOpen(false); setBusy(false); setNome(""); setCategoria("");
-        setUnidade("Kg"); setEditingId(null);
+        setOpen(false); setBusy(false); setEditingId(null);
+        setNome(""); setIdCategoria(""); setUnidade("Kg");
     };
 
     const handleOpenCreate = () => {
@@ -78,9 +121,23 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
         setOpen(true);
     };
 
+    const handleEdit = (material) => {
+        setEditingId(material.id);
+        setNome(material.nome || "");
+        setIdCategoria(material.idCategoria || "");
+        setUnidade(material.unidade_medida || "Kg");
+        setOpen(true);
+    };
+
     const submit = async (e) => {
         e.preventDefault(); setBusy(true);
-        const payload = { nome, categoria, unidade_medida: unidade };
+        // O payload agora deve bater com o 'MaterialCreate' (nome, unidade_medida, categoria, ativo)
+        const payload = {
+            nome,
+            id_categoria: idCategoria ? Number(idCategoria) : null,
+            unidade_medida: unidade,
+            ativo: true
+        };
         let success = false;
         try {
             if (editingId) {
@@ -88,17 +145,17 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
             } else {
                 success = await onCreate(payload);
             }
-            if (success) { handleCloseDrawer(); }
+            if (success) {
+                handleCloseDrawer();
+                setRefreshTrigger(t => t + 1); // Força refetch
+            }
         } catch (error) { console.error("Falha submit material:", error); }
         finally { setBusy(false); }
     };
 
-    const handleEdit = (material) => {
-        setEditingId(material.id);
-        setNome(material.nome || "");
-        setCategoria(material.categoria || "");
-        setUnidade(material.unidade_medida || "Kg");
-        setOpen(true);
+    const handleDelete = async (id) => {
+        const success = await onDelete(id);
+        if (success) setRefreshTrigger(t => t + 1); // Força refetch
     };
 
     return (
@@ -107,33 +164,69 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
                 <h2 className="text-xl font-semibold">Materiais e Estoque</h2>
                 <button className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleOpenCreate}>+ Novo material</button>
             </Toolbar>
-            <Table
-                columns={[
-                    { key: "id", header: "ID" },
-                    { key: "codigo", header: "Código" },
-                    { key: "nome", header: "Nome" },
-                    { key: "categoria", header: "Categoria" },
-                    {
-                        key: "estoque_atual",
-                        header: "Estoque Atual",
-                        render: (estoque, row) => `${estoque !== null && estoque !== undefined ? estoque.toFixed(1) : '-'} ${row.unidade_medida || 'un'}`
-                    },
-                    {
-                        key: "actions", header: "Ações", render: (_, row) => (
-                            <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() => handleEdit(row)} title="Editar material">
-                                ✏️ Editar
-                            </button>
-                        )
-                    },
-                ]}
-                data={data}
-                emptyLabel="Nenhum material cadastrado"
-            />
+
+            {/* Filtros */}
+            <Card className="p-4 mb-4">
+                <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                        <TextInput label="Filtrar por Nome" value={filtroNome} onChange={setFiltroNome} placeholder="Digite o nome do material..." />
+                    </div>
+                    <button className="px-3 py-2 rounded-xl border bg-white h-10" onClick={() => setFiltroNome("")}>Limpar</button>
+                </div>
+            </Card>
+
+            {/* Tabela */}
+            {loading && <div className="text-center p-4 text-emerald-600">Carregando...</div>}
+            {!loading && (
+                <>
+                    <Table
+                        columns={[
+                            { key: "codigo", header: "Código" },
+                            { key: "nome", header: "Nome" },
+                            { key: "categoria_info", header: "Categoria", render: (cat) => cat?.nome || "-" },
+                            { key: "estoque_atual", header: "Estoque", render: (v, row) => `${Number(v || 0).toFixed(1)} ${row.unidade_medida || 'un'}` },
+                            {
+                                key: "actions", header: "Ações", render: (_, row) => (
+                                    <div className="flex gap-2">
+                                        <button className="px-2 py-1 rounded-lg border text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                                            onClick={() => handleEdit(row)} title="Editar material">
+                                            ✏️ Editar
+                                        </button>
+                                        {row.ativo && (
+                                            <button className="px-2 py-1 rounded-lg border text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                                onClick={() => handleDelete(row.id)} title="Inativar material">
+                                                🗑️ Inativar
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            },
+                        ]}
+                        data={materiais}
+                        emptyLabel="Nenhum material encontrado."
+                    />
+                    {/* Paginação */}
+                    {totalMateriais > ITENS_POR_PAGINA && (
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setPaginaAtual(p => p - 1)} disabled={paginaAtual === 0} className="px-3 py-1 rounded border bg-white disabled:opacity-50">&larr; Anterior</button>
+                            <span className="px-3 py-1 text-sm text-neutral-600">Pág. {paginaAtual + 1}</span>
+                            <button onClick={() => setPaginaAtual(p => p + 1)} disabled={(paginaAtual + 1) * ITENS_POR_PAGINA >= totalMateriais} className="px-3 py-1 rounded border bg-white disabled:opacity-50">Próxima &rarr;</button>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Drawer */}
             <Drawer open={open} onClose={handleCloseDrawer} title={editingId ? "Editar Material" : "Adicionar Material"}>
                 <form onSubmit={submit} className="space-y-3">
                     <TextInput label="Nome" value={nome} onChange={setNome} placeholder="Ex: PET, Papelão" required />
-                    <TextInput label="Categoria" value={categoria} onChange={setCategoria} placeholder="Ex: Plástico, Papel" />
+                    <Select
+                        label="Categoria"
+                        value={idCategoria}
+                        onChange={setIdCategoria}
+                        options={categoriasOpts}
+                        placeholder="Selecione uma categoria..."
+                    />
                     <TextInput label="Unidade de Medida" value={unidade} onChange={setUnidade} placeholder="Ex: Kg, un" required />
                     <div className="flex justify-end gap-2 pt-2">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
@@ -144,6 +237,8 @@ function MateriaisView({ data, onCreate, onUpdate, fetchAPI }) {
         </section>
     );
 }
+
+
 function TipoParceiroView({ onCreate, fetchAPI }) { // 👈 Não recebe mais 'data' do store
     const [tipos, setTipos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -350,20 +445,20 @@ function ParceirosView({ store, onCreate, onUpdate, onDelete, fetchAPI }) {
     const [nome, setNome] = useState("");
     const [tipoId, setTipoId] = useState("");
 
-    console.log("ParceirosView: store.tiposParceiro é:", store.tiposParceiro);
-    console.log("ParceirosView: É array?", Array.isArray(store.tipoParceiro));
+    console.log("ParceirosView: store.tiposParceiro é:", store);
+    console.log("ParceirosView: É array?", Array.isArray(store.tiposParceiro));
 
     const tiposGenericOpts = useMemo(() => {
-        if (!store.tipoParceiro || !Array.isArray(store.tipoParceiro)) return [];
-        return store.tipoParceiro
+        if (!store.tiposParceiro || !Array.isArray(store.tiposParceiro)) return [];
+        return store.tiposParceiro
             .filter(t => t.nome !== "ASSOCIACAO") // Remove ASSOCIAÇÃO (pois tem tela própria)
             .map(t => ({ value: String(t.id), label: t.nome }));
     }, [store.tipoParceiro]);
 
     const todosTiposOpts = useMemo(() => {
-        if (!store.tipoParceiro || !Array.isArray(store.tipoParceiro)) return [];
-        return store.tipoParceiro.map(t => ({ value: String(t.id), label: t.nome }));
-    }, [store.tipoParceiro]);
+        if (!store.tiposParceiro || !Array.isArray(store.tiposParceiro)) return [];
+        return store.tiposParceiro.map(t => ({ value: String(t.id), label: t.nome }));
+    }, [store.tiposParceiro]);
 
     // --- Busca de Dados ---
     useEffect(() => {
@@ -912,35 +1007,24 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     const compradoresOpts = store.compradores.map(c => ({ value: String(c.id), label: c.nome })); // Para o novo Select
     const getMat = (id) => store.materiais.find(m => m.id === Number(id));
 
-    // useEffect para buscar dados filtrados e paginados
     useEffect(() => {
-        const fetchVendasData = async () => {
-            setLoading(true);
-            const params = new URLSearchParams();
-            if (dataInicio) params.append('data_inicio', dataInicio);
-            if (dataFim) params.append('end_date', dataFim);
-            if (filtroComprador) params.append('comprador', filtroComprador);
-            if (filtroMaterialId) params.append('id_material', filtroMaterialId);
-
-            const skip = paginaAtual * ITENS_POR_PAGINA;
-            params.append('skip', skip);
-            params.append('limit', ITENS_POR_PAGINA);
-
-            try {
-                const data = await fetchAPI(`/vendas/?${params.toString()}`);
-                setVendas(data.items);
-                setTotalVendas(data.total_count);
-            } catch (error) {
-                console.error("Erro ao buscar vendas:", error);
-                alert(error.message);
-                setVendas([]);
-                setTotalVendas(0);
-            } finally {
-                setLoading(false);
+        const fetchEstoque = async () => {
+            if (itemAtualMaterialId && !isNaN(Number(itemAtualMaterialId))) {
+                try {
+                    setEstoqueDisponivel(null);
+                    // ✅ CORREÇÃO: Usa fetchAPI (que já tem o token e a API_URL)
+                    const data = await fetchAPI(`/estoque/${itemAtualMaterialId}`);
+                    setEstoqueDisponivel(data);
+                } catch (error) {
+                    console.error("Erro ao buscar estoque do item:", error.message);
+                    setEstoqueDisponivel(null);
+                }
+            } else {
+                setEstoqueDisponivel(null);
             }
         };
-        fetchVendasData();
-    }, [dataInicio, dataFim, filtroComprador, filtroMaterialId, paginaAtual, refreshTrigger]);
+        fetchEstoque();
+    }, [itemAtualMaterialId, fetchAPI]);
 
     // useEffect para buscar estoque (do Drawer)
     useEffect(() => {
@@ -1600,6 +1684,7 @@ function App() {
 
     const [store, setStore] = useState({
         materiais: [],
+        categorias: [],
         associacoes: [],
         compradores: [],
         tiposParceiro: [],
@@ -1646,19 +1731,21 @@ function App() {
             setLoading(true);
             console.log("Token verificado. Buscando dados ...");
             try {
-                const [mats, assocs, comps, tipos, parcs] = await Promise.all([
+                const [mats, assocs, comps, tipos, parcs, cats] = await Promise.all([
                     fetchAPI('/estoque/'),
                     fetchAPI('/associacoes/'),
                     fetchAPI('/compradores/'),
                     fetchAPI('/tipos_parceiro/'),
-                    fetchAPI('/parceiros/')
+                    fetchAPI('/parceiros/'),
+                    fetchAPI('/categorias/')
                 ]);
                 setStore({
                     materiais: mats.items || mats,
                     associacoes: assocs.items || assocs,
-                    parceiros: parcs.items || parcs,
-                    tipoParceiro: tipos.items || tipos,
                     compradores: comps.items || comps,
+                    tiposParceiro: tipos || [],
+                    parceiros: parcs.items || parcs,
+                    categorias: cats || [],
                     recebimentos: [], vendas: []
                 });
             } catch (err) {
@@ -1706,6 +1793,12 @@ function App() {
             setStore(s => ({ ...s, parceiros: data.items || data }));
         } catch (e) { console.error("Erro refresh parceiros:", e); }
     };
+    const refreshCategorias = async () => {
+        try {
+            const data = await fetchAPI('/categorias/');
+            setStore(s => ({ ...s, categorias: data }));
+        } catch (e) { console.error("Erro refresh categorias:", e); }
+    };
 
     // --- Funções de Ação (CREATE/UPDATE/DELETE) ---
     // MATERIAIS
@@ -1721,7 +1814,15 @@ function App() {
             await refreshEstoque(); return true;
         } catch (e) { alert(e.message); return false; }
     };
-
+    const deleteMaterial = async (id) => {
+        if (!confirm("Tem certeza que deseja INATIVAR este material?")) return false;
+        try {
+            await fetchAPI(`/materiais/${id}`, { method: 'DELETE' });
+            // O refreshEstoque agora não é necessário aqui, 
+            // pois a MateriaisView vai se atualizar sozinha.
+            return true;
+        } catch (e) { alert(e.message); return false; }
+    };
     //PARCEIRO
     const createParceiro = async (payload) => {
         try {
@@ -1754,14 +1855,26 @@ function App() {
 
     // COMPRADORES
     const createComprador = async (payload) => {
+        const payloadAPI = {
+            ...payload,
+            cnpj: payload.cnpj || null,
+            telefone: payload.telefone || null,
+            email: payload.email || null
+        };
         try {
-            await fetchAPI('/compradores/', { method: 'POST', body: JSON.stringify(payload) });
+            await fetchAPI('/compradores/', { method: 'POST', body: JSON.stringify(payloadAPI) });
             await refreshCompradores(); return true;
         } catch (e) { alert(e.message); return false; }
     };
     const updateComprador = async (id, payload) => {
+        const payloadAPI = {
+            ...payload,
+            cnpj: payload.cnpj || null,
+            telefone: payload.telefone || null,
+            email: payload.email || null
+        };
         try {
-            await fetchAPI(`/compradores/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+            await fetchAPI(`/compradores/${id}`, { method: 'PUT', body: JSON.stringify(payloadAPI) });
             await refreshCompradores(); return true;
         } catch (e) { alert(e.message); return false; }
     };
@@ -1909,7 +2022,7 @@ function App() {
                     ) : (
                         <>
                             {active === "dashboard" && <DashboardView store={store} />}
-                            {active === "materiais" && <MateriaisView data={store.materiais} onCreate={createMaterial} onUpdate={updateMaterial} />}
+                            {active === "materiais" && <MateriaisView store={store} onCreate={createMaterial} onUpdate={updateMaterial} onDelete={deleteMaterial} fetchAPI={fetchAPI} />}
                             {active === "associacoes" && <AssociacoesView store={store} data={store.associacoes} onCreate={createAssociacao} onUpdate={updateAssociacao} onDelete={deleteAssociacao} fetchAPI={fetchAPI} />}
                             {active === "parceiros" && (<ParceirosView store={store} fetchAPI={fetchAPI} onCreate={createParceiro} onUpdate={updateParceiro} onDelete={deleteParceiro} />
                             )}

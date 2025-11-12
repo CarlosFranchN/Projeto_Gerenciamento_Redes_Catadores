@@ -2,6 +2,7 @@ from .schema_tipo_parceiro import *
 from .schema_parceiro import *
 from .schema_associacao import *
 from .schema_comprador import *
+from .schema_categoria import *
 from .schema_material import *
 from .schema_recebimento import *
 from .schema_compra import *

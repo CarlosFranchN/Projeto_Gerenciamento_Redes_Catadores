@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import date
 from .. import crud, schemas 
 from ..database import get_db
-from ..dependecies import get_current_user
+from ..dependencies import get_current_user
 
 router = APIRouter(
     prefix="/entradas", 

@@ -14,17 +14,25 @@ class Usuario(Base):
     def __repr__(self):
         return f"<Usuario(email='{self.email}', role='{self.role}')>"
 
+class CategoriaResiduo(Base):
+    __tablename__ = "categoria_residuo"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False,index=True)
+    
+    materiais = relationship("Material", back_populates="categoria_info")
+
 class Material(Base):
     __tablename__ = "materiais"
     
     id = Column(Integer, primary_key=True, index=True)
     codigo = Column(String, unique=True, index=True, nullable=True) 
     nome = Column(String, unique=True, index=True, nullable=False)
-    categoria = Column(String, index=True, nullable=True) 
+    id_categoria = Column(Integer,ForeignKey("categoria_residuo.id"), nullable=True)
     unidade_medida = Column(String, default='Kg')
     ativo = Column(Boolean, server_default='true', nullable=False)
     
-    # Relacionamento reverso para todas as transações
+
+    categoria_info = relationship("CategoriaResiduo" , back_populates="materiais")
     itens_venda = relationship("ItemVenda", back_populates="material")
     recebimentos_doacao = relationship("RecebimentoDoacao", back_populates="material") # Renomeado
     compras = relationship("Compra", back_populates="material") # Novo

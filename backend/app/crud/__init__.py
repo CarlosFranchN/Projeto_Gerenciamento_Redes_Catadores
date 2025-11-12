@@ -2,6 +2,7 @@ from .tipo_parceiro import *
 from .parceiro import *
 from .associacao import *
 from .comprador import *
+from .categoria import *
 from .material import *
 from .recebimento import *
 from .venda import *

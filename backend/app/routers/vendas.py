@@ -4,7 +4,7 @@ from typing import List, Optional
 from .. import crud, schemas
 from ..database import get_db
 from datetime import date
-from ..dependecies import get_current_user
+from ..dependencies import get_current_user
 
 router = APIRouter(
     prefix="/vendas",

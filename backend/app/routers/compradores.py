@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, models, schemas
 from ..database import SessionLocal
-from ..dependecies import get_current_user
+from ..dependencies import get_current_user
 def get_db():
     db = SessionLocal()
     try:

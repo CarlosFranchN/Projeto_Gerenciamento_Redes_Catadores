@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends,HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from app import crud, models
+
 from app.database import get_db
-from .. import schemas
-from ..dependecies import get_current_user
+from .. import schemas, crud,models
+from ..dependencies import get_current_user
 
 
 
@@ -22,12 +22,6 @@ router = APIRouter(
     summary="Consulta o estoque atual de um material específico"
 )
 def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
-    """
-    Calcula e retorna a quantidade atual em estoque para um material
-    específico identificado pelo seu ID.
-
-    Exemplo de URL: `/estoque/1`
-    """
     material = crud.get_material(db, id_material=id_material)
     if not material:
         raise HTTPException(
@@ -42,9 +36,10 @@ def get_estoque_material(id_material: int, db: Session = Depends(get_db)):
         id=material.id, 
         codigo=material.codigo,
         nome=material.nome,
-        categoria=material.categoria,
+        categoria_info=material.categoria_info,
         estoque_atual=estoque,
-        unidade_medida=material.unidade_medida
+        unidade_medida=material.unidade_medida,
+        ativo=material.ativo
     )
 @router.get(
     "/",

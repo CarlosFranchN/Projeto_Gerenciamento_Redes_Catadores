@@ -39,57 +39,50 @@ def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
 
 def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> models.Associacao:
     """
-    Cria uma nova Associação.
-    Isso envolve criar um registro 'Doador' (pai) e um registro 'Associacao' (filho).
+    Cria um Parceiro (tipo ASSOCIACAO) e seus detalhes de Associação.
     """
-
-    id_tipo_associacao = 1 
-    
-    tipo_parc_obj = db.query(models.TipoParceiro).filter(models.TipoParceiro.nome == "ASSOCIACAO").first()
-    if not tipo_parc_obj:
-
-        tipo_parc_obj = models.TipoParceiro(nome="ASSOCIACAO")
-        db.add(tipo_parc_obj)
-        db.flush() 
-    
-    id_tipo_associacao = tipo_parc_obj.id
-
-
-    db_parc = models.Parceiro(
-        nome=associacao.nome,
-        id_tipo_associacao=id_tipo_associacao
-    )
-    db.add(db_parc)
-    
-
-    try:
+    # 1. Garante que o tipo 'ASSOCIACAO' existe e pega seu ID
+    tipo_assoc = db.query(models.TipoParceiro).filter(models.TipoParceiro.nome == "ASSOCIACAO").first()
+    if not tipo_assoc:
+        # Se não existir (o que não deve acontecer se a migração rodou), cria por segurança
+        tipo_assoc = models.TipoParceiro(nome="ASSOCIACAO")
+        db.add(tipo_assoc)
         db.flush()
-        db.refresh(db_parc)
-    except IntegrityError as e:
-        db.rollback() 
-        if "unique constraint" in str(e).lower() and "parceiro_nome_key" in str(e).lower():
-            raise ValueError(f"Já existe um parceiro com o nome '{associacao.nome}'")
-        else:
-            raise e 
+    
+    id_tipo = tipo_assoc.id
 
+    # 2. Cria o registro PAI (Parceiro)
+    db_parceiro = models.Parceiro(
+        nome=associacao.nome,
+        id_tipo_parceiro=id_tipo # 👈 CORRIGIDO AQUI (de 'associacao' para 'parceiro')
+    )
+    db.add(db_parceiro)
+    
+    try:
+        db.flush() 
+    except IntegrityError as e:
+        db.rollback()
+        if "unique constraint" in str(e).lower() and "parceiros_nome_key" in str(e).lower():
+            raise ValueError(f"Já existe um parceiro com o nome '{associacao.nome}'")
+        raise e
+
+    # 3. Cria o registro FILHO (Associacao)
     db_associacao = models.Associacao(
-        id=db_parc.id, 
+        parceiro_id=db_parceiro.id, # Linka ao pai
         lider=associacao.lider,
         telefone=associacao.telefone,
         cnpj=associacao.cnpj,
         ativo=associacao.ativo
     )
     db.add(db_associacao)
-    
 
     try:
-        db.commit()
+        db.commit() 
+        db.refresh(db_associacao)
+        return db_associacao
     except Exception as e:
-        db.rollback() 
-        raise ValueError(f"Erro ao salvar detalhes da associação: {e}") from e
-
-    db.refresh(db_associacao)
-    return db_associacao
+        db.rollback()
+        raise ValueError(f"Erro ao salvar associação: {e}") from e
 
 def update_associacao(db: Session, associacao_id: int, associacao_update: schemas.AssociacaoUpdate) -> Optional[models.Associacao]:
     """
