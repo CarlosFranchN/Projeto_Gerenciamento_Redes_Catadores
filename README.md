@@ -69,68 +69,121 @@ O sistema diferencia duas formas de entrada de material, ambas alimentando o mes
 O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é dividido em camadas claras de responsabilidade, facilitando manutenção e escalabilidade.
 
 ```plaintext
-backend/
-├── alembic
-│   ├── versions
-│   │   
-│   ├── README
-│   ├── env.py
-│   └── script.py.mako
-├── app
-│   ├── core
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   └── security.py
-│   ├── crud
-│   │   ├── __init__.py
-│   │   ├── associacao.py
-│   │   ├── compra.py
-│   │   ├── comprador.py
-│   │   ├── material.py
-│   │   ├── parceiro.py
-│   │   ├── recebimento.py
-│   │   ├── relatorio.py
-│   │   ├── tipo_parceiro.py
-│   │   ├── usuario.py
-│   │   └── venda.py
-│   ├── routers
-│   │   ├── __init__.py
-│   │   ├── associacoes.py
-│   │   ├── auth.py
-│   │   ├── compradores.py
-│   │   ├── compras.py
-│   │   ├── estoque.py
-│   │   ├── materiais.py
-│   │   ├── parceiros.py
-│   │   ├── recebimentos.py
-│   │   ├── relatorio.py
-│   │   ├── tipos_parceiro.py
-│   │   └── vendas.py
-│   ├── schemas
-│   │   ├── __init__.py
-│   │   ├── schema_associacao.py
-│   │   ├── schema_compra.py
-│   │   ├── schema_comprador.py
-│   │   ├── schema_estoque.py
-│   │   ├── schema_material.py
-│   │   ├── schema_parceiro.py
-│   │   ├── schema_recebimento.py
-│   │   ├── schema_relatorio.py
-│   │   ├── schema_tipo_parceiro.py
-│   │   ├── schema_usuario.py
-│   │   └── schema_venda.py
-│   ├── __init__.py
-│   ├── database.py
-│   ├── dependecies.py
-│   ├── main.py
-│   └── models.py
-├── .gitignore
-├── alembic.ini
-├── criar_usuario.py
-└── requirements.txt
 
+├── backend
+│   ├── alembic
+│   │   ├── versions
+│   │   │   ├── 66203f355943_cria_tabela_categoriaresiduo_e_linka_em_.py
+│   │   │   ├── ccabf74e1aeb_adiciona_tabela_usuarios.py
+│   │   │   ├── edeaa421a717_versao_3_0_implementa_arquitetura_.py
+│   │   │   └── f8b17a4befaa_ajusta_transacaofinanceira_para_usar_.py
+│   │   ├── README
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── app
+│   │   ├── core
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   └── security.py
+│   │   ├── crud
+│   │   │   ├── __init__.py
+│   │   │   ├── associacao.py
+│   │   │   ├── categoria.py
+│   │   │   ├── compra.py
+│   │   │   ├── comprador.py
+│   │   │   ├── financeiro.py
+│   │   │   ├── material.py
+│   │   │   ├── parceiro.py
+│   │   │   ├── recebimento.py
+│   │   │   ├── relatorio.py
+│   │   │   ├── tipo_parceiro.py
+│   │   │   ├── usuario.py
+│   │   │   └── venda.py
+│   │   ├── routers
+│   │   │   ├── __init__.py
+│   │   │   ├── associacoes.py
+│   │   │   ├── auth.py
+│   │   │   ├── categoria.py
+│   │   │   ├── compradores.py
+│   │   │   ├── compras.py
+│   │   │   ├── estoque.py
+│   │   │   ├── financeiro.py
+│   │   │   ├── materiais.py
+│   │   │   ├── parceiros.py
+│   │   │   ├── recebimentos.py
+│   │   │   ├── relatorio.py
+│   │   │   ├── tipos_parceiro.py
+│   │   │   └── vendas.py
+│   │   ├── schemas
+│   │   │   ├── __init__.py
+│   │   │   ├── schema_associacao.py
+│   │   │   ├── schema_categoria.py
+│   │   │   ├── schema_compra.py
+│   │   │   ├── schema_comprador.py
+│   │   │   ├── schema_estoque.py
+│   │   │   ├── schema_financeiro.py
+│   │   │   ├── schema_material.py
+│   │   │   ├── schema_parceiro.py
+│   │   │   ├── schema_recebimento.py
+│   │   │   ├── schema_relatorio.py
+│   │   │   ├── schema_tipo_parceiro.py
+│   │   │   ├── schema_usuario.py
+│   │   │   └── schema_venda.py
+│   │   ├── __init__.py
+│   │   ├── database.py
+│   │   ├── dependencies.py
+│   │   ├── main.py
+│   │   └── models.py
+│   ├── .gitignore
+│   ├── alembic.ini
+│   ├── criar_usuario.py
+│   └── requirements.txt
+├── frontend
+│   ├── app.html
+│   ├── app.js
+│   ├── foto1.png
+│   ├── foto2.png
+│   ├── foto3.png
+│   ├── foto4.png
+│   ├── foto5.jpg
+│   ├── index.html
+│   └── logo.png
+└── README.md
 ```
 ---
+
+### .env
+Como o .env deve ficar para q der certo
+```
+#.env
+
+DATABASE_URL="postgresql+psycopg://postgres:[password]@localhost/rede_catadores_db"
+
+SECRET_KEY="rede123"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+## Programas Necessários (Ambiente)
+🚀 Começando
+Para rodar este projeto, você precisará ter os seguintes programas instalados na sua máquina:
+
+Python (Versão 3.11 ou superior):
+
+Necessário para rodar o backend (FastAPI) e o servidor simples do frontend.
+
+PostgreSQL (Versão 16+ recomendada):
+
+O banco de dados onde todas as informações são armazenadas.
+
+Git:
+
+Para clonar o repositório.
+
+(Opcional) Cliente de Banco de Dados:
+
+Um software como pgAdmin ou DBeaver para visualizar os dados do PostgreSQL.
+
 
 ## Instalação e Execução
     🧩 Pré-requisitos
