@@ -327,7 +327,7 @@
         <!-- Grupos -->
         <div id="tab-grupos" class="tab-pane hidden">
           <div class="grid md:grid-cols-2 gap-3">
-            <div class="rounded-xl border p-3"><div class="font-semibold">ASCABOMJA</div><div class="text-sm text-gray-600">14 integrantes (doc.)</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">ASCABOMJA</div><div class="text-sm text-gray-600">14 integrantes</div></div>
             <div class="rounded-xl border p-3"><div class="font-semibold">ASCAROSA</div><div class="text-sm text-gray-600">08</div></div>
             <div class="rounded-xl border p-3"><div class="font-semibold">CATAVIP</div><div class="text-sm text-gray-600">33</div></div>
             <div class="rounded-xl border p-3"><div class="font-semibold">José de Alencar</div><div class="text-sm text-gray-600">37</div></div>
@@ -337,7 +337,11 @@
             <div class="rounded-xl border p-3"><div class="font-semibold">Palmares</div><div class="text-sm text-gray-600">22</div></div>
             <div class="rounded-xl border p-3"><div class="font-semibold">Viva a Vida (grupo)</div><div class="text-sm text-gray-600">05</div></div>
           </div>
-          <p class="text-xs text-neutral-500 mt-3">*Números citados no documento.</p>
+          <p class="mt-3 text-xs bg-green-50 border border-green-100 rounded-lg p-3 text-green-700">
+            <span class="font-semibold">Legenda:</span>
+            o número mostrado em cada cartão de grupo corresponde à
+            <strong>quantidade de integrantes</strong>
+          </p>
         </div>
 
         <!-- Municípios -->
@@ -365,7 +369,11 @@
             <div class="rounded-xl border p-3"><div class="font-semibold">Tururu</div><div class="text-sm text-gray-600">13</div></div>
             <div class="rounded-xl border p-3"><div class="font-semibold">Ubajara</div><div class="text-sm text-gray-600">03</div></div>
           </div>
-          <p class="text-xs text-neutral-500 mt-3">*Lista resumida do documento (há mais cidades filiadas/associadas, incluindo Cariri).</p>
+          <p class="mt-3 text-xs bg-blue-50 border border-blue-100 rounded-lg p-3 text-blue-700">
+            <span class="font-semibold">Legenda:</span>
+            o número mostrado em cada cartão de município corresponde à
+            <strong>quantidade de grupos/associações</strong>.
+          </p>
         </div>
       </div>
     </div>
@@ -373,172 +381,247 @@
 
   <!-- SCRIPTS -->
   <script>
+  // ====================== CONFIG ======================
+  const API_URL = "http://127.0.0.1:8000";
 
-    const API_URL = "http://127.0.0.1:8000"
+  // Mapa de endereços
+  const ENDERECOS = {
+    "REDE DE CATADORES": "RUA VALDEMAR HOLANDA, S/N — BAIRRO JOÃO XIII",
+    "ACORES": "RUA FREI ALEMÃO, 161 B — SERRINHA",
+    "ARAN": "RUA ALÍPIO MARTINS, 729 — BONSUCESSO",
+    "ASCAJAN": "RUA ESTRADA DO ITAPERI, 1665 — JANGURUSSU",
+    "MOURA BRASIL": "RUA DO TRILHO, 1263 — MOURA BRASIL",
+    "MARAVILHA": "RUA SOL, 10 — VILA UNIÃO",
+    "RAIO DE SOL": "RUA MOÇAMBIQUE, 148 — GENIBAÚ",
+    "ROSA VIRGÍNIA": "RUA 7, N° 20 — PARQUE SANTA ROSA",
+    "SOCRELP": "RUA GAL. COSTA MATOS, 8 A — PIRAMBU",
+    "VIVA A VIDA": "RUA DOMINGOS OLÍMPIO, S/N — FARIAS BRITO / OTÁVIO BONFIM"
+  };
 
-    // Login modal
-    const modalLogin = document.getElementById('modalLogin');
-    const btnLogin = document.getElementById('btnLogin');
-    const closeLogin = document.getElementById('closeLogin');
-
-
-    const loginBtnAction = modalLogin.querySelector("button.bg-green-700");
-    const inputUser = modalLogin.querySelector("input[type='text']");
-    const inputPass = modalLogin.querySelector("input[type='password']");
-
-    btnLogin.onclick = () => {
-      modalLogin.classList.remove('hidden')
-      inputUser.focus()
-    }
-
-    closeLogin.addEventListener('click', () => modalLogin.classList.add('hidden'));
-
-    modalLogin.onclick = (e) => {
-      if (e.target === modalLogin) modalLogin.classList.add('hidden')
-    }
-
-    loginBtnAction.onclick = async (e) => {
-      if (e) e.preventDefault()
-      const username = inputUser.value.trim()
-      const password = inputPass.value
-
-      if (!username || !password){
-        alert("Por favor, preencha o usuário e a senha")
-        return
-      }
-
-      const originalText = loginBtnAction.innerText
-      loginBtnAction.innerText = "Entrandoooo..."
-      loginBtnAction.disabled = true
-    
-      try{
-        const formData = new URLSearchParams()
-        formData.append('username' , username)
-        formData.append('password' , password)
-
-        const response = await fetch(`${API_URL}/token`,{
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData
-        })
-        if (!response.ok){
-          throw new Error("Usuário ou senha incorretos!")
-        }
-
-        const data = await response.json()
-        const token = data.access_token
-
-        
-        localStorage.setItem("rc_token",token)
-
-        window.location.href = "app.html"
-      }catch(error){
-        alert(error.message)
-
-        loginBtnAction.innerText = originalText
-        loginBtnAction.disabled = false
+  // ====================== NAVBAR: inverter Afiliados/Login ======================
+  (function reorderNav() {
+    const btnLogin = document.getElementById("btnLogin");
+    const btnAfiliados = document.getElementById("btnAfiliados");
+    if (btnLogin && btnAfiliados) {
+      const liLogin = btnLogin.closest("li");
+      const liAfi = btnAfiliados.closest("li");
+      const ul = liLogin && liAfi && liLogin.parentElement;
+      if (ul && liLogin && liAfi) {
+        // Coloca Afiliados imediatamente antes de Login
+        ul.insertBefore(liAfi, liLogin);
       }
     }
-    inputPass.addEventListener("keypress" , (e) => {
-      if(e.key === "Enter"){
-        e.preventDefault()
-        loginBtnAction.click()
-      } 
-    })
+  })();
 
+  // ====================== LOGIN MODAL ======================
+  const modalLogin = document.getElementById('modalLogin');
+  const btnLogin = document.getElementById('btnLogin');
+  const closeLogin = document.getElementById('closeLogin');
+  const loginBtnAction = modalLogin?.querySelector("button.bg-green-700");
+  const inputUser = modalLogin?.querySelector("input[type='text']");
+  const inputPass = modalLogin?.querySelector("input[type='password']");
 
+  btnLogin?.addEventListener('click', () => {
+    modalLogin.classList.remove('hidden');
+    inputUser?.focus();
+  });
+  closeLogin?.addEventListener('click', () => modalLogin.classList.add('hidden'));
+  modalLogin?.addEventListener('click', (e) => {
+    if (e.target === modalLogin) modalLogin.classList.add('hidden');
+  });
 
-    // Afiliados modal + tabs
-    const modalAfiliados = document.getElementById('modalAfiliados');
-    const btnAfiliados = document.getElementById('btnAfiliados');
-    const btnVerAfiliados = document.getElementById('btnVerAfiliados');
-    const btnFecharAfiliados = document.getElementById('btnFecharAfiliados');
-
-    function openAfiliados() { modalAfiliados.classList.remove('hidden'); }
-    function closeAfiliados() { modalAfiliados.classList.add('hidden'); }
-
-    [btnAfiliados, btnVerAfiliados].forEach(b => b && b.addEventListener('click', openAfiliados));
-    btnFecharAfiliados.addEventListener('click', closeAfiliados);
-    modalAfiliados.addEventListener('click', (e) => {
-      if (e.target === modalAfiliados) closeAfiliados();
-    });
-
-    // Tabs
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const panes = document.querySelectorAll('.tab-pane');
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-tab');
-        tabBtns.forEach(b => b.classList.toggle('bg-green-600', b === btn));
-        tabBtns.forEach(b => b.classList.toggle('text-white', b === btn));
-        tabBtns.forEach(b => b.classList.toggle('bg-white', b !== btn));
-        panes.forEach(p => p.classList.toggle('hidden', p.id !== id));
+  loginBtnAction?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const username = (inputUser?.value || "").trim();
+    const password = (inputPass?.value || "");
+    if (!username || !password) {
+      alert("Por favor, preencha o usuário e a senha");
+      return;
+    }
+    const originalText = loginBtnAction.innerText;
+    loginBtnAction.innerText = "Entrando...";
+    loginBtnAction.disabled = true;
+    try {
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+      const resp = await fetch(`${API_URL}/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
       });
+      if (!resp.ok) throw new Error("Usuário ou senha incorretos!");
+      const data = await resp.json();
+      localStorage.setItem("rc_token", data.access_token);
+      window.location.href = "app.html";
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      loginBtnAction.innerText = originalText;
+      loginBtnAction.disabled = false;
+    }
+  });
+
+  inputPass?.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      loginBtnAction?.click();
+    }
+  });
+
+  // ====================== MODAL AFILIADOS + TABS ======================
+  const modalAfiliados = document.getElementById('modalAfiliados');
+  const btnAfiliados = document.getElementById('btnAfiliados');
+  const btnVerAfiliados = document.getElementById('btnVerAfiliados');
+  const btnFecharAfiliados = document.getElementById('btnFecharAfiliados');
+
+  function openAfiliados() { modalAfiliados.classList.remove('hidden'); }
+  function closeAfiliados() { modalAfiliados.classList.add('hidden'); }
+
+  [btnAfiliados, btnVerAfiliados].forEach(b => b && b.addEventListener('click', openAfiliados));
+  btnFecharAfiliados?.addEventListener('click', closeAfiliados);
+  modalAfiliados?.addEventListener('click', (e) => { if (e.target === modalAfiliados) closeAfiliados(); });
+
+  // Tabs
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const panes = document.querySelectorAll('.tab-pane');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-tab');
+      tabBtns.forEach(b => {
+        b.classList.toggle('bg-green-600', b === btn);
+        b.classList.toggle('text-white', b === btn);
+        b.classList.toggle('bg-white', b !== btn);
+      });
+      panes.forEach(p => p.classList.toggle('hidden', p.id !== id));
     });
+  });
 
-    // ========= Gráfico baseado na TABELA (Produção mensal) =========
-    (function makeGraficoMensal() {
-      const tabela = document.getElementById('tabelaProducao');
-      const canvas = document.getElementById('graficoMensal');
-      if (!tabela || !canvas || !window.Chart) return;
+  (function wireAfiliadosClick() {
+    const paneAssoc = document.getElementById("tab-associacoes");
+    if (!paneAssoc) return;
 
-      const parsePtBR = (txt) => Number(String(txt).replace(/\./g, '').replace(',', '.'));
+    // Cria área de info (uma vez)
+    let infoBox = document.getElementById("associacaoInfo");
+    if (!infoBox) {
+      infoBox = document.createElement("div");
+      infoBox.id = "associacaoInfo";
+      infoBox.className = "mt-4 p-4 rounded-xl border bg-green-50 hidden";
+      // Insere após as panes
+      panes[panes.length - 1]?.parentElement?.appendChild(infoBox);
+    }
 
-      const linhas = Array.from(tabela.querySelectorAll('tbody tr'))
-        .filter(tr => {
-          const mes = tr.querySelector('td')?.textContent?.trim()?.toLowerCase();
-          return mes && mes !== 'total';
+    // Todos os cards de associação do modal
+    const cards = paneAssoc.querySelectorAll(".rounded-xl.border.p-3, .rounded-xl.border.bg-white.p-3");
+    cards.forEach(card => {
+      const nameEl = card.querySelector(".font-semibold");
+      if (!nameEl) return;
+      const nomeUpper = nameEl.textContent.trim().toUpperCase();
+      nameEl.textContent = nomeUpper; // padroniza para MAIÚSCULO
+
+      card.classList.add("cursor-pointer", "hover:bg-green-50");
+      card.addEventListener("click", () => {
+        const endereco = ENDERECOS[nomeUpper] || "ENDEREÇO NÃO INFORMADO.";
+        infoBox.innerHTML = `
+          <div class="text-sm text-green-700">Endereço da Associação</div>
+          <div class="font-semibold text-green-800">${nomeUpper}</div>
+          <div class="text-sm text-gray-700 mt-1 whitespace-pre-line">${endereco}</div>
+        `;
+        infoBox.classList.remove("hidden");
+        // Garante que a aba correta esteja ativa
+        tabBtns.forEach(b => {
+          const isAssoc = b.getAttribute('data-tab') === 'tab-associacoes';
+          b.classList.toggle('bg-green-600', isAssoc);
+          b.classList.toggle('text-white', isAssoc);
+          b.classList.toggle('bg-white', !isAssoc);
         });
+        panes.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-associacoes'));
+      });
+    });
+  })();
 
-      const meses = [];
-      const valores = [];
-      linhas.forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        const mes = tds[0].textContent.trim();
-        const kg = parsePtBR(tds[3].textContent.trim());
-        meses.push(mes);
-        valores.push(kg);
+  (function wireGridRede() {
+    const grid = document.querySelector('#rede .grid.sm\\:grid-cols-2, #rede .grid.sm\\:grid-cols-2.gap-4') || document.querySelector('#rede .grid');
+    if (!grid) return;
+    const tiles = grid.querySelectorAll(".rounded-xl.border.bg-white.p-4");
+    tiles.forEach(tile => {
+      const nameEl = tile.querySelector(".font-semibold");
+      if (!nameEl) return;
+      const nomeUpper = nameEl.textContent.trim().toUpperCase();
+      nameEl.textContent = nomeUpper; // padroniza para MAIÚSCULO
+
+      tile.classList.add("cursor-pointer", "hover:bg-green-50");
+      tile.addEventListener("click", () => {
+        // Abre o modal e foca nessa associação
+        openAfiliados();
+        // Aguarda o modal montar e dispara clique no card correspondente do modal
+        setTimeout(() => {
+          const paneAssoc = document.getElementById("tab-associacoes");
+          if (!paneAssoc) return;
+          const modalCards = [...paneAssoc.querySelectorAll(".rounded-xl.border.p-3, .rounded-xl.border.bg-white.p-3")];
+          const target = modalCards.find(c => c.querySelector(".font-semibold")?.textContent.trim().toUpperCase() === nomeUpper);
+          target?.click();
+        }, 50);
+      });
+    });
+  })();
+
+  // ====================== GRÁFICO ======================
+  (function makeGraficoMensal() {
+    const tabela = document.getElementById('tabelaProducao');
+    const canvas = document.getElementById('graficoMensal');
+    if (!tabela || !canvas || !window.Chart) return;
+
+    const parsePtBR = (txt) => Number(String(txt).replace(/\./g, '').replace(',', '.'));
+    const linhas = Array.from(tabela.querySelectorAll('tbody tr'))
+      .filter(tr => {
+        const mes = tr.querySelector('td')?.textContent?.trim()?.toLowerCase();
+        return mes && mes !== 'total';
       });
 
-      new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: meses,
-          datasets: [{
-            label: 'Kg por mês',
-            data: valores,
-            borderWidth: 1,
-            borderRadius: 8,
-            backgroundColor: 'rgba(16, 185, 129, 0.6)',
-            borderColor: 'rgba(16, 185, 129, 1)'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => Intl.NumberFormat('pt-BR').format(ctx.parsed.y) + ' kg'
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(0,0,0,0.06)' },
-              ticks: {
-                callback: (v) => Intl.NumberFormat('pt-BR').format(v) + ' kg'
-              }
-            },
-            x: { grid: { display: false } }
+    const meses = [];
+    const valores = [];
+    linhas.forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      const mes = tds[0].textContent.trim();
+      const kg = parsePtBR(tds[3].textContent.trim());
+      meses.push(mes);
+      valores.push(kg);
+    });
+
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: meses,
+        datasets: [{
+          label: 'Kg por mês',
+          data: valores,
+          borderWidth: 1,
+          borderRadius: 8,
+          backgroundColor: 'rgba(16, 185, 129, 0.6)',
+          borderColor: 'rgba(16, 185, 129, 1)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: (ctx) => Intl.NumberFormat('pt-BR').format(ctx.parsed.y) + ' kg' }
           }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.06)' },
+            ticks: { callback: (v) => Intl.NumberFormat('pt-BR').format(v) + ' kg' }
+          },
+          x: { grid: { display: false } }
         }
-      });
-    })();
-    // ==============================================================
-  </script>
+      }
+    });
+  })();
+</script>
+
 </body>
 </html>
