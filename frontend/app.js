@@ -47,7 +47,7 @@ function DashboardView({ store }) {
                 <StatCard title="Materiais" value={materiaisAtivos} subtitle="Cadastros Ativos" />
                 <StatCard title="Associações" value={associacoesAtivas} subtitle="Parceiras Ativas" />
                 <StatCard title="Compradores" value={compradoresAtivos} subtitle="Cadastros Ativos" />
-                <StatCard title="Relatórios" value="4" subtitle="Disponíveis" />
+                <StatCard title="Relatórios" value="0" subtitle="Disponíveis" />
             </div>
             <Card className="p-6">
                 <h3 className="text-lg font-semibold mb-2">Boas-vindas 👋</h3>
@@ -277,7 +277,7 @@ function TipoParceiroView({ onCreate, fetchAPI }) { // 👈 Não recebe mais 'da
             const success = await onCreate({ nome });
             if (success) {
                 handleCloseDrawer();
-                setRefreshTrigger(t => t + 1); // Recarrega a lista
+                setRefreshTrigger(t => t + 1);
             }
         } catch (error) { console.error("Falha submit tipo:", error); }
         finally { setBusy(false); }
@@ -320,7 +320,7 @@ function CompradoresView({ data, onCreate, onUpdate, onDelete }) {
     const [busy, setBusy] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
-    // Campos do formulário
+
     const [nome, setNome] = useState("");
     const [cnpj, setCnpj] = useState("");
     const [telefone, setTelefone] = useState("");
@@ -812,9 +812,8 @@ function RecebimentosView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     const [materialId, setMaterialId] = useState("");
     const [quantidade, setQuantidade] = useState("");
 
-    // --- Opções para Selects ---
-    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
-    // 👇 USA A LISTA DE PARCEIROS (que inclui Associações e outros)
+    
+    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: `${m.nome} (${m.unidade_medida})` }));
     const parceirosOpts = store.parceiros.map(p => ({ value: String(p.id), label: p.nome }));
 
     // --- Busca de Dados (useEffect) ---
@@ -1006,7 +1005,7 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
     // --- Opções para Selects ---
     console.log(store);
 
-    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
+    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: `${m.nome} (${m.unidade_medida})` }));
     const compradoresOpts = store.compradores.map(c => ({ value: String(c.id), label: c.nome }));
     const getMat = (id) => store.materiais.find(m => m.id === Number(id));
 
@@ -1169,18 +1168,17 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
             )}
 
             <Drawer open={open} onClose={handleCloseDrawer} title="Registrar Nova Venda">
-                {/* O <form> envolve tudo, incluindo botões */}
                 <form onSubmit={handleSubmitVenda} className="flex flex-col h-full">
 
-                    {/* Conteúdo principal do formulário (com scroll se necessário) */}
+
                     <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-                        {/* <TextInput label="Data" ... /> (Removido, data é automática no back) */}
+
                         <Select label="Comprador" value={compradorId} onChange={setCompradorId} options={compradoresOpts} required />
 
                         <hr className="my-4" />
 
-                        {/* --- Seção de Adicionar Item --- */}
-                        <h4 className="font-medium text-neutral-700">Adicionar Item</h4>
+
+                        <h4 className="text-lg font-semibold text-gray-800 border-b pb-1">Adicionar Item</h4>
                         <div className="grid grid-cols-3 gap-2 p-3 border rounded-lg bg-neutral-50">
                             <div className="col-span-3">
                                 <Select
@@ -1215,7 +1213,7 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                             />
                             <div className="flex items-end">
                                 <button
-                                    type="button" // Importante: 'type="button"' para não enviar o form
+                                    type="button" 
                                     onClick={handleAddItem}
                                     disabled={
                                         !itemAtualMaterialId || !itemAtualQuantidade || !itemAtualPrecoUnit ||
@@ -1224,7 +1222,7 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                                         (estoqueDisponivel === null && itemAtualMaterialId !== "") ||
                                         (estoqueDisponivel && parseFloat(itemAtualQuantidade || '0') > estoqueDisponivel.estoque_atual)
                                     }
-                                    className="w-full px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="mt-2 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                                 >
                                     + Adicionar
                                 </button>
@@ -1267,8 +1265,8 @@ function VendasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                         )}
                     </div>
 
-                    {/* Rodapé fixo do Drawer com os botões de ação */}
-                    <div className="flex justify-end gap-2 pt-4 border-t mt-auto">
+                
+                    <div className="sticky bottom-0 bg-white border-t pt-3 pb-3 flex justify-end gap-2 shadow-sm">
                         <button type="button" className="px-4 py-2 rounded-xl border" onClick={handleCloseDrawer}>Cancelar</button>
                         <button
                             type="submit" // Este é o botão que envia o formulário
@@ -1523,7 +1521,7 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
 
 
 
-    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: m.nome }));
+    const materiaisOpts = store.materiais.map(m => ({ value: String(m.id), label: `${m.nome} (${m.unidade_medida})` }));
     const parceirosOpts = store.parceiros.map(p => ({ value: String(p.id), label: `${p.nome} (${p.tipo_info?.nome})` }));
 
     // --- Busca de Dados ---
@@ -1539,12 +1537,12 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
             params.append('limit', ITENS_POR_PAGINA);
 
             try {
-                // const data = await fetchAPI(`/compras/?${params.toString()}`);
+
                 const [saldoData, comprasData] = await Promise.all([
                     fetchAPI('/financeiro/saldo'),
                     fetchAPI(`/compras/?${params.toString()}`)
                 ])
-                // fetchAPI já joga erro se falhar e já faz o .json()!
+
                 setSaldoCaixa(saldoData.saldo_atual);
                 setCompras(comprasData.items);
                 setTotalCompras(comprasData.total_count);
@@ -1618,7 +1616,6 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                             { key: "parceiro", header: "Fornecedor", render: (p) => p?.nome || "-" },
                             { key: "material", header: "Material", render: (m) => m?.nome || "-" },
                             { key: "quantidade", header: "Qtd.", render: (v, row) => `${v.toFixed(1)} ${row.material?.unidade_medida || ""}` },
-                            // NOVAS COLUNAS DE VALOR
                             { key: "valor_pago_unitario", header: "Valor Unit.", render: v => money(v) },
                             { key: "valor_pago_total", header: "Total Pago", render: v => money(v) },
                             {
@@ -1633,7 +1630,7 @@ function ComprasView({ store, setActive, onCreate, onCancel, fetchAPI }) {
                         data={compras}
                         emptyLabel="Nenhuma compra encontrada."
                     />
-                    {/* (Bloco de Paginação igual aos outros - copie se quiser) */}
+
                 </>
             )}
 
@@ -2062,7 +2059,7 @@ function App() {
     // RECEBIMENTOS
     const createRecebimento = async (payload) => {
         try {
-            await fetchAPI('/recebimentos/', { method: 'POST', body: JSON.stringify(payload) });
+            await fetchAPI('/entradas/', { method: 'POST', body: JSON.stringify(payload) });
             await refreshGlobalData(); return true;
         } catch (e) { alert(e.message); return false; }
     };
