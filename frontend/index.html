@@ -57,7 +57,10 @@
         </div>
       </div>
       <div class="flex justify-center md:justify-end">
-        <img src="logo.png" alt="Logo Rede de Catadores" class="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] drop-shadow-2xl rounded-xl bg-white/5 p-3">
+        <img 
+        src="logo.png" 
+        alt="Logo Rede de Catadores" 
+        class="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] drop-shadow-2xl rounded-xl">
       </div>
     </div>
   </section>
@@ -263,23 +266,80 @@
   </section>
 
   <!-- FOOTER -->
-  <footer class="bg-green-700 text-white py-8">
-    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-6 text-sm">
-      <div>
-        <div class="font-semibold">Rede de Catadores do Estado do Ceará</div>
-        <div>CNPJ: 09.000.185/0001-09</div>
+<footer class="bg-green-700 text-white py-8">
+  <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-6 text-sm">
+    <div>
+      <div class="font-semibold">Rede de Catadores do Estado do Ceará</div>
+      <div>CNPJ: 09.000.185/0001-09</div>
+    </div>
+
+    <div>
+      <div class="font-semibold">Endereço</div>
+      <div>Rua Valdemar Holanda, 474 — João XXIII, Fortaleza/CE</div>
+    </div>
+
+    <div>
+      <div class="font-semibold">Acesso</div>
+      <a href="app.html" class="underline hover:text-yellow-200">Ir para o sistema de gestão</a>
+    </div>
+
+    <!-- Redes & Contato -->
+        <div>
+      <div class="font-semibold">Redes & Contato</div>
+
+      <div class="mt-2 flex items-center gap-3">
+        <!-- Instagram -->
+        <a href="https://www.instagram.com/redecatadoresce" target="_blank" rel="noopener"
+          aria-label="Instagram"
+          class="inline-flex w-9 h-9 rounded-full border border-white/30 items-center justify-center hover:bg-white/10">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+            <path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm10 2H7a3 3 0 00-3 3v10a3 3 0 003 3h10a3 3 0 
+            003-3V7a3 3 0 00-3-3zm-5 3a5 5 0 110 10 5 5 0 010-10zm0 2.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zM17.5 6.8a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5z"/>
+          </svg>
+        </a>
+
+        <!-- YouTube -->
+        <a href="https://www.youtube.com/@cicerocatador.74" target="_blank" rel="noopener"
+          aria-label="YouTube"
+          class="inline-flex w-9 h-9 rounded-full border border-white/30 items-center justify-center hover:bg-white/10">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+            <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 
+            002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.5v-7L15.8 12 9.6 15.5z"/>
+          </svg>
+        </a>
       </div>
-      <div>
-        <div class="font-semibold">Endereço</div>
-        <div>Rua Valdemar Holanda, 474 — João XXIII, Fortaleza/CE</div>
-      </div>
-      <div>
-        <div class="font-semibold">Acesso</div>
-        <a href="app.html" class="underline hover:text-yellow-200">Ir para o sistema de gestão</a>
+
+      <div class="mt-3 flex items-center gap-3">
+        <!-- WhatsApp -->
+        <a href="https://wa.me/5585991192037" target="_blank" rel="noopener"
+          aria-label="WhatsApp"
+          class="inline-flex w-9 h-9 rounded-full border border-white/30 items-center justify-center hover:bg-white/10">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+            <path d="M12.04 2a9.9 9.9 0 00-8.5 14.9L2 22l5.2-1.5A9.9 9.9 0 1012.04 2zm0 2a7.9 7.9 0 110 15.8 7.8 7.8 0 01-4.2-1.2l-.3-.2-3 
+            .9.9-3-.2-.3A7.8 7.8 0 0112.04 4zm4.7 9.5c-.2-.1-1.2-.6-1.4-.6s-.3 0-.5.2l-.5.6c-.1.1-.2.2-.4.2h-.2a6.7 6.7 0 01-3.1-2.6c-.1-.2-.1-.3 
+            0-.5l.4-.5c.1-.2.2-.3.2-.5s-.2-1-.4-1.4c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.7.7-1 1.6-1 2.5 0 2 1.7 3.9 2 4.2.3.3 2 1.9 4 2 .9 0 1.7-.3 
+            2.4-1 .2-.2.3-.5.3-.7v-.4c0-.2 0-.3-.2-.5z"/>
+          </svg>
+        </a>
+
+        <!-- Facebook -->
+        <a href="https://www.facebook.com/rededecatadorescearaoficial" target="_blank" rel="noopener"
+          aria-label="Facebook"
+          class="inline-flex w-9 h-9 rounded-full border border-white/30 items-center justify-center hover:bg-white/10">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+            <path d="M22 12a10 10 0 10-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2V12h2.2l-.3 3h-1.9v7A10 10 0 0022 12z"/>
+          </svg>
+        </a>
       </div>
     </div>
-    <p class="text-center mt-6 text-xs opacity-80">© 2025 Rede de Catadores. Feito com ♻ e respeito ao meio ambiente.</p>
-  </footer>
+  </div>
+
+  <p class="text-center mt-6 text-xs opacity-80">
+    © 2025 Rede de Catadores. Feito com ♻ e respeito ao meio ambiente.
+  </p>
+</footer>
+
+
 
   <!-- MODAL LOGIN -->
   <div id="modalLogin" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -311,67 +371,57 @@
         <div id="tab-associacoes" class="tab-pane grid md:grid-cols-2 gap-3">
           <!-- preenchido via HTML estático para leveza -->
           <div class="rounded-xl border p-3"><div class="font-semibold">Rede de Catadores</div><div class="text-sm text-gray-600">09.000.185/0001-09 — João XXIII</div></div>
-          <div class="rounded-xl border p-3"><div class="font-semibold">ACORES</div><div class="text-sm text-gray-600">04.989.221/0001-95 — Serrinha</div></div>
-          <div class="rounded-xl border p-3"><div class="font-semibold">ARAN</div><div class="text-sm text-gray-600">07.475.187/0001-29 — Bonsucesso</div></div>
-          <div class="rounded-xl border p-3"><div class="font-semibold">ASCAJAN</div><div class="text-sm text-gray-600">08.612.882/0001-58 — Jangurussu</div></div>
-          <div class="rounded-xl border p-3"><div class="font-semibold">Moura Brasil</div><div class="text-sm text-gray-600">24.293.438/0001-73 — Moura Brasil</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ACORES (Associação Ecológica dos Coletores de Materiais Recicláveis da Serrinha e Adjacências)</div><div class="text-sm text-gray-600">04.989.221/0001-95 — Serrinha</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ARAN (Associação de Recicladores Amigos da Natureza)</div><div class="text-sm text-gray-600">07.475.187/0001-29 — Bonsucesso</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">ASCAJAN (Associação dos Catadores do Jangurussu)</div><div class="text-sm text-gray-600">08.612.882/0001-58 — Jangurussu</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">Moura Brasil </div><div class="text-sm text-gray-600">24.293.438/0001-73 — Moura Brasil</div></div>
           <div class="rounded-xl border p-3"><div class="font-semibold">Maravilha</div><div class="text-sm text-gray-600">11.058.865/0001-25 — Vila União</div></div>
           <div class="rounded-xl border p-3"><div class="font-semibold">Raio de Sol</div><div class="text-sm text-gray-600">23.668.402/0001-64 — Genibaú</div></div>
           <div class="rounded-xl border p-3"><div class="font-semibold">Rosa Virgínia</div><div class="text-sm text-gray-600">09.635.604/0001-89 — Santa Terezinha</div></div>
-          <div class="rounded-xl border p-3"><div class="font-semibold">SOCRELP</div><div class="text-sm text-gray-600">00.118.784/0001-57 — Pirambu</div></div>
+          <div class="rounded-xl border p-3"><div class="font-semibold">SOCRELP (Sociedade Comunitária de Reciclagem de Lixo do Pirambu)</div><div class="text-sm text-gray-600">00.118.784/0001-57 — Pirambu</div></div>
           <div class="rounded-xl border p-3"><div class="font-semibold">Viva a Vida</div><div class="text-sm text-gray-600">07.865.301/0001-27 — Farias Brito</div></div>
         </div>
 
         <!-- Grupos -->
         <div id="tab-grupos" class="tab-pane hidden">
           <div class="grid md:grid-cols-2 gap-3">
-            <div class="rounded-xl border p-3"><div class="font-semibold">ASCABOMJA</div><div class="text-sm text-gray-600">14</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">ASCAROSA</div><div class="text-sm text-gray-600">08</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">CATAVIP</div><div class="text-sm text-gray-600">33</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">JOSÉ DE ALENCAR</div><div class="text-sm text-gray-600">37</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">LAGOA REDONDA</div><div class="text-sm text-gray-600">12</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">MACHADO DE ASSIS</div><div class="text-sm text-gray-600">04</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">MULHERES LUTA EM CENA</div><div class="text-sm text-gray-600">50</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">PALMARES</div><div class="text-sm text-gray-600">22</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">VIVA A VIDA</div><div class="text-sm text-gray-600">05</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">ASCABOMJA</div><div class="text-sm text-gray-600">14 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">ASCAROSA</div><div class="text-sm text-gray-600">08 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">CATAVIP</div><div class="text-sm text-gray-600">33 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">JOSÉ DE ALENCAR</div><div class="text-sm text-gray-600">37 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">LAGOA REDONDA</div><div class="text-sm text-gray-600">12 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">MACHADO DE ASSIS</div><div class="text-sm text-gray-600">04 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">MULHERES LUTA EM CENA</div><div class="text-sm text-gray-600">50 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">PALMARES</div><div class="text-sm text-gray-600">22 integrantes</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">VIVA A VIDA</div><div class="text-sm text-gray-600">05 integrantes</div></div>
           </div>
-          <p class="mt-3 text-xs bg-green-50 border border-green-100 rounded-lg p-3 text-green-700">
-            <span class="font-semibold">Legenda:</span>
-            o número mostrado em cada cartão de grupo corresponde à
-            <strong>quantidade de integrantes</strong>.
-          </p>
         </div>
 
         <!-- Municípios -->
         <div id="tab-municipios" class="tab-pane hidden">
           <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <div class="rounded-xl border p-3"><div class="font-semibold">Metropolitano</div><div class="text-sm text-gray-600">08</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Amontada</div><div class="text-sm text-gray-600">22</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Aracoiaba</div><div class="text-sm text-gray-600">17</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Aratuba</div><div class="text-sm text-gray-600">01</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Barreira</div><div class="text-sm text-gray-600">05</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Baturité</div><div class="text-sm text-gray-600">18</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Boa Viagem</div><div class="text-sm text-gray-600">38</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Chorozinho</div><div class="text-sm text-gray-600">12</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Granja</div><div class="text-sm text-gray-600">06</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Guaramiranga</div><div class="text-sm text-gray-600">02</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Icó</div><div class="text-sm text-gray-600">27</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Itapipoca</div><div class="text-sm text-gray-600">14</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Itapiúna</div><div class="text-sm text-gray-600">02</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Miraíma</div><div class="text-sm text-gray-600">17</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Ocara</div><div class="text-sm text-gray-600">18</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Pacatuba</div><div class="text-sm text-gray-600">30</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Paracuru</div><div class="text-sm text-gray-600">12</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Quixelô</div><div class="text-sm text-gray-600">19</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Redenção</div><div class="text-sm text-gray-600">19</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Tururu</div><div class="text-sm text-gray-600">13</div></div>
-            <div class="rounded-xl border p-3"><div class="font-semibold">Ubajara</div><div class="text-sm text-gray-600">03</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Metropolitano</div><div class="text-sm text-gray-600">08 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Amontada</div><div class="text-sm text-gray-600">22 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Aracoiaba</div><div class="text-sm text-gray-600">17 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Aratuba</div><div class="text-sm text-gray-600">01 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Barreira</div><div class="text-sm text-gray-600">05 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Baturité</div><div class="text-sm text-gray-600">18 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Boa Viagem</div><div class="text-sm text-gray-600">38 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Chorozinho</div><div class="text-sm text-gray-600">12 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Granja</div><div class="text-sm text-gray-600">06 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Guaramiranga</div><div class="text-sm text-gray-600">02 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Icó</div><div class="text-sm text-gray-600">27 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Itapipoca</div><div class="text-sm text-gray-600">14 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Itapiúna</div><div class="text-sm text-gray-600">02 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Miraíma</div><div class="text-sm text-gray-600">17 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Ocara</div><div class="text-sm text-gray-600">18 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Pacatuba</div><div class="text-sm text-gray-600">30 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Paracuru</div><div class="text-sm text-gray-600">12 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Quixelô</div><div class="text-sm text-gray-600">19 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Redenção</div><div class="text-sm text-gray-600">19 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Tururu</div><div class="text-sm text-gray-600">13 grupos/associações</div></div>
+            <div class="rounded-xl border p-3"><div class="font-semibold">Ubajara</div><div class="text-sm text-gray-600">03 grupos/associações</div></div>
           </div>
-          <p class="mt-3 text-xs bg-blue-50 border border-blue-100 rounded-lg p-3 text-blue-700">
-            <span class="font-semibold">Legenda:</span>
-            o número mostrado em cada cartão de município corresponde à
-            <strong>quantidade de grupos/associações</strong>.
-          </p>
         </div>
       </div>
 
