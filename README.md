@@ -244,20 +244,85 @@ cd ../frontend
 python -m http.server 8001
 ``` 
 
+## 💾 Scripts de População Inicial (Seed Data)
+
+Para que o sistema funcione corretamente logo após a instalação, é necessário popular as tabelas de domínio (tipos, categorias) e os cadastros iniciais. 
+
+Você pode executar os scripts SQL abaixo diretamente no seu cliente de banco de dados (pgAdmin, DBeaver) ou garantir que eles estejam nas migrações do Alembic.
+
+### 1. Tipos de Parceiro e Categorias de Resíduo
+Estes dados são fundamentais para o funcionamento dos dropdowns e cadastros.
+
+```sql
+-- Inserir Tipos de Parceiro
+INSERT INTO tipo_parceiro (id, nome) VALUES
+(1, 'ASSOCIACAO'),
+(2, 'ORGAO_PUBLICO'),
+(3, 'EMPRESA_PRIVADA'),
+(4, 'CATADOR_INDIVIDUAL'),
+(5, 'OUTRO')
+ON CONFLICT (id) DO NOTHING;
+
+-- Inserir Categorias de Resíduo
+INSERT INTO categoria_residuo (id, nome) VALUES
+(1, 'Plástico'),
+(2, 'Papel'),
+(3, 'Metal'),
+(4, 'Vidro'),
+(5, 'Orgânico'),
+(6, 'Rejeito'),
+(7, 'Eletrônico'),
+(8, 'Tetra Pak')
+ON CONFLICT (id) DO NOTHING;
+
+-- 1. Inserir os nomes na tabela PARCEIROS (Pai)
+INSERT INTO parceiros (nome, id_tipo_parceiro) VALUES
+('REDE DE CATADORES', 1),
+('ACORES', 1),
+('ARAN', 1),
+('ASCAJAN', 1),
+('MOURA BRASIL', 1),
+('MARAVILHA', 1),
+('RAIO DE SOL', 1),
+('ROSA VIRGÍNIA', 1),
+('SOCRELP', 1),
+('VIVA A VIDA', 1)
+ON CONFLICT (nome) DO NOTHING;
+
+-- 2. Inserir os detalhes na tabela ASSOCIACOES (Filha)
+-- Utiliza SELECT para garantir o vínculo correto com o ID gerado acima
+INSERT INTO associacoes (parceiro_id, lider, telefone, cnpj, ativo)
+SELECT id, 'Leina Mara Rodrigues da Silva Duarte', '(85) 98562-4020', '09.000.185/0001-09', TRUE FROM parceiros WHERE nome = 'REDE DE CATADORES'
+UNION ALL
+SELECT id, 'LIDIANA SOUSA', '(85) 99436-4061', '04.989.221/0001-95', TRUE FROM parceiros WHERE nome = 'ACORES'
+UNION ALL
+SELECT id, 'MARIA DA CONCEIÇÃO', '(85) 98575-2728', '07.475.187/0001-29', TRUE FROM parceiros WHERE nome = 'ARAN'
+UNION ALL
+SELECT id, 'SEBASTIANA DO CARMO', '(85) 98520-7116', '08.612.882/0001-58', TRUE FROM parceiros WHERE nome = 'ASCAJAN'
+UNION ALL
+SELECT id, 'FRANCSICA RAQUEL', '(85) 99838-2731', '24.293.438/0001-73', TRUE FROM parceiros WHERE nome = 'MOURA BRASIL'
+UNION ALL
+SELECT id, 'KELSON ALVES', '(85) 99769-9760', '11.058.865/0001-25', TRUE FROM parceiros WHERE nome = 'MARAVILHA'
+UNION ALL
+SELECT id, 'LEIDIVANIA MARIA', '(85) 99234-0148', '23.668.402/0001-64', TRUE FROM parceiros WHERE nome = 'RAIO DE SOL'
+UNION ALL
+SELECT id, 'MUSAMARA PEREIRA', '(85) 98962-1862', '09.635.604/0001-89', TRUE FROM parceiros WHERE nome = 'ROSA VIRGÍNIA'
+UNION ALL
+SELECT id, 'JANETE CABRAL', '(85) 98613-0768', '00.118.784/0001-57', TRUE FROM parceiros WHERE nome = 'SOCRELP'
+UNION ALL
+SELECT id, 'LAUDIRENE', '(85) 98528-9578', '07.865.301/0001-27', TRUE FROM parceiros WHERE nome = 'VIVA A VIDA';
+
+``` 
+
 ## 🛣️ Roadmap (Próximos Passos)
-[x] V1.0: CRUDs básicos (Materiais, Associações).
 
-[x] V2.0: Implementação de Vendas e Estoque Dinâmico.
-
-[x] V3.0: Arquitetura de Parceiros Híbridos e Módulo de Compras.
-
-[x] V3.1: Implementação de Autenticação JWT (Backend + Frontend).
-
-[x] V3.2: Implementação do Módulo Financeiro (Livro Caixa) com Compras/Vendas automáticas.
-
-[ ] V3.3: Implementação de Testes Automatizados (pytest) no Backend.
-
-[ ] V4.0: Deploy em produção (Render + Vercel/GitHub Pages).
+- [x] **V1.0:** CRUDs básicos (Materiais, Associações).
+- [x] **V2.0:** Implementação de Vendas e Estoque Dinâmico.
+- [x] **V3.0:** Arquitetura de Parceiros Híbridos e Módulo de Compras.
+- [x] **V3.1:** Implementação de Autenticação JWT (Backend + Frontend).
+- [x] **V3.2:** Implementação do Módulo Financeiro (Livro Caixa) com integração automática de Compras/Vendas.
+- [ ] **V3.3:** Implementação de Testes Automatizados (`pytest`) no Backend para garantir a estabilidade.
+- [ ] **V4.0:** Deploy em produção (Render para Backend + Vercel/GitHub Pages para Frontend).
 
 📄 Licença
 
