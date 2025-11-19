@@ -10,12 +10,11 @@ from ..dependencies import get_current_user
 
 router = APIRouter(
     prefix="/associacoes",
-    tags=["Associações"],
-    dependencies=[Depends(get_current_user)]
+    tags=["Associações"]
 )
 
 
-@router.post("/", response_model=schemas.Associacao)
+@router.post("/", response_model=schemas.Associacao , dependencies=[Depends(get_current_user)])
 def create_associacao(associacao: schemas.AssociacaoCreate, db: Session = Depends(get_db)):
     if crud.get_parceiro_by_nome(db, nome=associacao.nome):
         raise HTTPException(status_code=409,detail=f"Parceiro '{associacao.nome}' já existe.")
@@ -36,14 +35,14 @@ def read_associacao(associacao_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Associação não encontrada")
     return db_assoc
 
-@router.put("/{associacao_id}", response_model=schemas.Associacao)
+@router.put("/{associacao_id}", response_model=schemas.Associacao, dependencies=[Depends(get_current_user)])
 def update_associacao(associacao_id: int, associacao_update: schemas.AssociacaoUpdate, db: Session = Depends(get_db)):
     db_assoc = crud.update_associacao(db, associacao_id=associacao_id, associacao_update=associacao_update)
     if not db_assoc:
         raise HTTPException(status_code=404, detail="Associação não encontrada")
     return db_assoc
 
-@router.delete("/{associacao_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{associacao_id}", status_code=status.HTTP_204_NO_CONTENT , dependencies=[Depends(get_current_user)])
 def delete_associacao(associacao_id: int, db: Session = Depends(get_db)):
     db_assoc = crud.delete_associacao(db, associacao_id=associacao_id)
     if not db_assoc:
