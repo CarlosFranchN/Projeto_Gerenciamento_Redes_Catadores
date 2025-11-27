@@ -23,7 +23,7 @@ app = FastAPI(
 origins = [
     "http://localhost:8001",
     "http://127.0.0.1:8001", # A linha crucial
-    "https://redecatadorescearaa.github.io/catadores-rede-sitee/",
+    "https://redecatadorescearaa.github.io",
     "null", # Para requisições de arquivos locais (file://)
 ]
 
