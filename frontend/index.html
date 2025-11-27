@@ -928,105 +928,150 @@
 
     <!-- SCRIPTS -->
     <script>
-        // =============== Normalização ===============
-        const normKey = (s) =>
-          String(s || "")
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .toUpperCase()
-            .replace(/\(.*?\)/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
+      // =============== Normalização ===============
+      const normKey = (s) =>
+        String(s || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .replace(/\(.*?\)/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
 
-        // ====================== DADOS ======================
+      // ====================== DADOS ======================
 
-        const ENDERECOS = {};
-      const ASSOC_DETAILS = {}
+      const ENDERECOS = {};
+      const ASSOC_DETAILS = {};
 
+      // ====================== LOGIN ======================
+      const API_URL =
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "localhost"
+          ? "http://127.0.0.1:8000/" // Local
+          : "https://projeto-gerenciamento-redes-catadores.onrender.com/";
+      const BRASIL_API_URL = "https://brasilapi.com.br/api/cnpj/v1";
+      const modalLogin = document.getElementById("modalLogin");
+      const btnLogin = document.getElementById("btnLogin");
+      const closeLogin = document.getElementById("closeLogin");
+      const loginBtnAction = modalLogin?.querySelector("button.bg-green-700");
+      const inputUser = modalLogin?.querySelector("input[type='text']");
+      const inputPass = modalLogin?.querySelector("input[type='password']");
 
-        // ====================== LOGIN ======================
-        const API_URL = "http://127.0.0.1:8000";
-        const BRASIL_API_URL = "https://brasilapi.com.br/api/cnpj/v1";
-        const modalLogin = document.getElementById('modalLogin');
-        const btnLogin = document.getElementById('btnLogin');
-        const closeLogin = document.getElementById('closeLogin');
-        const loginBtnAction = modalLogin?.querySelector("button.bg-green-700");
-        const inputUser = modalLogin?.querySelector("input[type='text']");
-        const inputPass = modalLogin?.querySelector("input[type='password']");
+      btnLogin?.addEventListener("click", () => {
+        modalLogin.classList.remove("hidden");
+        inputUser?.focus();
+      });
+      closeLogin?.addEventListener("click", () =>
+        modalLogin.classList.add("hidden")
+      );
+      modalLogin?.addEventListener("click", (e) => {
+        if (e.target === modalLogin) modalLogin.classList.add("hidden");
+      });
 
-        btnLogin?.addEventListener('click', () => { modalLogin.classList.remove('hidden'); inputUser?.focus(); });
-        closeLogin?.addEventListener('click', () => modalLogin.classList.add('hidden'));
-        modalLogin?.addEventListener('click', (e) => { if (e.target === modalLogin) modalLogin.classList.add('hidden'); });
-
-        loginBtnAction?.addEventListener('click', async (e) => {
-          e.preventDefault();
-          const username = (inputUser?.value || "").trim();
-          const password = (inputPass?.value || "");
-          if (!username || !password) { alert("Por favor, preencha o usuário e a senha"); return; }
-          const originalText = loginBtnAction.innerText;
-          loginBtnAction.innerText = "Entrando..."; loginBtnAction.disabled = true;
-          try {
-            const formData = new URLSearchParams(); formData.append('username', username); formData.append('password', password);
-            const resp = await fetch(`${API_URL}/token`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: formData });
-            if (!resp.ok) throw new Error("Usuário ou senha incorretos!");
-            const data = await resp.json(); localStorage.setItem("rc_token", data.access_token); window.location.href = "app.html";
-          } catch (err) { alert(err.message); } finally { loginBtnAction.innerText = originalText; loginBtnAction.disabled = false; }
-        });
-        inputPass?.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); loginBtnAction?.click(); } });
-
-        // ====================== MODAL AFILIADOS + TABS ======================
-        const modalAfiliados = document.getElementById('modalAfiliados');
-        const btnAfiliados = document.getElementById('btnAfiliados');
-        const btnVerAfiliados = document.getElementById('btnVerAfiliados');
-        const btnFecharAfiliados = document.getElementById('btnFecharAfiliados');
-        function openAfiliados(){ modalAfiliados.classList.remove('hidden'); }
-        function closeAfiliados(){ modalAfiliados.classList.add('hidden'); }
-        [btnAfiliados, btnVerAfiliados].forEach(b => b && b.addEventListener('click', openAfiliados));
-        btnFecharAfiliados?.addEventListener('click', closeAfiliados);
-        modalAfiliados?.addEventListener('click', (e) => { if (e.target === modalAfiliados) closeAfiliados(); });
-
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const panes = document.querySelectorAll('.tab-pane');
-        tabBtns.forEach(btn => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-tab');
-            tabBtns.forEach(b => {
-              b.classList.toggle('bg-green-600', b === btn);
-              b.classList.toggle('text-white', b === btn);
-              b.classList.toggle('bg-white', b !== btn);
-            });
-            panes.forEach(p => p.classList.toggle('hidden', p.id !== id));
+      loginBtnAction?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const username = (inputUser?.value || "").trim();
+        const password = inputPass?.value || "";
+        if (!username || !password) {
+          alert("Por favor, preencha o usuário e a senha");
+          return;
+        }
+        const originalText = loginBtnAction.innerText;
+        loginBtnAction.innerText = "Entrando...";
+        loginBtnAction.disabled = true;
+        try {
+          const formData = new URLSearchParams();
+          formData.append("username", username);
+          formData.append("password", password);
+          const resp = await fetch(`${API_URL}/token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData,
           });
-        });
+          if (!resp.ok) throw new Error("Usuário ou senha incorretos!");
+          const data = await resp.json();
+          localStorage.setItem("rc_token", data.access_token);
+          window.location.href = "app.html";
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          loginBtnAction.innerText = originalText;
+          loginBtnAction.disabled = false;
+        }
+      });
+      inputPass?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          loginBtnAction?.click();
+        }
+      });
 
+      // ====================== MODAL AFILIADOS + TABS ======================
+      const modalAfiliados = document.getElementById("modalAfiliados");
+      const btnAfiliados = document.getElementById("btnAfiliados");
+      const btnVerAfiliados = document.getElementById("btnVerAfiliados");
+      const btnFecharAfiliados = document.getElementById("btnFecharAfiliados");
+      function openAfiliados() {
+        modalAfiliados.classList.remove("hidden");
+      }
+      function closeAfiliados() {
+        modalAfiliados.classList.add("hidden");
+      }
+      [btnAfiliados, btnVerAfiliados].forEach(
+        (b) => b && b.addEventListener("click", openAfiliados)
+      );
+      btnFecharAfiliados?.addEventListener("click", closeAfiliados);
+      modalAfiliados?.addEventListener("click", (e) => {
+        if (e.target === modalAfiliados) closeAfiliados();
+      });
+
+      const tabBtns = document.querySelectorAll(".tab-btn");
+      const panes = document.querySelectorAll(".tab-pane");
+      tabBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-tab");
+          tabBtns.forEach((b) => {
+            b.classList.toggle("bg-green-600", b === btn);
+            b.classList.toggle("text-white", b === btn);
+            b.classList.toggle("bg-white", b !== btn);
+          });
+          panes.forEach((p) => p.classList.toggle("hidden", p.id !== id));
+        });
+      });
 
       async function buscarEnderecoPorCNPJ(cnpj) {
         // Limpa o CNPJ (deixa só números)
-        const cnpjLimpo = String(cnpj).replace(/\D/g, '');
-        
+        const cnpjLimpo = String(cnpj).replace(/\D/g, "");
+
         if (!cnpjLimpo || cnpjLimpo.length !== 14) return null;
 
         try {
-            const res = await fetch(`${BRASIL_API_URL}/${cnpjLimpo}`);
-            if (!res.ok) return null;
-            
-            const data = await res.json();
-            
-            // Formata o endereço bonito
-            // Ex: Rua Flores, 123 — Centro, Fortaleza/CE
-            return `${data.logradouro}, ${data.numero}${data.complemento ? ' ('+data.complemento+')' : ''} — ${data.bairro}, ${data.municipio}/${data.uf}`;
+          const res = await fetch(`${BRASIL_API_URL}/${cnpjLimpo}`);
+          if (!res.ok) return null;
+
+          const data = await res.json();
+
+          // Formata o endereço bonito
+          // Ex: Rua Flores, 123 — Centro, Fortaleza/CE
+          return `${data.logradouro}, ${data.numero}${
+            data.complemento ? " (" + data.complemento + ")" : ""
+          } — ${data.bairro}, ${data.municipio}/${data.uf}`;
         } catch (error) {
-            console.warn(`Não foi possível buscar endereço para CNPJ ${cnpj}`, error);
-            return null;
+          console.warn(
+            `Não foi possível buscar endereço para CNPJ ${cnpj}`,
+            error
+          );
+          return null;
         }
       }
-async function fetchAssociacoesPublicas() {
-      try {
+      async function fetchAssociacoesPublicas() {
+        try {
           // Passo A: Busca a lista básica do seu Backend
           const response = await fetch(`${API_URL}/associacoes/?limit=100`);
-          
+
           if (!response.ok) {
-              console.warn("API de associações indisponível.");
-              return;
+            console.warn("API de associações indisponível.");
+            return;
           }
 
           const data = await response.json();
@@ -1034,166 +1079,233 @@ async function fetchAssociacoesPublicas() {
 
           // Passo B: Processa cada associação
           // Usamos Promise.all para buscar os endereços em paralelo (mais rápido)
-          await Promise.all(lista.map(async (assoc) => {
-              const nomeReal = assoc.parceiro_info?.nome || "Associação Sem Nome";
+          await Promise.all(
+            lista.map(async (assoc) => {
+              const nomeReal =
+                assoc.parceiro_info?.nome || "Associação Sem Nome";
               const key = normKey(nomeReal);
               const cnpj = assoc.cnpj;
 
               // Define os dados iniciais (Endereço começa como "Carregando...")
               ASSOC_DETAILS[key] = {
-                  nome: nomeReal,
-                  lider: assoc.lider || "—",
-                  telefone: assoc.telefone || "—",
-                  cnpj: cnpj || "—",
-                  endereco: "Buscando endereço..." 
+                nome: nomeReal,
+                lider: assoc.lider || "—",
+                telefone: assoc.telefone || "—",
+                cnpj: cnpj || "—",
+                endereco: "Buscando endereço...",
               };
 
               // Se tiver CNPJ, busca o endereço na BrasilAPI
               if (cnpj && cnpj.length > 5) {
-                  const enderecoReal = await buscarEnderecoPorCNPJ(cnpj);
-                  if (enderecoReal) {
-                      ASSOC_DETAILS[key].endereco = enderecoReal;
-                  } else {
-                      ASSOC_DETAILS[key].endereco = "Endereço não encontrado";
-                  }
+                const enderecoReal = await buscarEnderecoPorCNPJ(cnpj);
+                if (enderecoReal) {
+                  ASSOC_DETAILS[key].endereco = enderecoReal;
+                } else {
+                  ASSOC_DETAILS[key].endereco = "Endereço não encontrado";
+                }
               } else {
-                  ASSOC_DETAILS[key].endereco = "Endereço não disponível";
+                ASSOC_DETAILS[key].endereco = "Endereço não disponível";
               }
-          }));
-
-          console.log("Dados de associações e endereços carregados:", Object.keys(ASSOC_DETAILS).length);
-
-      } catch (error) {
-          console.error("Erro ao conectar com a API:", error);
-      }
-    }
-        document.addEventListener("DOMContentLoaded", fetchAssociacoesPublicas);
-        // ====================== Detalhe da Associação ======================
-        const assocDetail = document.getElementById('assocDetail');
-        const assocTitleEl = document.getElementById('assocTitle');
-        const assocLeaderEl = document.getElementById('assocLeader');
-        const assocPhoneEl  = document.getElementById('assocPhone');
-        const assocAddrEl   = document.getElementById('assocAddress');
-        const assocCNPJEl   = document.getElementById('assocCNPJ');
-        const closeAssocDetail = document.getElementById('closeAssocDetail');
-
-        function openAssocDetailByName(rawName){
-          const key = normKey(rawName);
-          const d = ASSOC_DETAILS[key] || { nome: rawName.toUpperCase(), lider:"—", telefone:"—", endereco: ENDERECOS[key] || "—", cnpj:"—" };
-          assocTitleEl.textContent = (rawName || d.nome).toUpperCase();
-          assocLeaderEl.textContent = d.lider || "—";
-          assocPhoneEl.textContent  = d.telefone || "—";
-          assocAddrEl.textContent   = d.endereco || "—";
-          assocCNPJEl.textContent   = d.cnpj || "—";
-          assocDetail.classList.remove('hidden');
-        }
-        function closeAssoc(){ assocDetail.classList.add('hidden'); }
-        closeAssocDetail?.addEventListener('click', closeAssoc);
-        assocDetail?.addEventListener('click', (e) => { if (e.target === assocDetail) closeAssoc(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !assocDetail.classList.contains('hidden')) closeAssoc(); });
-
-        // ====== Função para dar "vida" aos cards ======
-        function enhanceClickableCard(card, onActivate){
-          card.classList.add(
-            'clickable-card','cursor-pointer','transition',
-            'hover:-translate-y-0.5','active:translate-y-0',
-            'hover:border-green-200','hover:shadow-md','shadow-sm','bg-white',
-            'focus-visible:ring-2','focus-visible:ring-green-600/50','ring-offset-2','ring-offset-white'
+            })
           );
-          card.setAttribute('role','button');
-          card.setAttribute('tabindex','0');
 
-          const press = (x, y) => {
-            card.style.setProperty('--x', x + 'px');
-            card.style.setProperty('--y', y + 'px');
-            card.classList.add('is-pressed');
-            setTimeout(() => card.classList.remove('is-pressed'), 220);
-          };
-
-          card.addEventListener('mousedown', (e) => {
-            const r = card.getBoundingClientRect();
-            press(e.clientX - r.left, e.clientY - r.top);
-          });
-          card.addEventListener('click', () => onActivate && onActivate());
-
-          // teclado: Enter ou Espaço ativam
-          card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              const r = card.getBoundingClientRect();
-              press(r.width/2, r.height/2);
-              onActivate && onActivate();
-            }
-          });
+          console.log(
+            "Dados de associações e endereços carregados:",
+            Object.keys(ASSOC_DETAILS).length
+          );
+        } catch (error) {
+          console.error("Erro ao conectar com a API:", error);
         }
+      }
+      document.addEventListener("DOMContentLoaded", fetchAssociacoesPublicas);
+      // ====================== Detalhe da Associação ======================
+      const assocDetail = document.getElementById("assocDetail");
+      const assocTitleEl = document.getElementById("assocTitle");
+      const assocLeaderEl = document.getElementById("assocLeader");
+      const assocPhoneEl = document.getElementById("assocPhone");
+      const assocAddrEl = document.getElementById("assocAddress");
+      const assocCNPJEl = document.getElementById("assocCNPJ");
+      const closeAssocDetail = document.getElementById("closeAssocDetail");
 
-        // Clique/efeito nos cards do modal (Associações)
-        (function wireAfiliadosClick(){
-          const paneAssoc = document.getElementById("tab-associacoes");
-          if (!paneAssoc) return;
-          const cards = paneAssoc.querySelectorAll(".rounded-xl.border.p-3, .rounded-xl.border.bg-white.p-3");
-          cards.forEach(card => {
-            const nameEl = card.querySelector(".font-semibold");
-            if (!nameEl) return;
-            enhanceClickableCard(card, () => {
-              // garante aba ativa e abre detalhe
-              tabBtns.forEach(b => {
-                const isAssoc = b.getAttribute('data-tab') === 'tab-associacoes';
-                b.classList.toggle('bg-green-600', isAssoc);
-                b.classList.toggle('text-white', isAssoc);
-                b.classList.toggle('bg-white', !isAssoc);
-              });
-              panes.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-associacoes'));
-              openAssocDetailByName(nameEl.textContent.trim());
+      function openAssocDetailByName(rawName) {
+        const key = normKey(rawName);
+        const d = ASSOC_DETAILS[key] || {
+          nome: rawName.toUpperCase(),
+          lider: "—",
+          telefone: "—",
+          endereco: ENDERECOS[key] || "—",
+          cnpj: "—",
+        };
+        assocTitleEl.textContent = (rawName || d.nome).toUpperCase();
+        assocLeaderEl.textContent = d.lider || "—";
+        assocPhoneEl.textContent = d.telefone || "—";
+        assocAddrEl.textContent = d.endereco || "—";
+        assocCNPJEl.textContent = d.cnpj || "—";
+        assocDetail.classList.remove("hidden");
+      }
+      function closeAssoc() {
+        assocDetail.classList.add("hidden");
+      }
+      closeAssocDetail?.addEventListener("click", closeAssoc);
+      assocDetail?.addEventListener("click", (e) => {
+        if (e.target === assocDetail) closeAssoc();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !assocDetail.classList.contains("hidden"))
+          closeAssoc();
+      });
+
+      // ====== Função para dar "vida" aos cards ======
+      function enhanceClickableCard(card, onActivate) {
+        card.classList.add(
+          "clickable-card",
+          "cursor-pointer",
+          "transition",
+          "hover:-translate-y-0.5",
+          "active:translate-y-0",
+          "hover:border-green-200",
+          "hover:shadow-md",
+          "shadow-sm",
+          "bg-white",
+          "focus-visible:ring-2",
+          "focus-visible:ring-green-600/50",
+          "ring-offset-2",
+          "ring-offset-white"
+        );
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+
+        const press = (x, y) => {
+          card.style.setProperty("--x", x + "px");
+          card.style.setProperty("--y", y + "px");
+          card.classList.add("is-pressed");
+          setTimeout(() => card.classList.remove("is-pressed"), 220);
+        };
+
+        card.addEventListener("mousedown", (e) => {
+          const r = card.getBoundingClientRect();
+          press(e.clientX - r.left, e.clientY - r.top);
+        });
+        card.addEventListener("click", () => onActivate && onActivate());
+
+        // teclado: Enter ou Espaço ativam
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            const r = card.getBoundingClientRect();
+            press(r.width / 2, r.height / 2);
+            onActivate && onActivate();
+          }
+        });
+      }
+
+      // Clique/efeito nos cards do modal (Associações)
+      (function wireAfiliadosClick() {
+        const paneAssoc = document.getElementById("tab-associacoes");
+        if (!paneAssoc) return;
+        const cards = paneAssoc.querySelectorAll(
+          ".rounded-xl.border.p-3, .rounded-xl.border.bg-white.p-3"
+        );
+        cards.forEach((card) => {
+          const nameEl = card.querySelector(".font-semibold");
+          if (!nameEl) return;
+          enhanceClickableCard(card, () => {
+            // garante aba ativa e abre detalhe
+            tabBtns.forEach((b) => {
+              const isAssoc = b.getAttribute("data-tab") === "tab-associacoes";
+              b.classList.toggle("bg-green-600", isAssoc);
+              b.classList.toggle("text-white", isAssoc);
+              b.classList.toggle("bg-white", !isAssoc);
             });
+            panes.forEach((p) =>
+              p.classList.toggle("hidden", p.id !== "tab-associacoes")
+            );
+            openAssocDetailByName(nameEl.textContent.trim());
           });
-        })();
+        });
+      })();
 
-        // Clique/efeito nos cards da seção “Nossa Rede”
-        (function wireGridRede(){
-          const grid = document.querySelector('#rede .grid.sm\\:grid-cols-2') || document.querySelector('#rede .grid');
-          if (!grid) return;
-          const tiles = grid.querySelectorAll(".rounded-xl.border.bg-white.p-4");
-          tiles.forEach(tile => {
-            const nameEl = tile.querySelector(".font-semibold");
-            if (!nameEl) return;
-            enhanceClickableCard(tile, () => {
-              openAfiliados();
-              setTimeout(() => openAssocDetailByName(nameEl.textContent.trim()), 80);
-            });
+      // Clique/efeito nos cards da seção “Nossa Rede”
+      (function wireGridRede() {
+        const grid =
+          document.querySelector("#rede .grid.sm\\:grid-cols-2") ||
+          document.querySelector("#rede .grid");
+        if (!grid) return;
+        const tiles = grid.querySelectorAll(".rounded-xl.border.bg-white.p-4");
+        tiles.forEach((tile) => {
+          const nameEl = tile.querySelector(".font-semibold");
+          if (!nameEl) return;
+          enhanceClickableCard(tile, () => {
+            openAfiliados();
+            setTimeout(
+              () => openAssocDetailByName(nameEl.textContent.trim()),
+              80
+            );
           });
-        })();
+        });
+      })();
 
-        // ====================== GRÁFICO ======================
-        (function makeGraficoMensal(){
-          const tabela = document.getElementById('tabelaProducao');
-          const canvas = document.getElementById('graficoMensal');
-          if (!tabela || !canvas || !window.Chart) return;
+      // ====================== GRÁFICO ======================
+      (function makeGraficoMensal() {
+        const tabela = document.getElementById("tabelaProducao");
+        const canvas = document.getElementById("graficoMensal");
+        if (!tabela || !canvas || !window.Chart) return;
 
-          const parsePtBR = (txt) => Number(String(txt).replace(/\./g, '').replace(',', '.'));
-          const linhas = Array.from(tabela.querySelectorAll('tbody tr'))
-            .filter(tr => (tr.querySelector('td')?.textContent || '').trim().toLowerCase() !== 'total');
+        const parsePtBR = (txt) =>
+          Number(String(txt).replace(/\./g, "").replace(",", "."));
+        const linhas = Array.from(tabela.querySelectorAll("tbody tr")).filter(
+          (tr) =>
+            (tr.querySelector("td")?.textContent || "").trim().toLowerCase() !==
+            "total"
+        );
 
-          const meses = [], valores = [];
-          linhas.forEach(tr => {
-            const tds = tr.querySelectorAll('td');
-            meses.push(tds[0].textContent.trim());
-            valores.push(parsePtBR(tds[1].textContent.trim()));
-          });
+        const meses = [],
+          valores = [];
+        linhas.forEach((tr) => {
+          const tds = tr.querySelectorAll("td");
+          meses.push(tds[0].textContent.trim());
+          valores.push(parsePtBR(tds[1].textContent.trim()));
+        });
 
-          new Chart(canvas, {
-            type: 'bar',
-            data: { labels: meses, datasets: [{ label: 'Kg por mês', data: valores, borderWidth: 1, borderRadius: 8, backgroundColor: 'rgba(16, 185, 129, 0.6)', borderColor: 'rgba(16, 185, 129, 1)' }] },
-            options: {
-              responsive: true,
-              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => Intl.NumberFormat('pt-BR').format(ctx.parsed.y) + ' kg' } } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: (v) => Intl.NumberFormat('pt-BR').format(v) + ' kg' } },
-                x: { grid: { display: false } }
-              }
-            }
-          });
-        })();
+        new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels: meses,
+            datasets: [
+              {
+                label: "Kg por mês",
+                data: valores,
+                borderWidth: 1,
+                borderRadius: 8,
+                backgroundColor: "rgba(16, 185, 129, 0.6)",
+                borderColor: "rgba(16, 185, 129, 1)",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    Intl.NumberFormat("pt-BR").format(ctx.parsed.y) + " kg",
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: "rgba(0,0,0,0.06)" },
+                ticks: {
+                  callback: (v) => Intl.NumberFormat("pt-BR").format(v) + " kg",
+                },
+              },
+              x: { grid: { display: false } },
+            },
+          },
+        });
+      })();
     </script>
   </body>
 </html>

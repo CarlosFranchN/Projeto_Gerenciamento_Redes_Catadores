@@ -1,7 +1,9 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
 // URL Global da API
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000/" 
+    : "https://projeto-gerenciamento-redes-catadores.onrender.com/";
 
 // ========== Utils ==========
 const cls = (...xs) => xs.filter(Boolean).join(" ");
@@ -1811,8 +1813,11 @@ function FinanceiroView({ fetchAPI, onCreateTransacao }) {
 
 // ========== App ==========
 function App() {
-    const API_URL = "http://127.0.0.1:8000";
+    // const API_URL = "http://127.0.0.1:8000";
 
+    const API_URL = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000/" 
+    : "https://projeto-gerenciamento-redes-catadores.onrender.com/"; 
     const [token, setToken] = useState(() => localStorage.getItem("rc_token"))
 
     useEffect(() => {
