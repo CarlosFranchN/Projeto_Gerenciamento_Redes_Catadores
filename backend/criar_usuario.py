@@ -3,7 +3,9 @@ from app import crud,schemas
 
 db = SessionLocal()
 try:
-    user = schemas.UsuarioCreate(username="admin", password="123") # Seu usuário inicial
+    user = schemas.UsuarioCreate(
+        username="gestao.rede",
+        password="Rede123!") 
     crud.create_user(db, user)
     print("Usuário 'admin' criado com sucesso!")
 except Exception as e:
