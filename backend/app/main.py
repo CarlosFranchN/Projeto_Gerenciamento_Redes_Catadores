@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import (
     auth,
     categoria,
+    grupos,
     materiais,
     associacoes,
     estoque,
+    municipios,
     parceiros,
     recebimentos,
     tipos_parceiro,
@@ -27,6 +29,7 @@ app = FastAPI(
 origins = [
     "http://localhost:8001",
     "http://127.0.0.1:8001", # A linha crucial
+    "http://127.0.0.1:8000", # A linha crucial
     "https://redecatadorescearaa.github.io",
     "null", # Para requisições de arquivos locais (file://)
 ]
@@ -54,7 +57,8 @@ app.include_router(parceiros.router)
 app.include_router(compras.router) 
 app.include_router(producao.router)
 app.include_router(audit.router)
-
+app.include_router(grupos.router)
+app.include_router(municipios.router)
 
 @app.get("/")
 def root():

@@ -3,7 +3,8 @@ import {
   renderProducao,
   renderGrupos,
   renderMunicipios,
-  closeAssocDetail
+  closeAssocDetail,
+  openAssocDetailFromCard 
 } from './scripts/render.js';
 
 import { setToken, removeToken, login } from './services/api.js';
@@ -97,24 +98,7 @@ function enhanceClickableCard(card, onActivate) {
   });
 }
 
-// =============== FUNÇÃO: openAssocDetailFromCard ===============
-// (Estava faltando! Abre o modal com dados do card)
-function openAssocDetailFromCard(card) {
-  const nome = card.dataset.nome || 'ASSOCIAÇÃO';
-  const cnpj = card.dataset.cnpj || '—';
-  const bairro = card.dataset.bairro || '—';
-  
-  if (assocTitleEl) assocTitleEl.textContent = nome.toUpperCase();
-  if (assocLeaderEl) assocLeaderEl.textContent = '—';
-  if (assocPhoneEl) assocPhoneEl.textContent = '—';
-  if (assocAddrEl) assocAddrEl.textContent = bairro;
-  if (assocCNPJEl) assocCNPJEl.textContent = cnpj;
-  
-  if (assocDetail) {
-    assocDetail.classList.remove('hidden');
-    console.log('📄 Modal aberto:', nome);
-  }
-}
+
 
 // =============== LOGIN ===============
 btnLogin?.addEventListener('click', () => {
@@ -281,13 +265,15 @@ formContato?.addEventListener('submit', (e) => {
 });
 
 // =============== DETALHE ASSOCIAÇÃO ===============
+
+
 closeAssocDetailBtn?.addEventListener('click', closeAssocDetail);
 
 assocDetail?.addEventListener('click', (e) => {
   if (e.target === assocDetail) closeAssocDetail();
 });
 
-// =============== TECLA ESC ===============
+// ✅ Tecla ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeAssocDetail();

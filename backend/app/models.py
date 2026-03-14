@@ -200,6 +200,7 @@ class Associacao(Base):
     
     # Relacionamento NOVO com ProducaoMensal
     producoes = relationship("ProducaoMensal", back_populates="associacao", cascade="all, delete-orphan")
+    grupos = relationship("Grupo", back_populates="associacao", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Associacao(nome='{self.parceiro_info.nome if self.parceiro_info else 'N/A'}')>"
@@ -322,3 +323,39 @@ class TransacaoFinanceira(Base):
     
     def __repr__(self):
         return f"<TransacaoFinanceira(tipo={self.tipo}, valor={self.valor})>"
+    
+
+# =============== GRUPOS E MUNICÍPIOS ===============
+
+class Grupo(Base):
+    __tablename__ = "grupos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(255), nullable=False, index=True)
+    integrantes = Column(Integer, default=0)
+    associacao_id = Column(Integer, ForeignKey("associacoes.id"), nullable=True, index=True)
+    cidade = Column(String(100), nullable=True)
+    uf = Column(String(2), nullable=True)
+    ativo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Relacionamentos
+    associacao = relationship("Associacao", back_populates="grupos")
+    
+    def __repr__(self):
+        return f"<Grupo(nome='{self.nome}', integrantes={self.integrantes})>"
+
+
+class Municipio(Base):
+    __tablename__ = "municipios"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False, unique=True, index=True)
+    uf = Column(String(2), nullable=False)
+    qtd_grupos = Column(Integer, default=0)
+    qtd_associacoes = Column(Integer, default=0)
+    ativo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<Municipio(nome='{self.nome}', uf='{self.uf}')>"

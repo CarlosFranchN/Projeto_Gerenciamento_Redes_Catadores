@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 
 from app import models
@@ -8,7 +8,7 @@ from app.database import get_db
 from ..dependencies import get_current_user
 
 router = APIRouter(
-    prefix="/api/associacoes",  # ✅ Adicionado /api
+    prefix="/api/associacoes",
     tags=["Associações"]
 )
 
@@ -24,7 +24,7 @@ def create_associacao(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/", response_model=dict)
+@router.get("/", response_model=schemas.AssociacoesPaginadasResponse)
 def read_all_associacoes(
     skip: int = 0,
     limit: int = 100,
@@ -32,7 +32,7 @@ def read_all_associacoes(
     db: Session = Depends(get_db)
 ):
     """Listar todas associações (público)"""
-    return crud.get_all_associacoes(db, skip=skip, limit=limit)
+    return crud.get_all_associacoes(db, skip=skip, limit=limit, ativo=ativo)
 
 @router.get("/ativas", response_model=List[schemas.AssociacaoResponse])
 def read_associacoes_ativas(db: Session = Depends(get_db)):

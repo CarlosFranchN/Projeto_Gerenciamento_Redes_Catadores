@@ -12,3 +12,5 @@ from .usuario import *
 from .financeiro import *
 from .producao import *
 from .audit import *
+from .grupo import *
+from .municipio import *

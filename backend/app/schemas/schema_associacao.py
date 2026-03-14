@@ -2,13 +2,22 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
+# =============== PARCEIRO ===============
+class ParceiroInfo(BaseModel):
+    """Schema simples para informações do parceiro"""
+    id: int
+    nome: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# =============== ASSOCIACAO ===============
 class AssociacaoBase(BaseModel):
     lider: Optional[str] = Field(None, max_length=255)
     telefone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
     cnpj: Optional[str] = Field(None, max_length=18)
     
-    # Novos campos de endereço
+    # Campos de endereço
     logradouro: Optional[str] = None
     numero: Optional[str] = Field(None, max_length=20)
     complemento: Optional[str] = Field(None, max_length=50)
@@ -20,6 +29,7 @@ class AssociacaoBase(BaseModel):
 
 class AssociacaoCreate(AssociacaoBase):
     parceiro_id: int
+    nome: str  # Nome do parceiro
 
 class AssociacaoUpdate(BaseModel):
     lider: Optional[str] = None
@@ -36,10 +46,15 @@ class AssociacaoUpdate(BaseModel):
 class AssociacaoResponse(AssociacaoBase):
     id: int
     parceiro_id: int
+    nome: str  # ✅ Nome do parceiro (não o objeto inteiro)
     data_cadastro: datetime
     ativo: bool
     
     model_config = ConfigDict(from_attributes=True)
 
 class AssociacaoWithParceiro(AssociacaoResponse):
-    parceiro_info: Optional[dict] = None
+    parceiro_info: Optional[ParceiroInfo] = None
+
+class AssociacoesPaginadasResponse(BaseModel):
+    total_count: int
+    items: list[AssociacaoResponse]

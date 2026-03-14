@@ -14,11 +14,14 @@ def get_associacao(db: Session, associacao_id: int):
     ).filter(models.Associacao.id == associacao_id).first()
     return query
 
-def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
+def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100, ativo: bool = True) -> dict:
     """Lista associações ATIVAS com paginação e contagem total."""
     
-    # 1. Query base (apenas ativas)
-    query = db.query(models.Associacao).filter(models.Associacao.ativo == True)
+    # 1. Query base
+    query = db.query(models.Associacao).join(models.Parceiro)
+    
+    if ativo:
+        query = query.filter(models.Associacao.ativo == True)
 
     # 2. Contagem total
     total_count = query.count()
@@ -26,7 +29,6 @@ def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
     # 3. Busca da página atual
     items = (
         query
-        .join(models.Parceiro, models.Associacao.parceiro_id == models.Parceiro.id)
         .options(joinedload(models.Associacao.parceiro_info))
         .order_by(models.Parceiro.nome)
         .offset(skip)
@@ -34,7 +36,29 @@ def get_all_associacoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
         .all()
     )
     
-    return {"total_count": total_count, "items": items}
+    # ✅ Converte para dicionário com nome do parceiro
+    items_data = []
+    for assoc in items:
+        items_data.append({
+            "id": assoc.id,
+            "parceiro_id": assoc.parceiro_id,
+            "nome": assoc.parceiro_info.nome if assoc.parceiro_info else "N/A",
+            "lider": assoc.lider,
+            "telefone": assoc.telefone,
+            "email": assoc.email,
+            "cnpj": assoc.cnpj,
+            "logradouro": assoc.logradouro,
+            "numero": assoc.numero,
+            "complemento": assoc.complemento,
+            "bairro": assoc.bairro,
+            "cidade": assoc.cidade,
+            "uf": assoc.uf,
+            "status": assoc.status,
+            "ativo": assoc.ativo,
+            "data_cadastro": assoc.data_cadastro
+        })
+    
+    return {"total_count": total_count, "items": items_data}
 
 def get_associacoes_ativas(db: Session) -> List[models.Associacao]:
     """Buscar todas associações ativas (para o frontend público)"""
@@ -50,7 +74,7 @@ def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> mode
     """
     Cria um Parceiro (tipo ASSOCIACAO) e seus detalhes de Associação.
     """
-    # 1. Garante que o tipo 'ASSOCIACAO' existe e pega seu ID
+    # 1. Garante que o tipo 'ASSOCIACAO' existe
     tipo_assoc = db.query(models.TipoParceiro).filter(
         models.TipoParceiro.nome == "ASSOCIACAO"
     ).first()
@@ -63,7 +87,7 @@ def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> mode
 
     # 2. Cria o registro PAI (Parceiro)
     db_parceiro = models.Parceiro(
-        nome=associacao.nome,
+        nome=associacao.nome,  # ✅ Usa o nome do schema
         id_tipo_parceiro=id_tipo
     )
     db.add(db_parceiro)
@@ -76,21 +100,20 @@ def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> mode
             raise ValueError(f"Já existe um parceiro com o nome '{associacao.nome}'")
         raise e
 
-    # 3. Cria o registro FILHO (Associacao) - COM CAMPOS DE ENDEREÇO
+    # 3. Cria o registro FILHO (Associacao)
     db_associacao = models.Associacao(
         parceiro_id=db_parceiro.id,
         lider=associacao.lider,
         telefone=associacao.telefone,
-        email=associacao.email,  # ✅ NOVO
+        email=associacao.email,
         cnpj=associacao.cnpj,
-        # Campos de endereço ✅ NOVOS
         logradouro=associacao.logradouro,
         numero=associacao.numero,
         complemento=associacao.complemento,
         bairro=associacao.bairro,
         cidade=associacao.cidade,
         uf=associacao.uf,
-        status=associacao.status,  # ✅ NOVO
+        status=associacao.status,
         ativo=associacao.ativo
     )
     db.add(db_associacao)

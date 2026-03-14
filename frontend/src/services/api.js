@@ -11,7 +11,7 @@ import { showError, showWarning } from '../utils/toast.js';
 
 const API_URL = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8000/'
+  ? 'http://127.0.0.1:8000/api/'
   : 'https://projeto-gerenciamento-redes-catadores.onrender.com/';
 
 const API_TIMEOUT = 5000;
@@ -28,7 +28,7 @@ function withTimeout(promise, ms) {
 export async function getAssociacoes() {
   try {
     const response = await withTimeout(
-      fetch(`${API_URL}associacoes/?limit=100`),
+      fetch(`${API_URL}associacoes/?skip=0&limit=100&ativo=true`),
       API_TIMEOUT
     );
     
@@ -83,7 +83,10 @@ export async function getGrupos() {
     
   } catch (error) {
     console.warn('⚠️ API indisponível, usando grupos locais:', error.message);
-    return GRUPOS;
+    // Fallback para dados estáticos
+    import('../data/grupos.js').then(module => {
+      return module.GRUPOS;
+    });
   }
 }
 
@@ -102,7 +105,10 @@ export async function getMunicipios() {
     
   } catch (error) {
     console.warn('⚠️ API indisponível, usando municípios locais:', error.message);
-    return MUNICIPIOS;
+    // Fallback para dados estáticos
+    import('../data/municipios.js').then(module => {
+      return module.MUNICIPIOS;
+    });
   }
 }
 

@@ -27,15 +27,29 @@ export async function renderAssociacoes() {
   if (modalAssoc) showLoading(modalAssoc, 'grid');
   
   try {
-    const associacoes = await getAssociacoes();
+    const response = await getAssociacoes();
     
+    // ✅ Extrai o array corretamente
+    const associacoes = Array.isArray(response) ? response : (response.items || []);
+    
+    if (associacoes.length === 0) {
+      throw new Error('Nenhuma associação encontrada');
+    }
+    
+    // ✅ Renderiza os cards COM data-attributes
     const html = associacoes.map(assoc => `
       <div class="rounded-xl border bg-white p-4 clickable-card cursor-pointer transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md shadow-sm focus-visible:ring-2 focus-visible:ring-green-600/50 ring-offset-2"
            tabindex="0"
-           data-nome="${assoc.nome}">
+           data-nome="${assoc.nome || 'N/A'}"
+           data-lider="${assoc.lider || '—'}"
+           data-telefone="${assoc.telefone || '—'}"
+           data-bairro="${assoc.bairro || '—'}"
+           data-cidade="${assoc.cidade || ''}"
+           data-uf="${assoc.uf || ''}"
+           data-cnpj="${assoc.cnpj || '—'}">
         <div class="font-semibold text-green-700">${assoc.nome}</div>
         <div class="text-sm text-gray-600">
-          ${formatCNPJ(assoc.cnpj)} — ${assoc.bairro || '—'}
+          ${assoc.cnpj || 'CNPJ não informado'} — ${assoc.bairro || '—'}
         </div>
       </div>
     `).join('');
@@ -43,12 +57,74 @@ export async function renderAssociacoes() {
     if (gridRede) setContent(gridRede, html);
     if (modalAssoc) setContent(modalAssoc, html);
     
+    // ✅ Wire up clicks DEPOIS de renderizar
     wireCardClicks();
+    
+    console.log('✅ Associações renderizadas:', associacoes.length);
     
   } catch (error) {
     console.error('Erro ao renderizar associações:', error);
+    showError('Não foi possível carregar associações');
     if (gridRede) hideLoading(gridRede);
     if (modalAssoc) hideLoading(modalAssoc);
+  }
+}
+
+// =============== CLICK NOS CARDS ===============
+function wireCardClicks() {
+  const cards = document.querySelectorAll('.clickable-card[data-nome]');
+  
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      openAssocDetailFromCard(card);
+    });
+    
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openAssocDetailFromCard(card);
+      }
+    });
+  });
+}
+
+// =============== ABRIR MODAL DE DETALHE ===============
+export function openAssocDetailFromCard(card) {
+  // ✅ Lê os dados dos data-attributes
+  const nome = card.dataset.nome || 'ASSOCIAÇÃO';
+  const lider = card.dataset.lider || '—';
+  const telefone = card.dataset.telefone || '—';
+  const bairro = card.dataset.bairro || '—';
+  const cidade = card.dataset.cidade || '';
+  const uf = card.dataset.uf || '';
+  const cnpj = card.dataset.cnpj || '—';
+  
+  // ✅ Atualiza os elementos do modal
+  const assocTitleEl = document.getElementById('assocTitle');
+  const assocLeaderEl = document.getElementById('assocLeader');
+  const assocPhoneEl = document.getElementById('assocPhone');
+  const assocAddrEl = document.getElementById('assocAddress');
+  const assocCNPJEl = document.getElementById('assocCNPJ');
+  
+  if (assocTitleEl) assocTitleEl.textContent = nome.toUpperCase();
+  if (assocLeaderEl) assocLeaderEl.textContent = lider;
+  if (assocPhoneEl) assocPhoneEl.textContent = telefone;
+  if (assocAddrEl) assocAddrEl.textContent = `${bairro}${cidade ? ' - ' + cidade : ''}${uf ? '/' + uf : ''}`;
+  if (assocCNPJEl) assocCNPJEl.textContent = cnpj;
+  
+  // ✅ Mostra o modal
+  const assocDetail = document.getElementById('assocDetail');
+  if (assocDetail) {
+    assocDetail.classList.remove('hidden');
+    console.log('📄 Modal aberto:', nome);
+  }
+}
+
+export function closeAssocDetail() {
+  const assocDetail = document.getElementById('assocDetail');
+  if (assocDetail) {
+    assocDetail.classList.add('hidden');
+    console.log('❌ Modal fechado');
   }
 }
 // =============== PRODUÇÃO ===============
@@ -58,7 +134,6 @@ export async function renderProducao() {
   const totalEl = document.getElementById('totalProducao');
   
   if (tabelaBody) {
-    // Mostra skeleton no tbody (não na tabela toda)
     tabelaBody.innerHTML = `
       <tr><td colspan="2" class="px-4 py-2">
         <div class="animate-pulse space-y-2">
@@ -71,13 +146,16 @@ export async function renderProducao() {
   }
   
   try {
-    const producao = await getProducao();
+    const response = await getProducao();
+    
+    // ✅ Extrai o array corretamente
+    const producao = Array.isArray(response) ? response : (response.items || []);
     
     if (!producao || producao.length === 0) {
       throw new Error('Dados de produção vazios');
     }
     
-    const total = producao.reduce((acc, item) => acc + item.kg, 0);
+    const total = producao.reduce((acc, item) => acc + parseFloat(item.kg || 0), 0);
     
     // Atualiza total
     if (totalEl) {
@@ -204,8 +282,8 @@ export async function renderMunicipios() {
     
     const html = municipios.map(municipio => `
       <div class="rounded-xl border p-3">
-        <div class="font-semibold text-green-700">${municipio.nome}</div>
-        <div class="text-sm text-gray-600">${municipio.grupos} grupos/associações</div>
+        <div class="font-semibold text-green-700">${municipio.nome}/${municipio.uf}</div>
+        <div class="text-sm text-gray-600">${municipio.qtd_grupos} grupos/associações</div>
       </div>
     `).join('');
     
@@ -217,25 +295,6 @@ export async function renderMunicipios() {
   }
 }
 
-// =============== CLICK NOS CARDS ===============
-function wireCardClicks() {
-  const cards = document.querySelectorAll('.clickable-card[data-nome]');
-  
-  cards.forEach(card => {
-    card.addEventListener('click', () => {
-      const nome = card.dataset.nome;
-      openAssocDetailByName(nome);
-    });
-    
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const nome = card.dataset.nome;
-        openAssocDetailByName(nome);
-      }
-    });
-  });
-}
 
 // =============== DETALHE DA ASSOCIAÇÃO ===============
 export function openAssocDetailByName(nome) {
@@ -257,9 +316,3 @@ export function openAssocDetailByName(nome) {
   assocDetail.classList.remove('hidden');
 }
 
-export function closeAssocDetail() {
-  const assocDetail = document.getElementById('assocDetail');
-  if (assocDetail) {
-    assocDetail.classList.add('hidden');
-  }
-}

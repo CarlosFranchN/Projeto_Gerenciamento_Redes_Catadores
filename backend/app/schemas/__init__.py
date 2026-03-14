@@ -14,6 +14,8 @@ from .schema_financeiro import *
 from .schema_audit import *
 from .schema_producao import *
 from .schema_token import *
+from .schema_grupo import *
+from .schema_municipio import *
 
 __all__ = [
     "UsuarioCreate", "UsuarioResponse", "UsuarioLogin", "UsuarioUpdate",
@@ -21,5 +23,6 @@ __all__ = [
     "ProducaoCreate", "ProducaoResponse", "ProducaoUpdate",
     "EnderecoCacheCreate", "EnderecoCacheResponse",
     "AuditLogCreate", "AuditLogResponse",
-    "Token", "TokenData", "RefreshTokenResponse",
+    "Token", "TokenData", "RefreshTokenResponse","GrupoCreate", "GrupoResponse", "GrupoUpdate", "GrupoListResponse",
+    "MunicipioCreate", "MunicipioResponse", "MunicipioUpdate", "MunicipioListResponse",
 ]
