@@ -1,9 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional, Dict, Any
 
 class AuditLogBase(BaseModel):
-    acao: str = Field(..., max_length=50)
+    acao: str = Field(..., max_length=50, description="Ação (CREATE, UPDATE, DELETE, LOGIN)")
     tabela_afetada: Optional[str] = Field(None, max_length=50)
     registro_id: Optional[int] = None
     dados_antigos: Optional[Dict[str, Any]] = None
@@ -18,5 +18,8 @@ class AuditLogResponse(AuditLogBase):
     usuario_id: Optional[int]
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+class AuditLogListResponse(BaseModel):
+    items: list[AuditLogResponse]
+    total: int

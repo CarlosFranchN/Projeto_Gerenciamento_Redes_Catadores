@@ -19,7 +19,9 @@ from .routers import (
 
 
 app = FastAPI(
-    title="API Rede de Catadores"
+    title="Rede de Catadores API",
+    description="API para gerenciamento da Rede de Catadores do Ceará",
+    version="1.0.0"
 )
 
 origins = [
@@ -52,6 +54,12 @@ app.include_router(parceiros.router)
 app.include_router(compras.router) 
 app.include_router(producao.router)
 app.include_router(audit.router)
-@app.get('/')
-def init():
-    return {"Message": "Inicializadooooooo"}
+
+
+@app.get("/")
+def root():
+    return {"message": "API Rede de Catadores - OOOOOOOOOOK", "version": "1.0.0"}
+
+@app.get("/health")
+def health():
+    return {"status": "heaaaaaaaaaaaaaaaaaaaaaaaaaalthy"}
