@@ -1,0 +1,23 @@
+export const MUNICIPIOS = [
+  { nome: "Metropolitano", grupos: 8 },
+  { nome: "Amontada", grupos: 22 },
+  { nome: "Aracoiaba", grupos: 17 },
+  { nome: "Aratuba", grupos: 1 },
+  { nome: "Barreira", grupos: 5 },
+  { nome: "Baturité", grupos: 18 },
+  { nome: "Boa Viagem", grupos: 38 },
+  { nome: "Chorozinho", grupos: 12 },
+  { nome: "Granja", grupos: 6 },
+  { nome: "Guaramiranga", grupos: 2 },
+  { nome: "Icó", grupos: 27 },
+  { nome: "Itapipoca", grupos: 14 },
+  { nome: "Itapiúna", grupos: 2 },
+  { nome: "Miraíma", grupos: 17 },
+  { nome: "Ocara", grupos: 18 },
+  { nome: "Pacatuba", grupos: 30 },
+  { nome: "Paracuru", grupos: 12 },
+  { nome: "Quixelô", grupos: 19 },
+  { nome: "Redenção", grupos: 19 },
+  { nome: "Tururu", grupos: 13 },
+  { nome: "Ubajara", grupos: 3 }
+];

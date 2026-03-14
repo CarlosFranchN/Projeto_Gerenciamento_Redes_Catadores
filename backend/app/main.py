@@ -13,7 +13,9 @@ from .routers import (
     relatorio,
     compradores,
     compras,
-    financeiro)
+    financeiro,
+    producao,
+    audit)
 
 
 app = FastAPI(
@@ -48,7 +50,8 @@ app.include_router(compradores.router)
 app.include_router(tipos_parceiro.router) 
 app.include_router(parceiros.router)      
 app.include_router(compras.router) 
-
+app.include_router(producao.router)
+app.include_router(audit.router)
 @app.get('/')
 def init():
     return {"Message": "Inicializadooooooo"}
