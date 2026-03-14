@@ -3,80 +3,79 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=for-the-badge&logo=postgresql)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
-![Status](https://img.shields.io/badge/Status-MVP%20v3.0-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Fase%201%20Conclu%C3%ADda-success?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ---
 
 ## 📖 Sobre o Projeto
 
-Este é um sistema **full-stack** desenvolvido para profissionalizar a gestão da **Rede de Catadores de Resíduos Sólidos**.  
-O sistema substitui planilhas manuais por uma aplicação web robusta que controla o fluxo completo de materiais — desde a **entrada (por doação ou compra)** até a **venda para a indústria recicladora**.
+Sistema **full-stack** desenvolvido para profissionalizar a gestão da **Rede de Catadores de Resíduos Sólidos do Ceará**.
 
-A versão atual (**v3.0**) introduziu uma **arquitetura híbrida** capaz de gerenciar diferentes tipos de parceiros e operações financeiras complexas, mantendo um controle de **estoque auditável em tempo real**.
-
----
-
-## ✨ Funcionalidades Principais (v3.0)
-
-### 🏗️ Gestão de Parceiros & Compradores
-
-- **Base Unificada de Parceiros:** Cadastro centralizado de quem fornece material, classificado por tipo:
-  - 🤝 **Associações/Cooperativas:** Com dados detalhados (Líder, CNPJ, Telefone).
-  - 🏛️ **Órgãos Públicos:** Prefeituras, Secretarias.
-  - 🏭 **Empresas Privadas:** Geradores de resíduos comerciais.
-  - 👤 **Catadores Individuais:** Autônomos.
-- **Gestão de Compradores:** Cadastro de clientes (indústrias, depósitos) para quem a rede vende o material consolidado.
+O sistema substitui planilhas manuais por uma aplicação web que controla:
+- 🏢 **Gestão de Associações** (10 associações filiadas)
+- 📊 **Produção Mensal** (registro de KG por mês)
+- 👥 **Grupos de Catadores** (grupos por município)
+- 🗺️ **Municípios Filiados** (20+ municípios)
+- 💰 **Operações Financeiras** (compras, vendas, doações)
+- 📦 **Controle de Estoque** (entradas e saídas)
 
 ---
 
-### 🚚 Operações de Entrada (Híbridas)
+## ✨ Funcionalidades (Fase 1)
 
-O sistema diferencia duas formas de entrada de material, ambas alimentando o mesmo estoque físico:
+### 🌐 Landing Page Pública
 
-1. **📥 Recebimentos (Doações):** Entradas sem custo financeiro para a Rede (vindas de Associações, Órgãos Públicos, etc.).  
-2. **💸 Compras:** Aquisições de material com registro de valor pago (R$), permitindo cálculo de custos.
+- ✅ **Homepage Institucional** - Apresentação da Rede
+- ✅ **Lista de Associações** - 10 associações com detalhes (CNPJ, líder, contato)
+- ✅ **Produção Mensal** - Gráfico e tabela com produção de 2024
+- ✅ **Grupos e Municípios** - Lista de grupos e municípios filiados
+- ✅ **Modal de Detalhes** - Informações completas de cada associação
+- ✅ **Formulário de Contato** - Para parcerias e doações
+- ✅ **Login** - Acesso à área administrativa
 
----
+### 🔐 Autenticação
 
-### 📤 Operações de Saída
+- ✅ JWT (JSON Web Tokens) com access e refresh tokens
+- ✅ Hash de senhas com Bcrypt
+- ✅ Roles de usuário (admin, operador, visualizador)
+- ✅ Logout e revogação de tokens
 
-- **Vendas:** Registro de saída de material para Compradores, com cálculo automático de receita.
+### 🗄️ Banco de Dados
 
----
+- ✅ 15+ tabelas relacionadas
+- ✅ Migrations com Alembic
+- ✅ Audit log para rastreabilidade
+- ✅ Cache de endereços (BrasilAPI)
 
-### 📊 Inteligência & Controle
+### 📊 Gestão
 
-- **Estoque em Tempo Real:** Calculado dinamicamente (`Entradas + Compras - Vendas`), garantindo integridade sem depender de um campo estático.
-- **Relatórios Gerenciais:**
-  - Balanço por período.
-  - Performance por Material (Kg recebidos vs. vendidos).
-  - Ranking de Parceiros (Quem mais doou/vendeu para a rede).
-  - **Lucro Bruto:** `Receita Total de Vendas - Custo Total de Compras`.
-
----
-
-### 🔐 Segurança (Backend Ready)
-
-- Estrutura de autenticação JWT (JSON Web Tokens) implementada no Backend.  
-- Hash de senhas com Bcrypt.  
-- *(Integração com frontend em andamento).*
+- ✅ CRUD de Associações
+- ✅ CRUD de Produção Mensal
+- ✅ CRUD de Grupos
+- ✅ CRUD de Municípios
+- ✅ CRUD de Usuários
+- ✅ CRUD de Materiais e Categorias
+- ✅ CRUD de Parceiros e Compradores
+- ✅ Registro de Compras, Vendas e Doações
 
 ---
 
 ## 🛠️ Arquitetura Técnica
 
+
+
 O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é dividido em camadas claras de responsabilidade, facilitando manutenção e escalabilidade.
 
-```plaintext
+### Backend (FastAPI + PostgreSQL)
 
+```
 ├── backend
 │   ├── alembic
 │   │   ├── versions
-│   │   │   ├── 66203f355943_cria_tabela_categoriaresiduo_e_linka_em_.py
-│   │   │   ├── ccabf74e1aeb_adiciona_tabela_usuarios.py
-│   │   │   ├── edeaa421a717_versao_3_0_implementa_arquitetura_.py
-│   │   │   └── f8b17a4befaa_ajusta_transacaofinanceira_para_usar_.py
+│   │   │   ├── 950576b57d5b_add_role_and_created_at_to_usuarios.py
+│   │   │   ├── b1a6f58fce3c_create_grupo_and_municipio_tables.py
+│   │   │   └── d66031aa8eb1_create_producao_mensal_table.py
 │   │   ├── README
 │   │   ├── env.py
 │   │   └── script.py.mako
@@ -88,45 +87,62 @@ O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é divid
 │   │   ├── crud
 │   │   │   ├── __init__.py
 │   │   │   ├── associacao.py
+│   │   │   ├── audit.py
 │   │   │   ├── categoria.py
 │   │   │   ├── compra.py
 │   │   │   ├── comprador.py
+│   │   │   ├── endereco.py
 │   │   │   ├── financeiro.py
+│   │   │   ├── grupo.py
 │   │   │   ├── material.py
+│   │   │   ├── municipio.py
 │   │   │   ├── parceiro.py
+│   │   │   ├── producao.py
 │   │   │   ├── recebimento.py
 │   │   │   ├── relatorio.py
 │   │   │   ├── tipo_parceiro.py
+│   │   │   ├── token.py
 │   │   │   ├── usuario.py
 │   │   │   └── venda.py
 │   │   ├── routers
 │   │   │   ├── __init__.py
 │   │   │   ├── associacoes.py
+│   │   │   ├── audit.py
 │   │   │   ├── auth.py
 │   │   │   ├── categoria.py
 │   │   │   ├── compradores.py
 │   │   │   ├── compras.py
 │   │   │   ├── estoque.py
 │   │   │   ├── financeiro.py
+│   │   │   ├── grupos.py
 │   │   │   ├── materiais.py
+│   │   │   ├── municipios.py
 │   │   │   ├── parceiros.py
+│   │   │   ├── producao.py
 │   │   │   ├── recebimentos.py
 │   │   │   ├── relatorio.py
 │   │   │   ├── tipos_parceiro.py
+│   │   │   ├── usuarios.py
 │   │   │   └── vendas.py
 │   │   ├── schemas
 │   │   │   ├── __init__.py
 │   │   │   ├── schema_associacao.py
+│   │   │   ├── schema_audit.py
 │   │   │   ├── schema_categoria.py
 │   │   │   ├── schema_compra.py
 │   │   │   ├── schema_comprador.py
+│   │   │   ├── schema_endereco.py
 │   │   │   ├── schema_estoque.py
 │   │   │   ├── schema_financeiro.py
+│   │   │   ├── schema_grupo.py
 │   │   │   ├── schema_material.py
+│   │   │   ├── schema_municipio.py
 │   │   │   ├── schema_parceiro.py
+│   │   │   ├── schema_producao.py
 │   │   │   ├── schema_recebimento.py
 │   │   │   ├── schema_relatorio.py
 │   │   │   ├── schema_tipo_parceiro.py
+│   │   │   ├── schema_token.py
 │   │   │   ├── schema_usuario.py
 │   │   │   └── schema_venda.py
 │   │   ├── __init__.py
@@ -136,19 +152,46 @@ O projeto adota uma **Arquitetura Monolítica Modular**, onde o backend é divid
 │   │   └── models.py
 │   ├── .gitignore
 │   ├── alembic.ini
-│   ├── criar_usuario.py
+│   ├── alembic.ini.backup
+│   ├── popular_associacoes.py
+│   ├── popular_dados.py
+│   ├── popular_producao.py
 │   └── requirements.txt
 ├── frontend
+│   ├── src
+│   │   ├── data
+│   │   │   ├── associacoes.js
+│   │   │   ├── grupos.js
+│   │   │   ├── index.js
+│   │   │   ├── municipios.js
+│   │   │   └── producao.js
+│   │   ├── scripts
+│   │   │   └── render.js
+│   │   ├── services
+│   │   │   └── api.js
+│   │   ├── utils
+│   │   │   ├── formatters.js
+│   │   │   ├── index.js
+│   │   │   ├── loading.js
+│   │   │   ├── sanitizers.js
+│   │   │   ├── toast.js
+│   │   │   └── validators.js
+│   │   └── landingPage_app.js
 │   ├── app.html
 │   ├── app.js
 │   ├── foto1.png
 │   ├── foto2.png
-│   ├── foto3.png
 │   ├── foto4.png
 │   ├── foto5.jpg
-│   ├── index.html
+│   ├── index_old.html
 │   └── logo.png
-└── README.md
+├── README.md
+├── foto1.png
+├── foto2.png
+├── foto4.png
+├── foto5.jpg
+├── index.html
+└── logo.png
 ```
 ---
 
@@ -174,27 +217,37 @@ Para clonar o repositório.
 Um software como pgAdmin ou DBeaver para visualizar os dados do PostgreSQL.
 
 
-## Instalação e Execução
-    🧩 Pré-requisitos
+### Pré-requisitos
 
-Python 3.11+
+| Programa | Versão | Link |
+|----------|--------|------|
+| Python | 3.11+ | [python.org](https://python.org) |
+| PostgreSQL | 16+ | [postgresql.org](https://postgresql.org) |
+| Git | Qualquer | [git-scm.com](https://git-scm.com) |
 
-PostgreSQL (Banco de dados local rodando)
+### 1️⃣ Clonar o Repositório
 
-Git
-
-### 1️⃣ Configuração do Backend (API)
-#### 1. Clone o repositório
-```
+```bash
 git clone https://github.com/SEU_USUARIO/rede-catadores.git
-cd rede-catadores/backend
+cd rede-catadores
 ```
+
 #### 2. Crie e ative o ambiente virtual
 ```
+cd backend
+
+# Criar ambiente virtual
 python -m venv venv
-Windows: .\venv\Scripts\activate
-Linux/Mac: source venv/bin/activate
+
+# Ativar (Windows)
+.\venv\Scripts\activate
+
+# Ativar (Linux/Mac)
+source venv/bin/activate
+
+
 ```
+
 #### 3. Instale as dependências
 ```
 pip install -r requirements.txt
@@ -202,29 +255,41 @@ pip install -r requirements.txt
 #### 4. Configure as variáveis de ambiente
 ```
 #Crie um arquivo .env na pasta backend/ com o conteúdo:
-DATABASE_URL="postgresql+psycopg://USUARIO:SENHA@localhost/rede_catadores_db"
-SECRET_KEY="sua_chave_super_secreta"
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/rede_catadores_db"
+SECRET_KEY="sua-chave-secreta-muito-forte-32-caracteres"
 ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
+
 #### 5. Crie o Banco de Dados
 ```
 #(Certifique-se que o banco 'rede_catadores_db' existe no seu Postgres)
 alembic upgrade head
 ```
 
-#### 6. Crie o usuario 
+#### 6. Popular Dados
 ```
-  # no terminal
-  python criar_usuario.py
+# Criar usuário admin
+python criar_usuario.py
+
+# Popular associações
+python popular_associacoes_completas.py
+
+# Popular produção
+python popular_producao_rede.py
+
+# Popular grupos e municípios
+python popular_grupos_municipios.py
 ```
 #### 7. Inicie o Servidor
 ```
-uvicorn app.main:app --reload
-```
+  # Terminal 1 - Backend
+  cd backend
+  uvicorn app.main:app --reload
 
-#### 8. Executar o Front
-```
-  cd Projeto_Gerenciamento_Redes_Catadores/frontend
+  # Terminal 2 - Frontend
+  cd frontend
   python -m http.server 8001
 ```
 --- 
@@ -243,6 +308,32 @@ cd ../frontend
 # Inicie um servidor HTTP simples
 python -m http.server 8001
 ``` 
+
+## 📊 Estrutura do Banco de Dados
+
+### Tabelas Principais
+
+| # | Tabela | Descrição | Colunas Principais |
+|---|--------|-----------|-------------------|
+| 1 | `usuarios` | Usuários do sistema | id, username, hashed_password, role, ativo, created_at |
+| 2 | `associacoes` | Associações de catadores | id, parceiro_id, lider, telefone, cnpj, bairro, cidade, uf, status |
+| 3 | `parceiros` | Base unificada de parceiros | id, nome, id_tipo_parceiro |
+| 4 | `tipo_parceiro` | Tipos de parceiros | id, nome (ASSOCIACAO, ORGAO_PUBLICO, etc.) |
+| 5 | `producao_mensal` | Produção mensal por associação | id, associacao_id, mes, ano, kg, valor_venda |
+| 6 | `grupos` | Grupos de catadores | id, nome, integrantes, associacao_id, cidade, uf |
+| 7 | `municipios` | Municípios filiados | id, nome, uf, qtd_grupos, qtd_associacoes |
+| 8 | `materiais` | Materiais recicláveis | id, codigo, nome, id_categoria, unidade_medida |
+| 9 | `categoria_residuo` | Categorias de resíduos | id, nome (Plástico, Papel, Metal, etc.) |
+| 10 | `compradores` | Clientes que compram da rede | id, nome, cnpj, telefone, email |
+| 11 | `compras` | Compras de material | id, codigo_compra, quantidade, valor_pago_total, id_parceiro, id_material |
+| 12 | `vendas` | Vendas para indústria | id, codigo, data_venda, id_comprador |
+| 13 | `itens_venda` | Itens de cada venda | id, id_venda, id_material, quantidade_vendida, valor_unitario |
+| 14 | `recebimentos_doacao` | Doações recebidas | id, codigo_lote, quantidade, id_parceiro, id_material |
+| 15 | `transacoes_financeiras` | Registro financeiro | id, tipo, valor, descricao, id_compra_associada, id_venda_associada |
+| 16 | `refresh_tokens` | Tokens de sessão | id, usuario_id, token, expires_at, revoked |
+| 17 | `audit_logs` | Logs de auditoria | id, usuario_id, acao, tabela_afetada, dados_antigos, dados_novos |
+| 18 | `enderecos_cache` | Cache de CNPJs | id, cnpj, logradouro, numero, bairro, cidade, uf |
+
 
 ## 💾 Scripts de População Inicial (Seed Data)
 
@@ -314,15 +405,29 @@ SELECT id, 'LAUDIRENE', '(85) 98528-9578', '07.865.301/0001-27', TRUE FROM parce
 
 ``` 
 
-## 🛣️ Roadmap (Próximos Passos)
-
-- [x] **V1.0:** CRUDs básicos (Materiais, Associações).
-- [x] **V2.0:** Implementação de Vendas e Estoque Dinâmico.
-- [x] **V3.0:** Arquitetura de Parceiros Híbridos e Módulo de Compras.
-- [x] **V3.1:** Implementação de Autenticação JWT (Backend + Frontend).
-- [x] **V3.2:** Implementação do Módulo Financeiro (Livro Caixa) com integração automática de Compras/Vendas.
-- [ ] **V3.3:** Implementação de Testes Automatizados (`pytest`) no Backend para garantir a estabilidade.
-- [ ] **V4.0:** Deploy em produção (Render para Backend + Vercel/GitHub Pages para Frontend).
+## 🛣️ Roadmap
+### ✅ Fase 1 - Fundação (Concluída)
+Landing page pública funcional
+API com CRUDs completos
+Banco de dados com migrations
+Autenticação JWT
+Scripts de população de dados
+Frontend modular e reutilizável
+### ⏳ Fase 2 - Dashboard Admin (Próxima)
+Tela de login funcional
+Dashboard com gráficos e KPIs
+CRUD de associações (admin)
+CRUD de produção mensal
+CRUD de grupos e municípios
+Logout e gestão de sessão
+### ⏳ Fase 3 - Infra e Deploy
+Variáveis de ambiente em produção
+Backup automático do banco
+Deploy frontend (Vercel/Netlify)
+Deploy backend (Render/Railway)
+HTTPS/SSL
+Domínio próprio
+Monitoramento (Sentry)
 
 📄 Licença
 
