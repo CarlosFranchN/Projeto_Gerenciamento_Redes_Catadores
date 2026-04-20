@@ -1,5 +1,3 @@
-// frontend/src/scripts/render.js
-
 import {
   getAssociacoes,
   getProducao,

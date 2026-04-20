@@ -55,24 +55,22 @@ export function validateNumber(value, fieldName = 'Campo') {
   return { valid: true, message: '' };
 }
 
-export function validateLogin(username, password) {
+export const validateLogin = (username, password) => {
   const errors = {};
-  let isValid = true;
   
-  const userValidation = validateRequired(username, 'Usuário');
-  if (!userValidation.valid) {
-    errors.username = userValidation.message;
-    isValid = false;
+  if (!username || username.trim() === '') {
+    errors.username = 'Usuário é obrigatório';
+  }
+  if (!password || password.length < 6) {
+    errors.password = 'Senha deve ter pelo menos 6 caracteres';
   }
   
-  const passValidation = validateRequired(password, 'Senha');
-  if (!passValidation.valid) {
-    errors.password = passValidation.message;
-    isValid = false;
-  }
-  
-  return { valid: isValid, errors };
-}
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
 
 export function validateContactForm(data) {
   const errors = {};

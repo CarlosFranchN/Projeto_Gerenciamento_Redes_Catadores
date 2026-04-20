@@ -83,10 +83,10 @@ export async function getGrupos() {
     
   } catch (error) {
     console.warn('⚠️ API indisponível, usando grupos locais:', error.message);
-    // Fallback para dados estáticos
-    import('../data/grupos.js').then(module => {
-      return module.GRUPOS;
-    });
+    showWarning('Usando dados locais (API indisponível)');
+    // Importa e retorna diretamente do arquivo local
+    const module = await import('../data/grupos.js');
+    return module.GRUPOS;
   }
 }
 
@@ -111,43 +111,45 @@ export async function getMunicipios() {
     });
   }
 }
-
-export async function login(username, password) {
+export const login = async (username, password) => {
   try {
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
     
-    const response = await fetch(`${API_URL}token`, {
+    const res = await fetch(`${API_URL}token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData,
+      body: formData
     });
     
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Usuário ou senha incorretos');
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro no login' };
     }
     
-    const data = await response.json();
+    const data = await res.json();
+    localStorage.setItem('auth_token', data.access_token);
     return { success: true, token: data.access_token };
     
-  } catch (error) {
-    return { success: false, error: error.message };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
-}
+};
 
-export function getToken() {
-  return localStorage.getItem('rc_token');
-}
+export const setToken = (token) => {
+  localStorage.setItem('auth_token', token);
+};
 
-export function setToken(token) {
-  localStorage.setItem('rc_token', token);
-}
+export const getToken = () => localStorage.getItem('auth_token');
 
-export function removeToken() {
-  localStorage.removeItem('rc_token');
-}
+export const logout = () => {
+  localStorage.removeItem('auth_token');
+};
+
+export const removeToken = () => {
+  localStorage.removeItem('auth_token');  // ← Mesma chave das outras funções
+};
 
 export async function consultarCNPJ(cnpj) {
   const cnpjLimpo = String(cnpj).replace(/\D/g, '');
