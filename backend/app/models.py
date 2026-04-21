@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy import (
-    Boolean, Column, ForeignKey, Integer, String, DateTime, 
+    Boolean, Column, ForeignKey, Integer, String, DateTime, Date,
     Float, UniqueConstraint, func, Enum, Numeric, Text, 
     CheckConstraint
 )
@@ -9,49 +9,6 @@ from sqlalchemy.orm import relationship
 from .database import Base 
 import enum
 
-
-# =============== NOVAS TABELAS (Fase 1) ===============
-
-class ProducaoMensal(Base):
-    __tablename__ = "producao_mensal"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    associacao_id = Column(Integer, ForeignKey("associacoes.id"), nullable=True, index=True)
-    mes = Column(Integer, nullable=False)
-    ano = Column(Integer, nullable=False, index=True)
-    kg = Column(Numeric(10, 2), nullable=False)
-    valor_venda = Column(Numeric(10, 2), nullable=True)
-    observado = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    
-    # Relacionamento
-    associacao = relationship("Associacao", back_populates="producoes")
-    
-    __table_args__ = (
-        UniqueConstraint('associacao_id', 'mes', 'ano', name='uq_producao_mes_ano'),
-        CheckConstraint('mes >= 1 AND mes <= 12', name='check_mes_valido'),
-    )
-    
-    def __repr__(self):
-        return f"<ProducaoMensal(mes={self.mes}, ano={self.ano}, kg={self.kg})>"
-
-
-class EnderecosCache(Base):
-    __tablename__ = "enderecos_cache"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    cnpj = Column(String(18), unique=True, nullable=False, index=True)
-    logradouro = Column(Text, nullable=True)
-    numero = Column(String(20), nullable=True)
-    complemento = Column(String(50), nullable=True)
-    bairro = Column(String(100), nullable=True)
-    cidade = Column(String(100), nullable=True)
-    uf = Column(String(2), nullable=True)
-    consulted_at = Column(DateTime, default=datetime.datetime.utcnow)
-    expires_at = Column(DateTime, nullable=True)
-    
-    def __repr__(self):
-        return f"<EnderecosCache(cnpj={self.cnpj}, cidade={self.cidade})>"
 
 
 class RefreshToken(Base):
@@ -112,250 +69,92 @@ class Usuario(Base):
         return f"<Usuario(username='{self.username}')>"
 
 
-class CategoriaResiduo(Base):
-    __tablename__ = "categoria_residuo"
+class Municipio(Base):
+    __tablename__ = "municipios"
+
     id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, unique=True, nullable=False, index=True)
-    
-    materiais = relationship("Material", back_populates="categoria_info")
-    
-    def __repr__(self):
-        return f"<CategoriaResiduo(nome='{self.nome}')>"
+    nome = Column(String(100), index=True, nullable=False)
+    uf = Column(String(2), default="CE", nullable=False)
+    regiao = Column(String(50), nullable=True)
+    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # ✅ Timestamp
+
+    associacoes = relationship("Associacao", back_populates="municipio")
 
 
-class Material(Base):
-    __tablename__ = "materiais"
-    
+class Grupo(Base):
+    __tablename__ = "grupos"
+
     id = Column(Integer, primary_key=True, index=True)
-    codigo = Column(String, unique=True, index=True, nullable=True) 
-    nome = Column(String, unique=True, index=True, nullable=False)
-    id_categoria = Column(Integer, ForeignKey("categoria_residuo.id"), nullable=True)
-    unidade_medida = Column(String, default='Kg')
-    ativo = Column(Boolean, server_default='true', nullable=False)
-    
-    categoria_info = relationship("CategoriaResiduo", back_populates="materiais")
-    itens_venda = relationship("ItemVenda", back_populates="material")
-    recebimentos_doacao = relationship("RecebimentoDoacao", back_populates="material")
-    compras = relationship("Compra", back_populates="material")
-    
-    def __repr__(self):
-        return f"<Material(nome='{self.nome}')>"
+    nome = Column(String(100), index=True, nullable=False)
+    descricao = Column(String(255), nullable=True)
+    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # ✅ Timestamp
 
-
-class TipoParceiro(Base):
-    __tablename__ = "tipo_parceiro"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, unique=True, nullable=False)
-    
-    parceiros = relationship("Parceiro", back_populates="tipo_info")
-    
-    def __repr__(self):
-        return f"<TipoParceiro(nome='{self.nome}')>"
-
-
-class Parceiro(Base):
-    __tablename__ = "parceiros"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, index=True, nullable=False, unique=True)
-    
-    id_tipo_parceiro = Column(Integer, ForeignKey("tipo_parceiro.id"), nullable=False)
-    tipo_info = relationship("TipoParceiro", back_populates="parceiros")
-    
-    recebimentos_doacao = relationship("RecebimentoDoacao", back_populates="parceiro")
-    compras = relationship("Compra", back_populates="parceiro")
-    associacao_detalhes = relationship("Associacao", back_populates="parceiro_info", uselist=False, cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<Parceiro(nome='{self.nome}')>"
+    associacoes = relationship("Associacao", back_populates="grupo")
 
 
 class Associacao(Base):
     __tablename__ = "associacoes"
-    
-    id = Column(Integer, primary_key=True, index=True) 
-    
-    parceiro_id = Column(Integer, ForeignKey("parceiros.id"), nullable=False, unique=True)
-    parceiro_info = relationship("Parceiro", back_populates="associacao_detalhes")
-    
-    # Detalhes específicos
-    lider = Column(String, nullable=True)
-    telefone = Column(String, nullable=True)
-    email = Column(String, nullable=True)
-    cnpj = Column(String, index=True, nullable=True)
-    
-    # Endereço (CAMPOS NOVOS - antes estava só no Parceiro)
-    logradouro = Column(Text, nullable=True)
-    numero = Column(String(20), nullable=True)
-    complemento = Column(String(50), nullable=True)
-    bairro = Column(String(100), nullable=True)
-    cidade = Column(String(100), nullable=True)
-    uf = Column(String(2), nullable=True)
-    
-    # Status e datas
-    status = Column(String(20), default="ativo")  # ativo, inativo, pendente
-    data_cadastro = Column(DateTime(timezone=True), server_default=func.now())
-    ativo = Column(Boolean, server_default='true', nullable=False)
-    
-    # Relacionamento NOVO com ProducaoMensal
-    producoes = relationship("ProducaoMensal", back_populates="associacao", cascade="all, delete-orphan")
-    grupos = relationship("Grupo", back_populates="associacao", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<Associacao(nome='{self.parceiro_info.nome if self.parceiro_info else 'N/A'}')>"
 
-
-class Comprador(Base):
-    __tablename__ = "compradores"
-    
     id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, unique=True, index=True, nullable=False)
-    cnpj = Column(String, index=True, nullable=True, unique=True)
-    telefone = Column(String, nullable=True)
-    email = Column(String, nullable=True)
-    ativo = Column(Boolean, server_default='true', nullable=False)
-    
-    vendas = relationship("Venda", back_populates="comprador")
-    
-    def __repr__(self):
-        return f"<Comprador(nome='{self.nome}')>"
+    nome = Column(String(150), unique=True, index=True, nullable=False)
+    cnpj = Column(String(20), unique=True, index=True, nullable=True)  # ✅ Nullable para casos sem CNPJ
+    lider = Column(String(100), nullable=True)
+    telefone = Column(String(20), nullable=True)
+    endereco = Column(String(255), nullable=True)
+    bairro = Column(String(100), nullable=True)  # ✅ Separado para filtros
+    cidade = Column(String(100), nullable=True)  # ✅ Separado para filtros
+    uf = Column(String(2), nullable=True)  # ✅ Separado para filtros
+    status = Column(String(20), default="ativo")  # ✅ 'ativo', 'inativo', 'pendente'
+    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    municipio_id = Column(Integer, ForeignKey("municipios.id", ondelete="SET NULL"), nullable=True)
+    grupo_id = Column(Integer, ForeignKey("grupos.id", ondelete="SET NULL"), nullable=True)
+
+    municipio = relationship("Municipio", back_populates="associacoes")
+    grupo = relationship("Grupo", back_populates="associacoes")
+    afiliados = relationship("Afiliado", back_populates="associacao", cascade="all, delete-orphan")
+    producoes = relationship("ProducaoImpacto", back_populates="associacao", cascade="all, delete-orphan")
 
 
-# =============== TABELAS TRANSACIONAIS ===============
+class Afiliado(Base):
+    __tablename__ = "afiliados"
 
-class RecebimentoDoacao(Base):
-    __tablename__ = "recebimentos_doacao"
-    
     id = Column(Integer, primary_key=True, index=True)
-    codigo_lote = Column(String, unique=True, index=True, nullable=True) 
-    quantidade = Column(Float, nullable=False)
-    data_entrada = Column(DateTime(timezone=True), server_default=func.now())
-    status = Column(String, default="Confirmada", server_default="Confirmada", nullable=False) 
-    
-    id_parceiro = Column(Integer, ForeignKey("parceiros.id"), nullable=False)
-    id_material = Column(Integer, ForeignKey("materiais.id"), nullable=False)
-    
-    parceiro = relationship("Parceiro", back_populates="recebimentos_doacao")
-    material = relationship("Material", back_populates="recebimentos_doacao")
-    
-    def __repr__(self):
-        return f"<RecebimentoDoacao(codigo_lote='{self.codigo_lote}')>"
+    nome = Column(String(150), nullable=False)
+    cpf = Column(String(14), unique=True, index=True, nullable=True)  # ✅ Nullable + tamanho fixo
+    cpf_hash = Column(String(64), index=True, nullable=True)  # ✅ Para buscas sem expor CPF
+    funcao = Column(String(50), nullable=True)
+    data_filiacao = Column(Date, nullable=True)
+    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    associacao_id = Column(Integer, ForeignKey("associacoes.id", ondelete="CASCADE"), nullable=False)
+    associacao = relationship("Associacao", back_populates="afiliados")
 
 
-class Compra(Base):
-    __tablename__ = "compras"
-    
+class ProducaoImpacto(Base):
+    __tablename__ = "producao_impacto"
+
     id = Column(Integer, primary_key=True, index=True)
-    codigo_compra = Column(String, unique=True, index=True, nullable=True)
-    quantidade = Column(Float, nullable=False)
-    valor_pago_unitario = Column(Float, nullable=False)
-    valor_pago_total = Column(Float, nullable=False)
-    data_compra = Column(DateTime(timezone=True), server_default=func.now())
-    status = Column(String, default="Concluída", server_default="Concluída", nullable=False)
-    
-    id_parceiro = Column(Integer, ForeignKey("parceiros.id"), nullable=False)
-    id_material = Column(Integer, ForeignKey("materiais.id"), nullable=False)
-    
-    parceiro = relationship("Parceiro", back_populates="compras")
-    material = relationship("Material", back_populates="compras")
-    transacao_financeira = relationship("TransacaoFinanceira", back_populates="compra", uselist=False)
-    
-    def __repr__(self):
-        return f"<Compra(codigo='{self.codigo_compra}')>"
+    mes = Column(Integer, nullable=False)  # ✅ 1-12
+    ano = Column(Integer, nullable=False)  # ✅ Ex: 2024
+    categoria = Column(String(50), nullable=False)  # ⚠️ Ideal: FK para tabela categorias
+    peso_kg = Column(Numeric(10, 2), nullable=False)
+    valor_gerado = Column(Numeric(10, 2), nullable=True)
+    tipo_registro = Column(String(20), default="PRODUCAO")  # ✅ 'PRODUCAO', 'VENDA', 'DOACAO'
+    observado = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    associacao_id = Column(Integer, ForeignKey("associacoes.id", ondelete="CASCADE"), nullable=False)
+    associacao = relationship("Associacao", back_populates="producoes")
 
-class Venda(Base):
-    __tablename__ = "vendas"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    codigo = Column(String, unique=True, index=True, nullable=True)
-    data_venda = Column(DateTime(timezone=True), server_default=func.now())
-    concluida = Column(Boolean, server_default='true', nullable=False)
-    
-    id_comprador = Column(Integer, ForeignKey("compradores.id"), nullable=False)
-    comprador = relationship("Comprador", back_populates="vendas")
-    
-    itens = relationship("ItemVenda", back_populates="venda", cascade="all, delete-orphan")
-    transacao_financeira = relationship("TransacaoFinanceira", back_populates="venda", uselist=False)
-    
-    def __repr__(self):
-        return f"<Venda(codigo='{self.codigo}')>"
-
-
-class ItemVenda(Base):
-    __tablename__ = "itens_venda"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    quantidade_vendida = Column(Float, nullable=False)
-    valor_unitario = Column(Float, nullable=False)
-    
-    id_venda = Column(Integer, ForeignKey("vendas.id"), nullable=False)
-    id_material = Column(Integer, ForeignKey("materiais.id"), nullable=False)
-    
-    venda = relationship("Venda", back_populates="itens")
-    material = relationship("Material", back_populates="itens_venda")
-    
-    def __repr__(self):
-        return f"<ItemVenda(quantidade={self.quantidade_vendida})>"
-
-
-class TipoTransacaoEnum(enum.Enum):
-    ENTRADA = "ENTRADA"
-    SAIDA = "SAIDA"
-    
-    
-class TransacaoFinanceira(Base):
-    __tablename__ = "transacoes_financeiras"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    data = Column(DateTime(timezone=True), server_default=func.now())
-    
-    tipo = Column(Enum(TipoTransacaoEnum), nullable=False, index=True)
-    valor = Column(Float, nullable=False)
-    descricao = Column(String, nullable=True)
-    
-    id_compra_associada = Column(Integer, ForeignKey("compras.id"), nullable=True)
-    id_venda_associada = Column(Integer, ForeignKey("vendas.id"), nullable=True)
-    
-    compra = relationship("Compra", back_populates="transacao_financeira")
-    venda = relationship("Venda", back_populates="transacao_financeira")
-    
-    def __repr__(self):
-        return f"<TransacaoFinanceira(tipo={self.tipo}, valor={self.valor})>"
-    
-
-# =============== GRUPOS E MUNICÍPIOS ===============
-
-class Grupo(Base):
-    __tablename__ = "grupos"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(255), nullable=False, index=True)
-    integrantes = Column(Integer, default=0)
-    associacao_id = Column(Integer, ForeignKey("associacoes.id"), nullable=True, index=True)
-    cidade = Column(String(100), nullable=True)
-    uf = Column(String(2), nullable=True)
-    ativo = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    
-    # Relacionamentos
-    associacao = relationship("Associacao", back_populates="grupos")
-    
-    def __repr__(self):
-        return f"<Grupo(nome='{self.nome}', integrantes={self.integrantes})>"
-
-
-class Municipio(Base):
-    __tablename__ = "municipios"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), nullable=False, unique=True, index=True)
-    uf = Column(String(2), nullable=False)
-    qtd_grupos = Column(Integer, default=0)
-    qtd_associacoes = Column(Integer, default=0)
-    ativo = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    
-    def __repr__(self):
-        return f"<Municipio(nome='{self.nome}', uf='{self.uf}')>"
+    # ✅ Trava para evitar duplicidade (associação + mês + ano + categoria)
+    __table_args__ = (
+        UniqueConstraint('associacao_id', 'mes', 'ano', 'categoria', name='trava_producao_unica'),
+        CheckConstraint('mes >= 1 AND mes <= 12', name='chk_mes_valido'),
+        CheckConstraint('peso_kg >= 0', name='chk_peso_positivo'),
+    )

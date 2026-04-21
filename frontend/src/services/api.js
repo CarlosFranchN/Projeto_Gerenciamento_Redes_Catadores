@@ -174,3 +174,257 @@ export async function consultarCNPJ(cnpj) {
     return null;
   }
 }
+
+// =============== CRUD ASSOCIAÇÕES ===============
+export const createAssociacao = async (data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}associacoes/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao criar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const updateAssociacao = async (id, data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}associacoes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao atualizar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteAssociacao = async (id) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}associacoes/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao excluir' };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// =============== CRUD PRODUÇÃO ===============
+export const createProducao = async (data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}producao/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao criar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const updateProducao = async (id, data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}producao/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao atualizar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteProducao = async (id) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}producao/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao excluir' };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// =============== CRUD GRUPOS ===============
+export const createGrupo = async (data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}grupos/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao criar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteGrupo = async (id) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}grupos/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao excluir' };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// =============== CRUD MUNICÍPIOS ===============
+export const createMunicipio = async (data) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}municipios/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao criar' };
+    }
+    
+    return { success: true, data: await res.json() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const deleteMunicipio = async (id) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_URL}municipios/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao excluir' };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// =============== PERFIL ===============
+export const updatePerfil = async (nome, senha) => {
+  const token = getToken();
+  try {
+    const data = {};
+    if (nome) data.nome = nome;
+    if (senha) data.hashed_password = senha;
+    
+    const res = await fetch(`${API_URL}usuarios/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      return { success: false, error: error.detail || 'Erro ao atualizar' };
+    }
+    
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};

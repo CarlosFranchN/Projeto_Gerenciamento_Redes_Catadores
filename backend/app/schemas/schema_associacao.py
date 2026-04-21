@@ -1,60 +1,57 @@
 from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List
 from datetime import datetime
-from typing import Optional
 
-# =============== PARCEIRO ===============
-class ParceiroInfo(BaseModel):
-    """Schema simples para informações do parceiro"""
-    id: int
-    nome: str
-    
-    model_config = ConfigDict(from_attributes=True)
-
-# =============== ASSOCIACAO ===============
 class AssociacaoBase(BaseModel):
-    lider: Optional[str] = Field(None, max_length=255)
+    nome: str = Field(..., min_length=3, max_length=150)
+    cnpj: Optional[str] = Field(None, max_length=20)
+    lider: Optional[str] = Field(None, max_length=100)
     telefone: Optional[str] = Field(None, max_length=20)
-    email: Optional[str] = Field(None, max_length=255)
-    cnpj: Optional[str] = Field(None, max_length=18)
-    
-    # Campos de endereço
-    logradouro: Optional[str] = None
-    numero: Optional[str] = Field(None, max_length=20)
-    complemento: Optional[str] = Field(None, max_length=50)
+    endereco: Optional[str] = Field(None, max_length=255)
     bairro: Optional[str] = Field(None, max_length=100)
     cidade: Optional[str] = Field(None, max_length=100)
     uf: Optional[str] = Field(None, min_length=2, max_length=2)
-    
-    status: str = Field(default="ativo", pattern="^(ativo|inativo|pendente)$")
+    status: str = Field(default="ativo")
+    municipio_id: Optional[int] = None
+    grupo_id: Optional[int] = None
 
 class AssociacaoCreate(AssociacaoBase):
-    parceiro_id: int
-    nome: str  # Nome do parceiro
+    pass
 
 class AssociacaoUpdate(BaseModel):
+    nome: Optional[str] = Field(None, min_length=3, max_length=150)
+    cnpj: Optional[str] = None
     lider: Optional[str] = None
     telefone: Optional[str] = None
-    email: Optional[str] = None
-    status: Optional[str] = None
-    # Endereço
-    logradouro: Optional[str] = None
-    numero: Optional[str] = None
+    endereco: Optional[str] = None
     bairro: Optional[str] = None
     cidade: Optional[str] = None
     uf: Optional[str] = None
+    status: Optional[str] = None
+    municipio_id: Optional[int] = None
+    grupo_id: Optional[int] = None
+    ativo: Optional[bool] = None
 
 class AssociacaoResponse(AssociacaoBase):
     id: int
-    parceiro_id: int
-    nome: str  # ✅ Nome do parceiro (não o objeto inteiro)
-    data_cadastro: datetime
     ativo: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# =============== SCHEMA PAGINADO (ESTE FALTAVA!) ===============
+class AssociacoesPaginadasResponse(BaseModel):
+    """Resposta para listagem paginada de associações"""
+    items: List[AssociacaoResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
     
     model_config = ConfigDict(from_attributes=True)
 
-class AssociacaoWithParceiro(AssociacaoResponse):
-    parceiro_info: Optional[ParceiroInfo] = None
-
-class AssociacoesPaginadasResponse(BaseModel):
-    total_count: int
-    items: list[AssociacaoResponse]
+# =============== ALIAS PARA COMPATIBILIDADE ===============
+# Se quiser usar AssociacoesListResponse como alias:
+AssociacoesListResponse = AssociacoesPaginadasResponse

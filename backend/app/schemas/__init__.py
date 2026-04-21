@@ -1,28 +1,25 @@
-from .schema_tipo_parceiro import *
-from .schema_parceiro import *
-from .schema_associacao import *
-from .schema_comprador import *
-from .schema_categoria import *
-from .schema_material import *
-from .schema_recebimento import *
-from .schema_compra import *
-from .schema_venda import *
-from .schema_relatorio import *
-from .schema_estoque import *
-from .schema_usuario import *
-from .schema_financeiro import *
-from .schema_audit import *
+# backend/app/schemas/__init__.py
+
+from .schema_usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
+from .schema_token import Token, TokenData
+from .schema_associacao import AssociacaoCreate, AssociacaoResponse, AssociacaoUpdate, AssociacoesPaginadasResponse , AssociacoesListResponse
 from .schema_producao import *
-from .schema_token import *
-from .schema_grupo import *
-from .schema_municipio import *
+from .schema_grupo import GrupoCreate, GrupoResponse, GrupoUpdate
+from .schema_municipio import MunicipioCreate, MunicipioResponse , MunicipioUpdate , MunicipioBase
+from .schema_afiliados import (                    
+    AfiliadoCreate, 
+    AfiliadoUpdate, 
+    AfiliadoResponse, 
+    AfiliadosListResponse
+)
+from .schema_categoria import CategoriaMaterial, CategoriaResponse
 
 __all__ = [
-    "UsuarioCreate", "UsuarioResponse", "UsuarioLogin", "UsuarioUpdate",
-    "AssociacaoCreate", "AssociacaoResponse", "AssociacaoUpdate",
-    "ProducaoCreate", "ProducaoResponse", "ProducaoUpdate",
-    "EnderecoCacheCreate", "EnderecoCacheResponse",
-    "AuditLogCreate", "AuditLogResponse",
-    "Token", "TokenData", "RefreshTokenResponse","GrupoCreate", "GrupoResponse", "GrupoUpdate", "GrupoListResponse",
-    "MunicipioCreate", "MunicipioResponse", "MunicipioUpdate", "MunicipioListResponse",
+    "UsuarioCreate", "UsuarioResponse", "UsuarioUpdate", "Token", "TokenData",
+    "AssociacaoCreate", "AssociacaoResponse", "AssociacoesListResponse", "AssociacaoUpdate", "AssociacoesPaginadasResponse" , "AssociacoesListResponse"
+    "ProducaoImpactoCreate", "ProducaoImpactoResponse",
+    "GrupoCreate", "GrupoResponse", "GrupoUpdate",
+    "MunicipioCreate", "MunicipioResponse", "MunicipioUpdate", "MunicipioUpdate" , "MunicipioBase"
+    "AfiliadoCreate", "AfiliadoUpdate", "AfiliadoResponse", "AfiliadosListResponse",  
+    "CategoriaMaterial", "CategoriaResponse"
 ]

@@ -6,7 +6,7 @@ from ..database import get_db
 from ..dependencies import get_current_user
 
 router = APIRouter(
-    prefix="/parceiros",
+    prefix="/api/parceiros",
     tags=["Parceiros (Geral)"],
     dependencies=[Depends(get_current_user)]
 )

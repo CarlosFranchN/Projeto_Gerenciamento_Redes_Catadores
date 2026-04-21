@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 
 from app.database import get_db
@@ -11,7 +12,7 @@ router = APIRouter(
     tags=["Produção"]
 )
 
-@router.get("/", response_model=List[schemas.ProducaoResponse])
+@router.get("/", response_model=List[schemas.ProducaoImpactoResponse])
 def read_producao(
     ano: int = 2024,
     associacao_id: Optional[int] = None,
@@ -19,7 +20,7 @@ def read_producao(
 ):
     """Listar produção por ano (público)"""
     
-    # Se não passar associacao_id, usa a "Rede de Catadores"
+
     if not associacao_id:
         rede = db.query(models.Associacao).filter(
             models.Associacao.cnpj == "09.000.185/0001-09"
@@ -27,8 +28,12 @@ def read_producao(
         if rede:
             associacao_id = rede.id
     
-    # ✅ Retorna os objetos do modelo direto (Pydantic serializa)
-    return crud.get_producao_by_ano(db, ano=ano, associacao_id=associacao_id)
+
+    query = db.query(models.ProducaoImpacto).filter(models.ProducaoImpacto.ano == ano)
+    if associacao_id:
+        query = query.filter(models.ProducaoImpacto.associacao_id == associacao_id)
+        
+    return query.order_by(models.ProducaoImpacto.mes.desc()).all()
 
 
 @router.get("/total/{ano}", response_model=dict)
@@ -39,20 +44,38 @@ def read_total_producao(
     """Obter total de produção por ano (público)"""
     from sqlalchemy import func
     
+
     total = db.query(
-        func.sum(models.ProducaoMensal.kg)
+        func.sum(models.ProducaoImpacto.peso_kg)
     ).filter(
-        models.ProducaoMensal.ano == ano
+        models.ProducaoImpacto.ano == ano
     ).scalar()
     
     return {"ano": ano, "total_kg": float(total) if total else 0.0}
 
 
-@router.post("/", response_model=schemas.ProducaoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=schemas.ProducaoImpactoResponse, status_code=status.HTTP_201_CREATED)
 def create_producao(
-    producao: schemas.ProducaoCreate,
+    producao: schemas.ProducaoImpactoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
     """Criar novo registro de produção (requer autenticação)"""
-    return crud.create_producao(db, producao=producao)
+    try:
+        return crud.create_producao(db, producao=producao)
+    
+    except IntegrityError as e:
+        db.rollback() 
+        
+
+        if "trava_producao_unica" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Já existe um registro de {producao.categoria.value} para o mês {producao.mes}/{producao.ano} nesta associação. Tente atualizar o registro existente."
+            )
+            
+        # Para outros erros de banco
+        raise HTTPException(
+            status_code=400,
+            detail="Erro de integridade ao registrar produção. Verifique os dados."
+        )

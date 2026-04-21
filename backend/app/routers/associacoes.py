@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 
 from app import models
@@ -18,11 +19,74 @@ def create_associacao(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
-    """Criar nova associação (requer autenticação)"""
+    """Criar nova associação - versão robusta"""
+    
+    # =============== PASSO 1: Garantir parceiro_id ===============
+    if associacao.nome and associacao.parceiro_id is None:
+        nome_limpo = associacao.nome.strip().lower()
+        
+        # 🔍 Busca EXATA (case-insensitive via Python, não SQL)
+        todos_parceiros = db.query(models.Parceiro).all()
+        parceiro = next(
+            (p for p in todos_parceiros if p.nome.strip().lower() == nome_limpo),
+            None
+        )
+        
+        if not parceiro:
+            # ➕ Cria novo parceiro
+            tipo_assoc = db.query(models.TipoParceiro).filter(
+                models.TipoParceiro.nome == "ASSOCIACAO"
+            ).first()
+            
+            if not tipo_assoc:
+                tipo_assoc = models.TipoParceiro(nome="ASSOCIACAO")
+                db.add(tipo_assoc)
+                db.flush()
+            
+            parceiro = models.Parceiro(
+                nome=associacao.nome.strip(),  # Mantém case original para exibição
+                id_tipo_parceiro=tipo_assoc.id
+            )
+            db.add(parceiro)
+            db.flush()
+        
+        associacao.parceiro_id = parceiro.id
+    
+    # =============== PASSO 2: Criar associação ===============
     try:
-        return crud.create_associacao(db=db, associacao=associacao)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        nova_associacao = crud.create_associacao(db=db, associacao=associacao)
+        db.refresh(nova_associacao)
+        return nova_associacao
+        
+    except IntegrityError as e:
+        db.rollback()
+        
+        # 🔄 Race condition: tenta re-fetch e retry uma vez
+        if "ix_parceiros_nome" in str(e) and associacao.nome:
+            nome_limpo = associacao.nome.strip().lower()
+            parceiro = next(
+                (p for p in db.query(models.Parceiro).all() 
+                 if p.nome.strip().lower() == nome_limpo),
+                None
+            )
+            if parceiro:
+                associacao.parceiro_id = parceiro.id
+                try:
+                    nova_associacao = crud.create_associacao(db=db, associacao=associacao)
+                    db.refresh(nova_associacao)
+                    return nova_associacao
+                except IntegrityError:
+                    pass  # Cai para o erro de CNPJ abaixo
+        
+        if "cnpj" in str(e).lower() or "ix_associacoes_cnpj" in str(e):
+            raise HTTPException(status_code=400, detail="CNPJ já cadastrado")
+        
+        raise HTTPException(status_code=400, detail=f"Erro: {str(e)}")
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ ERRO: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @router.get("/", response_model=schemas.AssociacoesPaginadasResponse)
 def read_all_associacoes(

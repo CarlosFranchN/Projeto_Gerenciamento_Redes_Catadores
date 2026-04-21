@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 class ReportSummaryResponse(BaseModel):
@@ -8,6 +8,8 @@ class ReportSummaryResponse(BaseModel):
     total_vendido: float
     receita_periodo: float
     lucro_bruto: float 
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class ReportPorMaterialItem(BaseModel):
     nome: str

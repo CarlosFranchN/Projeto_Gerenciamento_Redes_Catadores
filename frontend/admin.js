@@ -1,4 +1,3 @@
-// frontend/admin.js
 import { 
   getAssociacoes, 
   getProducao, 
@@ -6,7 +5,13 @@ import {
   getMunicipios, 
   login, 
   logout,
-  getToken 
+  getToken,
+  createAssociacao,      
+  updateAssociacao,      
+  deleteAssociacao,      
+  createProducao,        
+  updateProducao,        
+  deleteProducao         
 } from './src/services/api.js';
 import { showSuccess, showError, showWarning } from './src/utils/toast.js';
 
@@ -119,13 +124,15 @@ const loadDashboard = async () => {
     ]);
     const assocArray = Array.isArray(associacoes) ? associacoes : associacoes.items || [];
     
-    elements.kpiAssociacoes.textContent = assocArray.length;
-    elements.kpiGrupos.textContent = Array.isArray(grupos) ? grupos.length : 0;
-    elements.kpiMunicipios.textContent = Array.isArray(municipios) ? municipios.length : 0;
-    
-    const totalProducao = Array.isArray(producao) 
-      ? producao.reduce((acc, item) => acc + (parseFloat(item.kg) || 0), 0) : 0;
-    elements.kpiProducao.textContent = formatNumber(totalProducao.toFixed(1));
+// Protegendo com "if"
+if (elements.kpiAssociacoes) elements.kpiAssociacoes.textContent = assocArray.length;
+if (elements.kpiGrupos) elements.kpiGrupos.textContent = Array.isArray(grupos) ? grupos.length : 0;
+if (elements.kpiMunicipios) elements.kpiMunicipios.textContent = Array.isArray(municipios) ? municipios.length : 0;
+
+const totalProducao = Array.isArray(producao) 
+  ? producao.reduce((acc, item) => acc + (parseFloat(item.kg) || 0), 0) : 0;
+
+if (elements.kpiProducao) elements.kpiProducao.textContent = formatNumber(totalProducao.toFixed(1));
     
     renderGraficoProducao(producao);
     renderTabelaAssociacoesRecentes(assocArray.slice(0, 5));
@@ -254,6 +261,7 @@ const openModalAssociacao = (assoc = null) => {
 
 const handleAssociacaoSubmit = async (e) => {
   e.preventDefault();
+  
   const formData = {
     nome: elements.formAssociacao.querySelector('#assocNome').value,
     cnpj: elements.formAssociacao.querySelector('#assocCnpj').value,
@@ -265,15 +273,16 @@ const handleAssociacaoSubmit = async (e) => {
     status: elements.formAssociacao.querySelector('#assocStatus').value
   };
   
-  try {
-    // Aqui entraria a chamada real à API (POST/PUT)
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simula API
+  const result = editingAssociacaoId 
+    ? await updateAssociacao(editingAssociacaoId, formData)
+    : await createAssociacao(formData);
+  
+  if (result.success) {
     showSuccess(editingAssociacaoId ? 'Associação atualizada!' : 'Associação criada!');
     elements.modalAssociacao?.classList.add('hidden');
     loadAssociacoes();
-    if (currentSection === 'dashboard') loadDashboard();
-  } catch (error) {
-    showError('Erro ao salvar associação');
+  } else {
+    showError(result.error);
   }
 };
 

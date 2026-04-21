@@ -1,56 +1,77 @@
-from sqlalchemy.orm import Session
+import sys
+import os
+
+# 1. MÁGICA DO IMPORT: Adiciona a pasta 'backend' no radar do Python
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app.database import SessionLocal
 from app import models
 
-db = SessionLocal()
+def popular_banco():
+    db = SessionLocal()
+    print("🔄 Iniciando a inserção de dados...")
 
-# Grupos
-grupos_data = [
-    {"nome": "ASCABOMJA", "integrantes": 14},
-    {"nome": "ASCAROSA", "integrantes": 8},
-    {"nome": "CATAVIP", "integrantes": 33},
-    {"nome": "JOSÉ DE ALENCAR", "integrantes": 37},
-    {"nome": "LAGOA REDONDA", "integrantes": 12},
-    {"nome": "MACHADO DE ASSIS", "integrantes": 4},
-    {"nome": "MULHERES LUTA EM CENA", "integrantes": 50},
-    {"nome": "PALMARES", "integrantes": 22},
-    {"nome": "VIVA A VIDA", "integrantes": 5},
-]
+    try:
+        # Grupos (Adaptado para o novo models.py usando 'descricao')
+        grupos_data = [
+            {"nome": "ASCABOMJA", "descricao": "14 integrantes"},
+            {"nome": "ASCAROSA", "descricao": "8 integrantes"},
+            {"nome": "CATAVIP", "descricao": "33 integrantes"},
+            {"nome": "JOSÉ DE ALENCAR", "descricao": "37 integrantes"},
+            {"nome": "LAGOA REDONDA", "descricao": "12 integrantes"},
+            {"nome": "MACHADO DE ASSIS", "descricao": "4 integrantes"},
+            {"nome": "MULHERES LUTA EM CENA", "descricao": "50 integrantes"},
+            {"nome": "PALMARES", "descricao": "22 integrantes"},
+            {"nome": "VIVA A VIDA", "descricao": "5 integrantes"},
+        ]
 
-for grupo_data in grupos_data:
-    grupo = models.Grupo(**grupo_data)
-    db.add(grupo)
+        for grupo_data in grupos_data:
+            # Verifica se já existe para não duplicar se rodar 2 vezes
+            existe = db.query(models.Grupo).filter(models.Grupo.nome == grupo_data["nome"]).first()
+            if not existe:
+                grupo = models.Grupo(**grupo_data)
+                db.add(grupo)
 
-# Municípios
-municipios_data = [
-    {"nome": "Metropolitano", "uf": "CE", "qtd_grupos": 8},
-    {"nome": "Amontada", "uf": "CE", "qtd_grupos": 22},
-    {"nome": "Aracoiaba", "uf": "CE", "qtd_grupos": 17},
-    {"nome": "Aratuba", "uf": "CE", "qtd_grupos": 1},
-    {"nome": "Barreira", "uf": "CE", "qtd_grupos": 5},
-    {"nome": "Baturité", "uf": "CE", "qtd_grupos": 18},
-    {"nome": "Boa Viagem", "uf": "CE", "qtd_grupos": 38},
-    {"nome": "Chorozinho", "uf": "CE", "qtd_grupos": 12},
-    {"nome": "Granja", "uf": "CE", "qtd_grupos": 6},
-    {"nome": "Guaramiranga", "uf": "CE", "qtd_grupos": 2},
-    {"nome": "Icó", "uf": "CE", "qtd_grupos": 27},
-    {"nome": "Itapipoca", "uf": "CE", "qtd_grupos": 14},
-    {"nome": "Itapiúna", "uf": "CE", "qtd_grupos": 2},
-    {"nome": "Miraíma", "uf": "CE", "qtd_grupos": 17},
-    {"nome": "Ocara", "uf": "CE", "qtd_grupos": 18},
-    {"nome": "Pacatuba", "uf": "CE", "qtd_grupos": 30},
-    {"nome": "Paracuru", "uf": "CE", "qtd_grupos": 12},
-    {"nome": "Quixelô", "uf": "CE", "qtd_grupos": 19},
-    {"nome": "Redenção", "uf": "CE", "qtd_grupos": 19},
-    {"nome": "Tururu", "uf": "CE", "qtd_grupos": 13},
-    {"nome": "Ubajara", "uf": "CE", "qtd_grupos": 3},
-]
+        # Municípios (Adaptado para o novo models.py usando 'regiao')
+        municipios_data = [
+            {"nome": "Metropolitano", "uf": "CE", "regiao": "8 grupos"},
+            {"nome": "Amontada", "uf": "CE", "regiao": "22 grupos"},
+            {"nome": "Aracoiaba", "uf": "CE", "regiao": "17 grupos"},
+            {"nome": "Aratuba", "uf": "CE", "regiao": "1 grupos"},
+            {"nome": "Barreira", "uf": "CE", "regiao": "5 grupos"},
+            {"nome": "Baturité", "uf": "CE", "regiao": "18 grupos"},
+            {"nome": "Boa Viagem", "uf": "CE", "regiao": "38 grupos"},
+            {"nome": "Chorozinho", "uf": "CE", "regiao": "12 grupos"},
+            {"nome": "Granja", "uf": "CE", "regiao": "6 grupos"},
+            {"nome": "Guaramiranga", "uf": "CE", "regiao": "2 grupos"},
+            {"nome": "Icó", "uf": "CE", "regiao": "27 grupos"},
+            {"nome": "Itapipoca", "uf": "CE", "regiao": "14 grupos"},
+            {"nome": "Itapiúna", "uf": "CE", "regiao": "2 grupos"},
+            {"nome": "Miraíma", "uf": "CE", "regiao": "17 grupos"},
+            {"nome": "Ocara", "uf": "CE", "regiao": "18 grupos"},
+            {"nome": "Pacatuba", "uf": "CE", "regiao": "30 grupos"},
+            {"nome": "Paracuru", "uf": "CE", "regiao": "12 grupos"},
+            {"nome": "Quixelô", "uf": "CE", "regiao": "19 grupos"},
+            {"nome": "Redenção", "uf": "CE", "regiao": "19 grupos"},
+            {"nome": "Tururu", "uf": "CE", "regiao": "13 grupos"},
+            {"nome": "Ubajara", "uf": "CE", "regiao": "3 grupos"},
+        ]
 
-for municipio_data in municipios_data:
-    municipio = models.Municipio(**municipio_data)
-    db.add(municipio)
+        for municipio_data in municipios_data:
+            existe = db.query(models.Municipio).filter(models.Municipio.nome == municipio_data["nome"]).first()
+            if not existe:
+                municipio = models.Municipio(**municipio_data)
+                db.add(municipio)
 
-db.commit()
-db.close()
+        # Salva tudo no banco de uma vez
+        db.commit()
+        print("✅ Grupos e municípios populados com sucesso!")
 
-print("✅ Grupos e municípios populados com sucesso!")
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Erro ao popular banco: {e}")
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    popular_banco()
