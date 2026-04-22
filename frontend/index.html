@@ -1,37 +1,13 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+<!doctype html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>Rede de Catadores – Teste</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- TailwindCSS via CDN (visual rápido) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = { darkMode: "class" };
-    </script>
-
-    <!-- React 18 + ReactDOM (UMD) -->
-    <script
-      crossorigin
-      src="https://unpkg.com/react@18/umd/react.development.js"
-    ></script>
-    <script
-      crossorigin
-      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
-    ></script>
-
-    <!-- Babel Standalone para JSX neste arquivo -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Chart.js para gráficos dos Relatórios (opcional) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
   </head>
-  <body
-    class="min-h-screen bg-gradient-to-br from-emerald-50 to-neutral-50 text-neutral-900"
-  >
+  <body>
     <div id="root"></div>
-
-  <script type="text/babel" src="app.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
