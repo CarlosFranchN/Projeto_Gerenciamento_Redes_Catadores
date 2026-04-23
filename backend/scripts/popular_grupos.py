@@ -28,6 +28,8 @@ for g in grupos_data:
         db.add(models.Grupo(
             nome=g["nome"],
             qtd_integrantes=g["qtd"],
+            cidade="Fortaleza", # 🆕 Adicione isso
+            uf="CE",
             ativo=True
         ))
 

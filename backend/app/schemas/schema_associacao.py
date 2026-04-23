@@ -15,6 +15,7 @@ class AssociacaoBase(BaseModel):
     municipio_id: Optional[int] = None
     grupo_id: Optional[int] = None
     qtd_integrantes: Optional[int] = 0
+    ativo: bool = True
     
 
 class AssociacaoCreate(AssociacaoBase):
@@ -34,6 +35,7 @@ class AssociacaoUpdate(BaseModel):
     grupo_id: Optional[int] = None
     ativo: Optional[bool] = None
     qtd_integrantes: Optional[int] = Field(None, ge=0) # Adicionado aqui!
+    
     
 
 class AssociacaoResponse(AssociacaoBase):

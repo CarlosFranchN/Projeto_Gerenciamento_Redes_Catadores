@@ -17,77 +17,34 @@ router = APIRouter(
 def create_associacao(
     associacao: schemas.AssociacaoCreate,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user)
+    # current_user: models.Usuario = Depends(get_current_user) # Descomente se quiser exigir login
 ):
-    """Criar nova associação - versão robusta"""
+    """Criar nova associação - versão limpa e alinhada com o models.py atual"""
     
-    # =============== PASSO 1: Garantir parceiro_id ===============
-    if associacao.nome and associacao.parceiro_id is None:
-        nome_limpo = associacao.nome.strip().lower()
-        
-        # 🔍 Busca EXATA (case-insensitive via Python, não SQL)
-        todos_parceiros = db.query(models.Parceiro).all()
-        parceiro = next(
-            (p for p in todos_parceiros if p.nome.strip().lower() == nome_limpo),
-            None
-        )
-        
-        if not parceiro:
-            # ➕ Cria novo parceiro
-            tipo_assoc = db.query(models.TipoParceiro).filter(
-                models.TipoParceiro.nome == "ASSOCIACAO"
-            ).first()
-            
-            if not tipo_assoc:
-                tipo_assoc = models.TipoParceiro(nome="ASSOCIACAO")
-                db.add(tipo_assoc)
-                db.flush()
-            
-            parceiro = models.Parceiro(
-                nome=associacao.nome.strip(),  # Mantém case original para exibição
-                id_tipo_parceiro=tipo_assoc.id
-            )
-            db.add(parceiro)
-            db.flush()
-        
-        associacao.parceiro_id = parceiro.id
-    
-    # =============== PASSO 2: Criar associação ===============
     try:
+        # Apenas passamos os dados direto para o CRUD
         nova_associacao = crud.create_associacao(db=db, associacao=associacao)
-        db.refresh(nova_associacao)
         return nova_associacao
         
     except IntegrityError as e:
         db.rollback()
         
-        # 🔄 Race condition: tenta re-fetch e retry uma vez
-        if "ix_parceiros_nome" in str(e) and associacao.nome:
-            nome_limpo = associacao.nome.strip().lower()
-            parceiro = next(
-                (p for p in db.query(models.Parceiro).all() 
-                 if p.nome.strip().lower() == nome_limpo),
-                None
-            )
-            if parceiro:
-                associacao.parceiro_id = parceiro.id
-                try:
-                    nova_associacao = crud.create_associacao(db=db, associacao=associacao)
-                    db.refresh(nova_associacao)
-                    return nova_associacao
-                except IntegrityError:
-                    pass  # Cai para o erro de CNPJ abaixo
-        
+        # Tratamento de erro caso o CNPJ já exista no banco
         if "cnpj" in str(e).lower() or "ix_associacoes_cnpj" in str(e):
-            raise HTTPException(status_code=400, detail="CNPJ já cadastrado")
-        
-        raise HTTPException(status_code=400, detail=f"Erro: {str(e)}")
+            raise HTTPException(status_code=400, detail="Este CNPJ já está cadastrado em outra Associação.")
+            
+        # Tratamento de erro caso o Nome já exista (já que é unique=True no model)
+        if "nome" in str(e).lower() or "ix_associacoes_nome" in str(e):
+            raise HTTPException(status_code=400, detail="Já existe uma Associação com este nome.")
+            
+        raise HTTPException(status_code=400, detail=f"Erro de integridade no banco: {str(e)}")
         
     except Exception as e:
         db.rollback()
         print(f"❌ ERRO: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
-
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
+    
+    
 @router.get("/", response_model=schemas.AssociacoesPaginadasResponse)
 def read_all_associacoes(
     skip: int = 0,

@@ -11,7 +11,8 @@ class GrupoBase(BaseModel):
     ativo: bool = True
 
 class GrupoCreate(GrupoBase):
-    associacao_id: Optional[int] = None
+    # associacao_id: Optional[int] = None
+    pass
 
 class GrupoUpdate(BaseModel):
     # Aqui colocamos tudo como Optional para permitir atualizações parciais
@@ -23,7 +24,7 @@ class GrupoUpdate(BaseModel):
 
 class GrupoResponse(GrupoBase):
     id: int
-    associacao_id: Optional[int] = None
+    # associacao_id: Optional[int] = None
     created_at: Optional[datetime] = None
     
     # Importante para o SQLAlchemy

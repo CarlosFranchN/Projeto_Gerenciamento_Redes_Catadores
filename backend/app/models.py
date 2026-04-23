@@ -2,15 +2,16 @@ import datetime
 from sqlalchemy import (
     Boolean, Column, ForeignKey, Integer, String, DateTime, Date,
     Float, UniqueConstraint, func, Enum, Numeric, Text, 
-    CheckConstraint
+    CheckConstraint, JSON
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+
 from .database import Base 
 import enum
 
 
-
+SmartJSON = JSON().with_variant(JSONB, "postgresql")
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     
@@ -36,8 +37,8 @@ class AuditLog(Base):
     acao = Column(String(50), nullable=False, index=True)
     tabela_afetada = Column(String(50), nullable=True)
     registro_id = Column(Integer, nullable=True)
-    dados_antigos = Column(JSONB, nullable=True)
-    dados_novos = Column(JSONB, nullable=True)
+    dados_antigos = Column(SmartJSON, nullable=True)
+    dados_novos = Column(SmartJSON, nullable=True)
     ip_address = Column(String(45), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     
@@ -88,6 +89,8 @@ class Grupo(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), index=True, nullable=False)
+    cidade = Column(String(42), index= True, nullable= False)
+    uf = Column(String(42), index= True, nullable= False)
     descricao = Column(String(255), nullable=True)
     ativo = Column(Boolean, default=True, nullable=False)  
     qtd_integrantes = Column(Integer, default=0, nullable= False)
