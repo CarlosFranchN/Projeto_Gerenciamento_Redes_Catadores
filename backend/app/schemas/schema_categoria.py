@@ -9,6 +9,7 @@ class CategoriaMaterial(str, Enum):
     PLASTICO_DURO = "Plástico Duro"
     METAL = "Metal"
     MISTO = "Misto"
+    GERAL = "Geral"
 
 # 2. Se você quiser um endpoint para o frontend puxar a lista de categorias
 class CategoriaResponse(BaseModel):

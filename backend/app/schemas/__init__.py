@@ -4,8 +4,8 @@ from .schema_usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
 from .schema_token import Token, TokenData
 from .schema_associacao import AssociacaoCreate, AssociacaoResponse, AssociacaoUpdate, AssociacoesPaginadasResponse , AssociacoesListResponse
 from .schema_producao import *
-from .schema_grupo import GrupoCreate, GrupoResponse, GrupoUpdate
-from .schema_municipio import MunicipioCreate, MunicipioResponse , MunicipioUpdate , MunicipioBase
+from .schema_grupo import GrupoCreate, GrupoResponse, GrupoUpdate, GrupoPaginated
+from .schema_municipio import MunicipioCreate, MunicipioResponse , MunicipioUpdate , MunicipioPaginated
 from .schema_afiliados import (                    
     AfiliadoCreate, 
     AfiliadoUpdate, 
@@ -19,7 +19,7 @@ __all__ = [
     "AssociacaoCreate", "AssociacaoResponse", "AssociacoesListResponse", "AssociacaoUpdate", "AssociacoesPaginadasResponse" , "AssociacoesListResponse"
     "ProducaoImpactoCreate", "ProducaoImpactoResponse",
     "GrupoCreate", "GrupoResponse", "GrupoUpdate",
-    "MunicipioCreate", "MunicipioResponse", "MunicipioUpdate", "MunicipioUpdate" , "MunicipioBase"
+    "MunicipioCreate", "MunicipioResponse", "MunicipioUpdate", "MunicipioUpdate" , "MunicipioPaginated"
     "AfiliadoCreate", "AfiliadoUpdate", "AfiliadoResponse", "AfiliadosListResponse",  
-    "CategoriaMaterial", "CategoriaResponse"
+    "CategoriaMaterial", "CategoriaResponse", "GrupoPaginated"
 ]

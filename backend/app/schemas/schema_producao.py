@@ -28,3 +28,10 @@ class ProducaoImpactoResponse(ProducaoImpactoBase):
 class ProducaoImpactoListResponse(BaseModel):
     items: list[ProducaoImpactoResponse]
     total: int
+    
+class ProducaoPaginated(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    pages: int
+    items: list[ProducaoImpactoResponse]

@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["Municípios"]
 )
 
-@router.get("/", response_model=List[schemas.MunicipioResponse])
+@router.get("/", response_model=schemas.MunicipioPaginated)
 def read_municipios(
     skip: int = 0,
     limit: int = 100,

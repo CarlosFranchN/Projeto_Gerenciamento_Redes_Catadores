@@ -1,4 +1,9 @@
 from sqlalchemy.orm import Session
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app.database import SessionLocal
 from app import models
 from decimal import Decimal
@@ -18,28 +23,28 @@ if not rede:
     db.close()
     exit()
 
-print(f"✅ Associação encontrada: {rede.parceiro_info.nome if rede.parceiro_info else 'Rede de Catadores'}")
+print(f"✅ Associação encontrada: {rede.nome}")
 print(f"   ID: {rede.id}")
 
 # =============== 2. Dados de Produção ===============
 producao_data = [
-    {"mes": 1,  "kg": Decimal("37655.0")},
-    {"mes": 2,  "kg": Decimal("32626.5")},
-    {"mes": 3,  "kg": Decimal("26805.9")},
-    {"mes": 4,  "kg": Decimal("35855.0")},
-    {"mes": 5,  "kg": Decimal("38118.0")},
-    {"mes": 6,  "kg": Decimal("36184.5")},
-    {"mes": 7,  "kg": Decimal("49744.0")},
-    {"mes": 8,  "kg": Decimal("39233.5")},
-    {"mes": 9,  "kg": Decimal("36517.0")},
-    {"mes": 10, "kg": Decimal("41127.5")},
-    {"mes": 11, "kg": Decimal("30212.5")},
-    {"mes": 12, "kg": Decimal("32913.3")},
+    {"mes": 1,  "peso_kg": Decimal("37655.0")},
+    {"mes": 2,  "peso_kg": Decimal("32626.5")},
+    {"mes": 3,  "peso_kg": Decimal("26805.9")},
+    {"mes": 4,  "peso_kg": Decimal("35855.0")},
+    {"mes": 5,  "peso_kg": Decimal("38118.0")},
+    {"mes": 6,  "peso_kg": Decimal("36184.5")},
+    {"mes": 7,  "peso_kg": Decimal("49744.0")},
+    {"mes": 8,  "peso_kg": Decimal("39233.5")},
+    {"mes": 9,  "peso_kg": Decimal("36517.0")},
+    {"mes": 10, "peso_kg": Decimal("41127.5")},
+    {"mes": 11, "peso_kg": Decimal("30212.5")},
+    {"mes": 12, "peso_kg": Decimal("32913.3")},
 ]
 
 # =============== 3. Deletar Produção Existente (para evitar duplicatas) ===============
-deletados = db.query(models.ProducaoMensal).filter(
-    models.ProducaoMensal.associacao_id == rede.id
+deletados = db.query(models.ProducaoImpacto).filter(
+    models.ProducaoImpacto.associacao_id == rede.id
 ).delete()
 
 if deletados > 0:
@@ -50,23 +55,25 @@ ano = 2024
 total_kg = Decimal("0")
 
 for prod in producao_data:
-    producao = models.ProducaoMensal(
+    producao = models.ProducaoImpacto(
         associacao_id=rede.id,
         mes=prod["mes"],
         ano=ano,
-        kg=prod["kg"],
-        valor_venda=None,
-        observado=None
+        categoria="Geral", # <-- Coluna obrigatória na nova arquitetura
+        peso_kg=prod["peso_kg"], # <-- Nome atualizado
+        valor_gerado=None,
+        tipo_registro="PRODUCAO",
+        observado="Dados importados via carga inicial"
     )
     db.add(producao)
-    total_kg += prod["kg"]
+    total_kg += prod["peso_kg"]
 
 db.commit()
 
 # =============== 5. Resumo ===============
 print("\n" + "="*60)
 print("🎉 Popularização concluída!")
-print(f"   📊 Associação: Rede de Catadores (ID: {rede.id})")
+print(f"   📊 Associação: {rede.nome} (ID: {rede.id})")
 print(f"   📅 Ano: {ano}")
 print(f"   📦 Meses: {len(producao_data)}")
 print(f"   ⚖️  Total: {total_kg:,.1f} kg")
@@ -74,10 +81,10 @@ print("="*60)
 
 # =============== 6. Verificar ===============
 total_no_banco = db.query(
-    models.ProducaoMensal.kg
+    models.ProducaoImpacto.peso_kg
 ).filter(
-    models.ProducaoMensal.associacao_id == rede.id,
-    models.ProducaoMensal.ano == ano
+    models.ProducaoImpacto.associacao_id == rede.id,
+    models.ProducaoImpacto.ano == ano
 ).all()
 
 soma = sum([float(p[0]) for p in total_no_banco])

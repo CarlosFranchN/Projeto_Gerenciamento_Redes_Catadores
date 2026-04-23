@@ -1,13 +1,31 @@
 from sqlalchemy.orm import Session
 from app.models import Municipio
 from app.schemas.schema_municipio import MunicipioCreate, MunicipioUpdate
+from app.models import Municipio
 from typing import List, Optional
+import math
 
-def get_all_municipios(db: Session, skip: int = 0, limit: int = 100, ativo: bool = True) -> List[Municipio]:
+def get_all_municipios(db: Session, skip: int = 0, limit: int = 100 , ativo: bool = True) -> dict:
+    """Busca todos os municípios com paginação para o Pydantic"""
     query = db.query(Municipio)
-    if ativo:
+    
+    if ativo: 
         query = query.filter(Municipio.ativo == True)
-    return query.order_by(Municipio.nome).offset(skip).limit(limit).all()
+    
+    total_count = query.count()
+    items = query.order_by(Municipio.nome).offset(skip).limit(limit).all()
+
+    # 🧮 Matemática da Paginação
+    page = (skip // limit) + 1 if limit > 0 else 1
+    pages = math.ceil(total_count / limit) if limit > 0 else 1
+
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": limit,
+        "pages": pages,
+        "items": items
+    }
 
 def get_municipio_by_id(db: Session, municipio_id: int) -> Optional[Municipio]:
     return db.query(Municipio).filter(Municipio.id == municipio_id).first()

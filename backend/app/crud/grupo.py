@@ -2,12 +2,28 @@ from sqlalchemy.orm import Session
 from app.models import Grupo
 from app.schemas.schema_grupo import GrupoCreate, GrupoUpdate
 from typing import List, Optional
+import math
 
-def get_all_grupos(db: Session, skip: int = 0, limit: int = 100, ativo: bool = True) -> List[Grupo]:
+def get_all_grupos(db: Session, skip: int = 0, limit: int = 100, ativo: bool = True) -> dict:
+    """Busca todos os grupos com a paginação completa exigida pelo Schema"""
     query = db.query(Grupo)
     if ativo:
         query = query.filter(Grupo.ativo == True)
-    return query.order_by(Grupo.nome).offset(skip).limit(limit).all()
+        
+    total_count = query.count()
+    items = query.order_by(Grupo.nome).offset(skip).limit(limit).all()
+
+    # 🧮 Matemática da Paginação
+    page = (skip // limit) + 1 if limit > 0 else 1
+    pages = math.ceil(total_count / limit) if limit > 0 else 1
+
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": limit,
+        "pages": pages,
+        "items": items
+    }
 
 def get_grupo_by_id(db: Session, grupo_id: int) -> Optional[Grupo]:
     return db.query(Grupo).filter(Grupo.id == grupo_id).first()
@@ -41,8 +57,24 @@ def delete_grupo(db: Session, grupo_id: int) -> bool:
     db.commit()
     return True
 
-def get_grupos_by_associacao(db: Session, associacao_id: int) -> List[Grupo]:
-    return db.query(Grupo).filter(
+def get_grupos_by_associacao(db: Session, associacao_id: int, skip: int = 0, limit: int = 100) -> dict:
+    """Busca os grupos de uma associação com paginação"""
+    query = db.query(Grupo).filter(
         Grupo.associacao_id == associacao_id,
         Grupo.ativo == True
-    ).all()
+    )
+    
+    total_count = query.count()
+    items = query.order_by(Grupo.nome).offset(skip).limit(limit).all()
+
+    # 🧮 Matemática da Paginação
+    page = (skip // limit) + 1 if limit > 0 else 1
+    pages = math.ceil(total_count / limit) if limit > 0 else 1
+
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": limit,
+        "pages": pages,
+        "items": items
+    }

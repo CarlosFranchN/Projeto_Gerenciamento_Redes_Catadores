@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["Grupos"]
 )
 
-@router.get("/", response_model=List[schemas.GrupoResponse])
+@router.get("/", response_model=schemas.GrupoPaginated)
 def read_grupos(
     skip: int = 0,
     limit: int = 100,

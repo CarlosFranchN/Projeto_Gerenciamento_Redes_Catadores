@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { login } from '../services/api';
+import { login } from '../../services/api';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [username, setUsername] = useState('');

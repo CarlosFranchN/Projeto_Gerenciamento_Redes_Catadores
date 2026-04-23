@@ -26,32 +26,26 @@ def create_afiliado(
     
     return crud.create_afiliado(db=db, afiliado=afiliado)
 
-@router.get("/", response_model=schemas.AfiliadosListResponse)
+@router.get("/", response_model=schemas.AfiliadosListResponse) #
 def read_afiliados(
     skip: int = 0,
     limit: int = 100,
-    associacao_id: int = None,
+    associacao_id: int = None, 
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user)
 ):
-    """Listar afiliados (com filtros opcionais)"""
-    afiliados, total = crud.get_afiliados(
+    """Listar afiliados (Público - sem o Depends(get_current_user))"""
+    
+
+    resultado = crud.get_afiliados(
         db, skip=skip, limit=limit, associacao_id=associacao_id
     )
     
-    return {
-        "items": afiliados,
-        "total": total,
-        "page": (skip // limit) + 1,
-        "page_size": limit,
-        "pages": (total + limit - 1) // limit
-    }
+    return resultado
 
 @router.get("/{afiliado_id}", response_model=schemas.AfiliadoResponse)
 def read_afiliado(
     afiliado_id: int,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user)
 ):
     """Obter detalhes de um afiliado"""
     afiliado = crud.get_afiliado(db, afiliado_id=afiliado_id)

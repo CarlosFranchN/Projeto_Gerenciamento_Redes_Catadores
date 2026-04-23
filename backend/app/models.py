@@ -76,8 +76,9 @@ class Municipio(Base):
     nome = Column(String(100), index=True, nullable=False)
     uf = Column(String(2), default="CE", nullable=False)
     regiao = Column(String(50), nullable=True)
-    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # ✅ Timestamp
+    ativo = Column(Boolean, default=True, nullable=False)  
+    qtd_integrantes = Column(Integer, default=0, nullable=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  
 
     associacoes = relationship("Associacao", back_populates="municipio")
 
@@ -88,8 +89,9 @@ class Grupo(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), index=True, nullable=False)
     descricao = Column(String(255), nullable=True)
-    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # ✅ Timestamp
+    ativo = Column(Boolean, default=True, nullable=False)  
+    qtd_integrantes = Column(Integer, default=0, nullable= False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  
 
     associacoes = relationship("Associacao", back_populates="grupo")
 
@@ -108,6 +110,7 @@ class Associacao(Base):
     uf = Column(String(2), nullable=True)  # ✅ Separado para filtros
     status = Column(String(20), default="ativo")  # ✅ 'ativo', 'inativo', 'pendente'
     ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+    qtd_integrantes = Column(Integer, default=0, nullable=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -116,24 +119,24 @@ class Associacao(Base):
 
     municipio = relationship("Municipio", back_populates="associacoes")
     grupo = relationship("Grupo", back_populates="associacoes")
-    afiliados = relationship("Afiliado", back_populates="associacao", cascade="all, delete-orphan")
+    # afiliados = relationship("Afiliado", back_populates="associacao", cascade="all, delete-orphan")
     producoes = relationship("ProducaoImpacto", back_populates="associacao", cascade="all, delete-orphan")
 
 
-class Afiliado(Base):
-    __tablename__ = "afiliados"
+# class Afiliado(Base):
+#     __tablename__ = "afiliados"
 
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(150), nullable=False)
-    cpf = Column(String(14), unique=True, index=True, nullable=True)  # ✅ Nullable + tamanho fixo
-    cpf_hash = Column(String(64), index=True, nullable=True)  # ✅ Para buscas sem expor CPF
-    funcao = Column(String(50), nullable=True)
-    data_filiacao = Column(Date, nullable=True)
-    ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+#     id = Column(Integer, primary_key=True, index=True)
+#     nome = Column(String(150), nullable=False)
+#     cpf = Column(String(14), unique=True, index=True, nullable=True)  # ✅ Nullable + tamanho fixo
+#     cpf_hash = Column(String(64), index=True, nullable=True)  # ✅ Para buscas sem expor CPF
+#     funcao = Column(String(50), nullable=True)
+#     data_filiacao = Column(Date, nullable=True)
+#     ativo = Column(Boolean, default=True, nullable=False)  # ✅ Soft delete
+#     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    associacao_id = Column(Integer, ForeignKey("associacoes.id", ondelete="CASCADE"), nullable=False)
-    associacao = relationship("Associacao", back_populates="afiliados")
+#     associacao_id = Column(Integer, ForeignKey("associacoes.id", ondelete="CASCADE"), nullable=False)
+#     associacao = relationship("Associacao", back_populates="afiliados")
 
 
 class ProducaoImpacto(Base):

@@ -37,7 +37,10 @@ export async function getAssociacoes() {
     }
     
     const data = await response.json();
-    console.log('✅ Dados carregados da API');
+    console.log('✅ Dados carregados da API (Associações)');
+    console.log(data);
+    
+    // Aqui já estava certo!
     return data.items || [];
     
   } catch (error) {
@@ -79,12 +82,14 @@ export async function getGrupos() {
     
     const data = await response.json();
     console.log('✅ Grupos carregados da API');
-    return data;
+    console.log(data);
+    
+    // CORRIGIDO: Pegando apenas a lista de items
+    return data.items || [];
     
   } catch (error) {
     console.warn('⚠️ API indisponível, usando grupos locais:', error.message);
     showWarning('Usando dados locais (API indisponível)');
-    // Importa e retorna diretamente do arquivo local
     const module = await import('../data/grupos.js');
     return module.GRUPOS;
   }
@@ -101,16 +106,19 @@ export async function getMunicipios() {
     
     const data = await response.json();
     console.log('✅ Municípios carregados da API');
-    return data;
+    console.log(data);
+    
+    // CORRIGIDO: Pegando apenas a lista de items
+    return data.items || [];
     
   } catch (error) {
     console.warn('⚠️ API indisponível, usando municípios locais:', error.message);
-    // Fallback para dados estáticos
     import('../data/municipios.js').then(module => {
       return module.MUNICIPIOS;
     });
   }
 }
+
 export const login = async (username, password) => {
   try {
     const formData = new URLSearchParams();

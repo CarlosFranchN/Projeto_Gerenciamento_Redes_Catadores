@@ -13,6 +13,8 @@ class AfiliadoBase(BaseModel):
     cpf: Optional[str] = Field(None, description="CPF no formato 000.000.000-00")
     funcao: Optional[str] = Field(None, max_length=50, description="Ex: Triador, Prensista, Coordenador")
     data_filiacao: Optional[date] = Field(None, description="Data de filiação à associação")
+    qtd_integrantes: Optional[int] = 0
+    
     
     @field_validator('cpf')
     def validar_cpf(cls, v):
@@ -59,6 +61,7 @@ class AfiliadoUpdate(BaseModel):
     cpf: Optional[str] = None
     funcao: Optional[str] = Field(None, max_length=50)
     data_filiacao: Optional[date] = None
+    qtd_integrantes: Optional[int] = Field(None, ge=0) # Adicionado aqui!
     ativo: Optional[bool] = None
     
     @field_validator('cpf')

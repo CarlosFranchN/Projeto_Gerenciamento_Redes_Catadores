@@ -1,27 +1,33 @@
 import { useState } from 'react';
 import Navbar from './layout/Navbar';
+import Footer from './layout/Footer';
 import Hero from './sections/Hero';
 import Sobre from './sections/Sobre';
 import Iniciativas from './sections/Iniciativas';
 import Rede from './sections/Rede';
 import Contato from './sections/Contato';
-import Footer from './layout/Footer';
-import LoginModal from './LoginModal';
+import LoginModal from './modals/LoginModal';
+import AfiliadosModal from './modals/AfiliadosModal';
 
 export default function LandingPage({ onLoginSuccess }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isAfiliadosModalOpen, setIsAfiliadosModalOpen] = useState(false);
 
   return (
     <div className="bg-green-50 text-gray-800 min-h-screen">
       
-      {/* Passamos a função de abrir o modal como uma "prop" para a Navbar */}
-      <Navbar onOpenLogin={() => setIsLoginModalOpen(true)} />
+      <Navbar 
+      onOpenLogin={() => setIsLoginModalOpen(true)}
+      onOpenAfiliados={() => setIsAfiliadosModalOpen(true)}/>
       
-      <Hero />
-      <Sobre />
-      <Iniciativas />
-      <Rede />
-      <Contato />
+      <main>
+        <Hero />
+        <Sobre />
+        <Iniciativas />
+        <Rede />
+        <Contato />
+      </main>
+
       <Footer />
 
       <LoginModal 
@@ -30,6 +36,10 @@ export default function LandingPage({ onLoginSuccess }) {
         onLoginSuccess={onLoginSuccess} 
       />
 
+    <AfiliadosModal 
+        isOpen={isAfiliadosModalOpen} 
+        onClose={() => setIsAfiliadosModalOpen(false)} 
+      />
     </div>
   );
 }

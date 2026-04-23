@@ -2,14 +2,45 @@ from sqlalchemy.orm import Session
 from app.models import ProducaoImpacto
 from app.schemas.schema_producao import ProducaoImpactoCreate, ProducaoImpactoUpdate
 from typing import List, Optional
+import math
 
-def get_producoes(db: Session, skip: int = 0, limit: int = 100) -> List[ProducaoImpacto]:
-    """Busca todas as produções (Ideal para o painel geral)"""
-    return db.query(ProducaoImpacto).order_by(ProducaoImpacto.ano.desc(), ProducaoImpacto.mes.desc()).offset(skip).limit(limit).all()
+def get_producoes(db: Session, skip: int = 0, limit: int = 100) -> dict:
+    """Busca todas as produções (Ideal para o painel geral) com paginação"""
+    query = db.query(ProducaoImpacto)
+    
+    total_count = query.count()
+    items = query.order_by(ProducaoImpacto.ano.desc(), ProducaoImpacto.mes.desc()).offset(skip).limit(limit).all()
+    
+    # 🧮 Matemática da Paginação
+    page = (skip // limit) + 1 if limit > 0 else 1
+    pages = math.ceil(total_count / limit) if limit > 0 else 1
 
-def get_producoes_by_associacao(db: Session, associacao_id: int, skip: int = 0, limit: int = 100) -> List[ProducaoImpacto]:
-    """Busca a produção de uma associação específica"""
-    return db.query(ProducaoImpacto).filter(ProducaoImpacto.associacao_id == associacao_id).order_by(ProducaoImpacto.ano.desc(), ProducaoImpacto.mes.desc()).offset(skip).limit(limit).all()
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": limit,
+        "pages": pages,
+        "items": items
+    }
+
+def get_producoes_by_associacao(db: Session, associacao_id: int, skip: int = 0, limit: int = 100) -> dict:
+    """Busca a produção de uma associação específica com paginação"""
+    query = db.query(ProducaoImpacto).filter(ProducaoImpacto.associacao_id == associacao_id)
+    
+    total_count = query.count()
+    items = query.order_by(ProducaoImpacto.ano.desc(), ProducaoImpacto.mes.desc()).offset(skip).limit(limit).all()
+    
+    # 🧮 Matemática da Paginação
+    page = (skip // limit) + 1 if limit > 0 else 1
+    pages = math.ceil(total_count / limit) if limit > 0 else 1
+
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": limit,
+        "pages": pages,
+        "items": items
+    }
 
 def create_producao(db: Session, producao: ProducaoImpactoCreate) -> ProducaoImpacto:
     """Registra um novo impacto mensal"""
