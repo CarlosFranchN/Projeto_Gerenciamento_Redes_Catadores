@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: catadores_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: rede123
+      POSTGRES_DB: catadores_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: catadores_api
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      # Esta URL sobrescreve a do seu banco local e aponta para o banco do Docker
+      - DATABASE_URL=postgresql://admin:senha_secreta@db:5432/catadores_db
+      - SECRET_KEY=uma-chave-secreta-muito-louca-e-dificil-de-adivinhar-catadores-2026
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+volumes:
+  postgres_data:

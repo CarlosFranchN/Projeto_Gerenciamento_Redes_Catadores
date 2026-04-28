@@ -3,51 +3,42 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import pytest
 
-# Importe o app principal, o Base do banco e a função que injeta o banco nas rotas
-from app.main import app
-from app.database import Base
-from app.database import get_db # Ajuste se o seu get_db estiver em outro arquivo (ex: app/dependencies.py)
+# 1. Imports da sua aplicação
+from app import models
+from app.database import Base, get_db
 from app.models import Usuario
 from app.dependencies import get_current_user
-# 1. Configurar um Banco de Dados "Fake" (SQLite na memória)
-# Ele nasce vazio, fazemos os testes e quando o teste acaba, ele some!
-from env_test_db import SQLALCHEMY_DATABASE_URL
+from app.main import app
 
+from tests.config_test import engine, TestingSessionLocal, preparar_banco_inicial
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+preparar_banco_inicial()
 
-# Cria as tabelas no banco de teste
-Base.metadata.create_all(bind=engine)
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-def override_get_current_user():
-    return Usuario(id=1, username="admin_teste", role="admin")
-
-app.dependency_overrides[get_db] = override_get_db
-app.dependency_overrides[get_current_user] = override_get_current_user
-
-# 3. Criar o "Cliente" que vai simular o navegador/React
 client = TestClient(app)
 
-# =====================================================================
-# AQUI COMEÇAM OS TESTES DE VERDADE
-# =====================================================================
+app.dependency_overrides[get_current_user] = lambda: Usuario(id=1, username="admin", role="admin")
+
+@pytest.fixture(autouse=True)
+def db_session():
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = TestingSessionLocal(bind=connection)
+    
+    # Injeta a sessão da transação no FastAPI
+    app.dependency_overrides[get_db] = lambda: session
+
+    yield session 
+
+    session.close()
+    transaction.rollback()
+    connection.close()
+
 
 def test_criar_e_listar_associacao():
     """Testa a criação de uma Associação"""
     nova_associacao = {
-        "nome": "Associação Teste Pytest",
-        "cnpj": "11.222.333/0001-44",
+        "nome": "Associação Teste Pytest3",
+        "cnpj": "11.222.333/0002-44",
         "bairro": "Centro",
         "cidade": "Fortaleza",
         "uf": "CE",
@@ -57,6 +48,11 @@ def test_criar_e_listar_associacao():
     }
     
     response_post = client.post("/api/associacoes/", json=nova_associacao)
+    
+    # Print de segurança: se der erro, queremos saber a fofoca toda
+    if response_post.status_code != 201:
+        print("❌ ERRO NO POST:", response_post.json())
+        
     assert response_post.status_code == 201
     
     response_get = client.get("/api/associacoes/")
@@ -64,4 +60,4 @@ def test_criar_e_listar_associacao():
     data = response_get.json()
     
     assert data["total"] >= 1
-    assert data["items"][-1]["cnpj"] == "11.222.333/0001-44"
+    assert data["items"][-1]["cnpj"] == "11.222.333/0002-44"

@@ -17,7 +17,7 @@ router = APIRouter(
 def create_associacao(
     associacao: schemas.AssociacaoCreate,
     db: Session = Depends(get_db),
-    # current_user: models.Usuario = Depends(get_current_user) # Descomente se quiser exigir login
+    current_user: models.Usuario = Depends(get_current_user) # Descomente se quiser exigir login
 ):
     """Criar nova associação - versão limpa e alinhada com o models.py atual"""
     
