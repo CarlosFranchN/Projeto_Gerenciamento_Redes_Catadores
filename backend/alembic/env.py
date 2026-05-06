@@ -1,15 +1,13 @@
+import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
-from app.core.config import settings
-from app.database import Base
-from app import models  # ✅ Importante!
+# IMPORTAÇÃO DO SEU MODELO BASE (Ajuste o caminho se necessário)
+from app.database import Base 
 
 config = context.config
-
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -28,16 +26,33 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 def run_migrations_online() -> None:
+    alembic_config = config.get_section(config.config_ini_section, {})
+    
+    # 🔥 A BALA DE PRATA: Puxa direto do ambiente do Docker 🔥
+    db_url = os.getenv("DATABASE_URL")
+    
+    # Se por acaso o .env sumir de vez, ele usa a string "na marra"
+    if not db_url:
+        print("\n🚨 AVISO: DATABASE_URL não encontrada! Usando fallback forçado. 🚨")
+        db_url = "postgresql://admin:senha_secreta@db:5432/catadores_db"
+        
+    print(f"\n==================================================")
+    print(f"🚀 O Alembic está usando a URL: {db_url}")
+    print(f"==================================================\n")
+    
+    alembic_config["sqlalchemy.url"] = db_url
+
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        alembic_config,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     with connectable.connect() as connection:
         context.configure(
-            connection=connection,
-            target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata
         )
+
         with context.begin_transaction():
             context.run_migrations()
 

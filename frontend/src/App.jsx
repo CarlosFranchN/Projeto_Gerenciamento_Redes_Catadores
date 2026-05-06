@@ -13,4 +13,3 @@ export default function App() {
   // Se não estiver, mostra o site público (Landing Page)
   return <LandingPage onLoginSuccess={() => setIsAuthenticated(true)} />;
 }
-
