@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+# auth.py
+from fastapi import APIRouter, Depends, HTTPException, status, Response # 1. Importado o Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from app import models, schemas
 from app.database import get_db
-# from app.core.security import authenticate_user, create_access_token, create_refresh_token
 from app.core.security import (
     authenticate_user,
     create_access_token,
@@ -20,12 +20,14 @@ router = APIRouter(
     tags=["Autenticação"]
 )
 
-@router.post("/token", response_model=schemas.Token)
+# 2. Removido o response_model=schemas.Token, pois não retornaremos mais o token no corpo
+@router.post("/token")
 def login(
+    response: Response, # <-- Injetamos o Response aqui
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """Login de usuário"""
+    """Login de usuário com Cookie Seguro (LGPD)"""
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -40,16 +42,42 @@ def login(
         expires_delta=access_token_expires
     )
     
-    # Cria refresh token
     refresh_token = create_refresh_token(db, user_id=user.id)
     
+    # ===== A MÁGICA DA SEGURANÇA ACONTECE AQUI =====
+    # Embutimos o token diretamente no cabeçalho da resposta
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,  # Impede ataques XSS (JavaScript não lê o cookie)
+        secure=False,   # Mude para True em Produção (quando tiver HTTPS)
+        samesite="lax", # Impede ataques CSRF
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Tempo de vida em segundos
+    )
+    
+    # O frontend não recebe mais o token, apenas os dados úteis para a interface
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "message": "Login realizado com sucesso",
+        "user": {
+            "username": user.username,
+            "role": user.role,
+            "nome": user.nome
+        }
     }
 
-@router.post("/token/refresh", response_model=schemas.Token)
+# 3. NOVA ROTA: O backend precisa destruir o cookie no Logout
+@router.post("/logout")
+def logout(response: Response):
+    """Destrói a sessão do usuário"""
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        samesite="lax",
+        secure=False # Mude para True em Produção
+    )
+    return {"message": "Logout realizado com sucesso"}
+
+@router.post("/token/refresh")
 def refresh_token(
     refresh_token: str,
     db: Session = Depends(get_db)
@@ -64,7 +92,6 @@ def create_usuario(
     db: Session = Depends(get_db)
 ):
     """Criar novo usuário (registro público ou admin)"""
-    # Verifica se usuário já existe
     existing = db.query(models.Usuario).filter(
         models.Usuario.username == usuario.username
     ).first()
@@ -75,7 +102,6 @@ def create_usuario(
             detail="Usuário já existe"
         )
     
-    # Cria usuário
     db_user = models.Usuario(
         username=usuario.username,
         hashed_password=get_password_hash(usuario.password),
