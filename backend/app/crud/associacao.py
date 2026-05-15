@@ -51,20 +51,21 @@ def get_associacoes_ativas(db: Session) -> List[models.Associacao]:
 def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> models.Associacao:
     """Cria uma Associação diretamente (Nova Arquitetura)"""
     
-    # Cria o registro direto na tabela Associacao
+    # 1. Cria o registro e adiciona o 'qtd_integrantes' que estava faltando
     db_associacao = models.Associacao(
         nome=associacao.nome,
         cnpj=associacao.cnpj,
         lider=associacao.lider,
         telefone=associacao.telefone,
-        endereco=associacao.endereco, # Substituindo logradouro/numero
+        endereco=associacao.endereco, 
         bairro=associacao.bairro,
         cidade=associacao.cidade,
         uf=associacao.uf,
         status=associacao.status,
         ativo=associacao.ativo,
         municipio_id=associacao.municipio_id,
-        grupo_id=associacao.grupo_id
+        grupo_id=associacao.grupo_id,
+        qtd_integrantes=associacao.qtd_integrantes # <-- INCLUÍDO AQUI
     )
     
     db.add(db_associacao)
@@ -75,10 +76,11 @@ def create_associacao(db: Session, associacao: schemas.AssociacaoCreate) -> mode
         return db_associacao
     except IntegrityError as e:
         db.rollback()
+        # O banco de dados vai chiar se o CNPJ ou Nome forem repetidos
         if "unique constraint" in str(e).lower() and "nome" in str(e).lower():
             raise ValueError(f"Já existe uma associação com o nome '{associacao.nome}'")
         if "unique constraint" in str(e).lower() and "cnpj" in str(e).lower():
-            raise ValueError(f"Já existe uma associação com o CNPJ '{associacao.cnpj}'")
+            raise ValueError(f"O CNPJ '{associacao.cnpj}' já está em uso.")
         raise e
     except Exception as e:
         db.rollback()

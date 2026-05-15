@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker
 import pytest
 
 # 1. Imports da sua aplicação
-from app import models
 from app.database import Base, get_db
 from app.models import Usuario
 from app.dependencies import get_current_user

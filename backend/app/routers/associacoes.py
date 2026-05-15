@@ -26,24 +26,16 @@ def create_associacao(
         nova_associacao = crud.create_associacao(db=db, associacao=associacao)
         return nova_associacao
         
-    except IntegrityError as e:
-        db.rollback()
-        
-        # Tratamento de erro caso o CNPJ já exista no banco
-        if "cnpj" in str(e).lower() or "ix_associacoes_cnpj" in str(e):
-            raise HTTPException(status_code=400, detail="Este CNPJ já está cadastrado em outra Associação.")
-            
-        # Tratamento de erro caso o Nome já exista (já que é unique=True no model)
-        if "nome" in str(e).lower() or "ix_associacoes_nome" in str(e):
-            raise HTTPException(status_code=400, detail="Já existe uma Associação com este nome.")
-            
-        raise HTTPException(status_code=400, detail=f"Erro de integridade no banco: {str(e)}")
+    except ValueError as e:
+        # 1. Captura o aviso limpo que veio do nosso CRUD (sobre Nome ou CNPJ)
+        # e transforma no Erro 400 para o React ler.
+        raise HTTPException(status_code=400, detail=str(e))
         
     except Exception as e:
+        # 2. Se for qualquer outro erro bizarro, dá erro 500
         db.rollback()
         print(f"❌ ERRO: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
-    
     
 @router.get("/", response_model=schemas.AssociacoesPaginadasResponse)
 def read_all_associacoes(

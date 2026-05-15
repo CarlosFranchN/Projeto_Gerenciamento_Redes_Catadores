@@ -9,6 +9,7 @@ import Contato from './sections/Contato';
 import LoginModal from './modals/LoginModal';
 import AfiliadosModal from './modals/AfiliadosModal';
 
+// 1. Recebemos a "chave" (onLoginSuccess) que veio lá do App.jsx
 export default function LandingPage({ onLoginSuccess }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAfiliadosModalOpen, setIsAfiliadosModalOpen] = useState(false);
@@ -17,8 +18,9 @@ export default function LandingPage({ onLoginSuccess }) {
     <div className="bg-green-50 text-gray-800 min-h-screen">
       
       <Navbar 
-      onOpenLogin={() => setIsLoginModalOpen(true)}
-      onOpenAfiliados={() => setIsAfiliadosModalOpen(true)}/>
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenAfiliados={() => setIsAfiliadosModalOpen(true)}
+      />
       
       <main>
         <Hero />
@@ -30,13 +32,14 @@ export default function LandingPage({ onLoginSuccess }) {
 
       <Footer />
 
+      {/* 2. Aqui passamos a "chave" para dentro do Modal */}
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
         onLoginSuccess={onLoginSuccess} 
       />
 
-    <AfiliadosModal 
+      <AfiliadosModal 
         isOpen={isAfiliadosModalOpen} 
         onClose={() => setIsAfiliadosModalOpen(false)} 
       />

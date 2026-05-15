@@ -1,50 +1,61 @@
-// frontend/src/services/api.js
+import axios from 'axios';
+import { ASSOCIACOES, PRODUCAO_MENSAL } from '../data/index.js';
+import { showWarning } from '../utils/toast.js';
 
-import { 
-  ASSOCIACOES, 
-  PRODUCAO_MENSAL, 
-  GRUPOS, 
-  MUNICIPIOS 
-} from '../data/index.js';
-
-import { showError, showWarning } from '../utils/toast.js';
-
+// 1. Definição da URL
 const API_URL = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000/api/'
   : 'https://projeto-gerenciamento-redes-catadores.onrender.com/';
 
-const API_TIMEOUT = 5000;
+// 2. Instância do Axios
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 5000,
+});
 
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout da API')), ms)
-    )
-  ]);
-}
+// 3. O INTERCEPTADOR: A mágica que coloca o Token em todas as requisições
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token'); // Tem que bater com o nome salvo no login!
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// =============== FUNÇÕES DE AUTENTICAÇÃO ===============
+
+export const login = async (username, password) => {
+  try {
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    const response = await api.post('token', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    
+    // Salva o token no LocalStorage
+    localStorage.setItem('auth_token', response.data.access_token);
+    return { success: true, token: response.data.access_token };
+    
+  } catch (err) {
+    const errorMessage = err.response?.data?.detail || 'Erro ao fazer login';
+    return { success: false, error: errorMessage };
+  }
+};
+
+export const getToken = () => localStorage.getItem('auth_token');
+export const setToken = (token) => localStorage.setItem('auth_token', token);
+export const removeToken = () => localStorage.removeItem('auth_token');
+
+// =============== CONSULTAS PÚBLICAS ===============
 
 export async function getAssociacoes() {
   try {
-    const response = await withTimeout(
-      fetch(`${API_URL}associacoes/?skip=0&limit=100&ativo=true`),
-      API_TIMEOUT
-    );
-    
-    if (!response.ok) {
-      throw new Error('API retornou erro');
-    }
-    
-    const data = await response.json();
-    console.log('✅ Dados carregados da API (Associações)');
-    console.log(data);
-    
-    // Aqui já estava certo!
-    return data.items || [];
-    
+    const response = await api.get('associacoes/?skip=0&limit=100&ativo=true');
+    return response.data.items || [];
   } catch (error) {
-    console.warn('⚠️ API indisponível, usando dados locais:', error.message);
     showWarning('Usando dados locais (API indisponível)');
     return ASSOCIACOES;
   }
@@ -52,43 +63,18 @@ export async function getAssociacoes() {
 
 export async function getProducao(ano = 2024) {
   try {
-    const response = await withTimeout(
-      fetch(`${API_URL}producao/?ano=${ano}`),
-      API_TIMEOUT
-    );
-    
-    if (!response.ok) {
-      throw new Error('API retornou erro');
-    }
-    
-    const data = await response.json();
-    console.log('✅ Produção carregada da API');
-    return data;
-    
+    const response = await api.get(`producao/?ano=${ano}`);
+    return response.data;
   } catch (error) {
-    console.warn('⚠️ API indisponível, usando produção local:', error.message);
     return PRODUCAO_MENSAL;
   }
 }
 
 export async function getGrupos() {
   try {
-    const response = await withTimeout(
-      fetch(`${API_URL}grupos/`),
-      API_TIMEOUT
-    );
-    
-    if (!response.ok) throw new Error('API retornou erro');
-    
-    const data = await response.json();
-    console.log('✅ Grupos carregados da API');
-    console.log(data);
-    
-    // CORRIGIDO: Pegando apenas a lista de items
-    return data.items || [];
-    
+    const response = await api.get('grupos/');
+    return response.data.items || [];
   } catch (error) {
-    console.warn('⚠️ API indisponível, usando grupos locais:', error.message);
     showWarning('Usando dados locais (API indisponível)');
     const module = await import('../data/grupos.js');
     return module.GRUPOS;
@@ -97,342 +83,190 @@ export async function getGrupos() {
 
 export async function getMunicipios() {
   try {
-    const response = await withTimeout(
-      fetch(`${API_URL}municipios/`),
-      API_TIMEOUT
-    );
-    
-    if (!response.ok) throw new Error('API retornou erro');
-    
-    const data = await response.json();
-    console.log('✅ Municípios carregados da API');
-    console.log(data);
-    
-    // CORRIGIDO: Pegando apenas a lista de items
-    return data.items || [];
-    
+    const response = await api.get('municipios/');
+    return response.data.items || [];
   } catch (error) {
-    console.warn('⚠️ API indisponível, usando municípios locais:', error.message);
-    import('../data/municipios.js').then(module => {
-      return module.MUNICIPIOS;
-    });
+    const module = await import('../data/municipios.js');
+    return module.MUNICIPIOS;
   }
 }
 
-export const login = async (username, password) => {
-  try {
-    const formData = new URLSearchParams();
-    formData.append('username', username);
-    formData.append('password', password);
-    
-    const res = await fetch(`${API_URL}token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro no login' };
-    }
-    
-    const data = await res.json();
-    localStorage.setItem('auth_token', data.access_token);
-    return { success: true, token: data.access_token };
-    
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-};
+// =============== EXMPLO DE CRUD (Super Limpo) ===============
 
-export const setToken = (token) => {
-  localStorage.setItem('auth_token', token);
-};
-
-export const getToken = () => localStorage.getItem('auth_token');
-
-export const logout = () => {
-  localStorage.removeItem('auth_token');
-};
-
-export const removeToken = () => {
-  localStorage.removeItem('auth_token');  // ← Mesma chave das outras funções
-};
-
-export async function consultarCNPJ(cnpj) {
-  const cnpjLimpo = String(cnpj).replace(/\D/g, '');
-  
-  if (!cnpjLimpo || cnpjLimpo.length !== 14) {
-    return null;
-  }
-  
-  try {
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
-    
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    
-    return `${data.logradouro}, ${data.numero}${
-      data.complemento ? ' (' + data.complemento + ')' : ''
-    } — ${data.bairro}, ${data.municipio}/${data.uf}`;
-    
-  } catch (error) {
-    console.warn(`Erro ao consultar CNPJ ${cnpj}:`, error);
-    return null;
-  }
-}
-
-// =============== CRUD ASSOCIAÇÕES ===============
 export const createAssociacao = async (data) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}associacoes/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
+    const response = await api.post('associacoes/', data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    // TRATAMENTO DE ERRO 422 PARA ASSOCIAÇÕES
+    let errorMessage = 'Erro ao criar associação';
     
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao criar' };
+    if (err.response && err.response.data && err.response.data.detail) {
+      const detail = err.response.data.detail;
+      
+      if (Array.isArray(detail)) {
+        errorMessage = detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ');
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
+      }
     }
     
-    return { success: true, data: await res.json() };
-  } catch (err) {
-    return { success: false, error: err.message };
+    // Se for Erro 401, avisamos o usuário que ele precisa relogar
+    if (err.response && err.response.status === 401) {
+      errorMessage = 'Sua sessão expirou. Por favor, saiga do sistema e faça login novamente.';
+    }
+    
+    return { success: false, error: errorMessage };
   }
 };
 
-export const updateAssociacao = async (id, data) => {
-  const token = getToken();
+export const createAfiliado = async (data) => {
   try {
-    const res = await fetch(`${API_URL}associacoes/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
+    const response = await api.post('afiliados/', data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    return { success: false, error: 'Erro ao cadastrar afiliado' };
+  }
+};
+
+export const createProducao = async (data) => {
+  try {
+    const response = await api.post('producao/', data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    let errorMessage = 'Erro ao registrar produção';
     
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao atualizar' };
+    if (err.response && err.response.data && err.response.data.detail) {
+      const detail = err.response.data.detail;
+      
+      if (Array.isArray(detail)) {
+        errorMessage = detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ');
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
+      }
     }
     
-    return { success: true, data: await res.json() };
-  } catch (err) {
-    return { success: false, error: err.message };
+    if (err.response && err.response.status === 401) {
+      errorMessage = 'Sua sessão expirou. Por favor, faça login novamente.';
+    }
+    
+    return { success: false, error: errorMessage };
   }
 };
 
 export const deleteAssociacao = async (id) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}associacoes/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao excluir' };
-    }
-    
+    await api.delete(`associacoes/${id}`);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: err.response?.data?.detail || 'Erro ao excluir' };
   }
 };
 
-// =============== CRUD PRODUÇÃO ===============
-export const createProducao = async (data) => {
-  const token = getToken();
+export const updateAssociacao = async (id, data) => {
   try {
-    const res = await fetch(`${API_URL}producao/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao criar' };
-    }
-    
-    return { success: true, data: await res.json() };
+    // Note que passamos o ID na URL e os dados no corpo da requisição
+    const response = await api.put(`associacoes/${id}`, data); 
+    return { success: true, data: response.data };
   } catch (err) {
-    return { success: false, error: err.message };
-  }
-};
-
-export const updateProducao = async (id, data) => {
-  const token = getToken();
-  try {
-    const res = await fetch(`${API_URL}producao/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
+    let errorMessage = 'Erro ao atualizar associação';
     
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao atualizar' };
-    }
-    
-    return { success: true, data: await res.json() };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-};
-
-export const deleteProducao = async (id) => {
-  const token = getToken();
-  try {
-    const res = await fetch(`${API_URL}producao/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
+    if (err.response && err.response.data && err.response.data.detail) {
+      const detail = err.response.data.detail;
+      if (Array.isArray(detail)) {
+        errorMessage = detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ');
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
       }
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao excluir' };
     }
-    
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: errorMessage };
   }
 };
 
-// =============== CRUD GRUPOS ===============
+// =============== CRUD DE GRUPOS ===============
+
 export const createGrupo = async (data) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}grupos/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao criar' };
-    }
-    
-    return { success: true, data: await res.json() };
+    const response = await api.post('grupos/', data);
+    return { success: true, data: response.data };
   } catch (err) {
-    return { success: false, error: err.message };
+    let errorMessage = 'Erro ao criar grupo';
+    if (err.response?.data?.detail) {
+      const detail = err.response.data.detail;
+      errorMessage = Array.isArray(detail) 
+        ? detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ') 
+        : detail;
+    }
+    return { success: false, error: errorMessage };
+  }
+};
+
+export const updateGrupo = async (id, data) => {
+  try {
+    const response = await api.put(`grupos/${id}`, data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    let errorMessage = 'Erro ao atualizar grupo';
+    if (err.response?.data?.detail) {
+      const detail = err.response.data.detail;
+      errorMessage = Array.isArray(detail) 
+        ? detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ') 
+        : detail;
+    }
+    return { success: false, error: errorMessage };
   }
 };
 
 export const deleteGrupo = async (id) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}grupos/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao excluir' };
-    }
-    
+    await api.delete(`grupos/${id}`);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: err.response?.data?.detail || 'Erro ao excluir grupo' };
   }
 };
 
-// =============== CRUD MUNICÍPIOS ===============
+// =============== CRUD DE MUNICÍPIOS ===============
+
 export const createMunicipio = async (data) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}municipios/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao criar' };
-    }
-    
-    return { success: true, data: await res.json() };
+    const response = await api.post('municipios/', data);
+    return { success: true, data: response.data };
   } catch (err) {
-    return { success: false, error: err.message };
+    let errorMessage = 'Erro ao cadastrar município';
+    if (err.response?.data?.detail) {
+      const detail = err.response.data.detail;
+      errorMessage = Array.isArray(detail) 
+        ? detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ') 
+        : detail;
+    }
+    return { success: false, error: errorMessage };
+  }
+};
+
+export const updateMunicipio = async (id, data) => {
+  try {
+    const response = await api.put(`municipios/${id}`, data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    let errorMessage = 'Erro ao atualizar município';
+    if (err.response?.data?.detail) {
+      const detail = err.response.data.detail;
+      errorMessage = Array.isArray(detail) 
+        ? detail.map(e => `Campo '${e.loc[e.loc.length - 1]}': ${e.msg}`).join(' | ') 
+        : detail;
+    }
+    return { success: false, error: errorMessage };
   }
 };
 
 export const deleteMunicipio = async (id) => {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}municipios/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao excluir' };
-    }
-    
+    await api.delete(`municipios/${id}`);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: err.response?.data?.detail || 'Erro ao excluir município' };
   }
 };
 
-// =============== PERFIL ===============
-export const updatePerfil = async (nome, senha) => {
-  const token = getToken();
-  try {
-    const data = {};
-    if (nome) data.nome = nome;
-    if (senha) data.hashed_password = senha;
-    
-    const res = await fetch(`${API_URL}usuarios/me`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      return { success: false, error: error.detail || 'Erro ao atualizar' };
-    }
-    
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-};
+export default api;
