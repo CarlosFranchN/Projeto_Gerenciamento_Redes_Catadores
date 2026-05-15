@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # BANCO DE DADOS
+  # ==========================================
+  db:
+    image: postgres:15-alpine
+    container_name: catadores_db
+    restart: always
+    # Agora aponta para a pasta do backend onde o .env real está
+    env_file:          
+      - ./backend/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ==========================================
+  # BACKEND (FastAPI)
+  # ==========================================
+  api:
+    build: 
+      context: ./backend # <-- Mudou de "." para "./backend"
+    container_name: catadores_api
+    restart: always
+    env_file:          
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  # ==========================================
+  # FRONTEND (React / Vite) - NOVO
+  # ==========================================
+  frontend:
+    build: 
+      context: ./frontend # <-- Aponta para a pasta do React
+    container_name: catadores_frontend
+    restart: always
+    ports:
+      - "5173:80" # A porta 80 do Nginx dentro do container será exposta na 5173 na sua máquina
+    depends_on:
+      - api
+
+  # ==========================================
+  # OBSERVABILIDADE (Sentry/Prometheus) - Adicionado anteriormente
+  # ==========================================
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus_catadores
+  #   volumes:
+  #     # Lembre-se de ter criado esse arquivo dentro da pasta backend
+  #     - ./backend/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   ports:
+  #     - "9090:9090"
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #   restart: unless-stopped
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: grafana_catadores
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   depends_on:
+  #     - prometheus
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

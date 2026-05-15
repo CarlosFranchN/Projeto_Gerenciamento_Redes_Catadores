@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getProducao, getAssociacoes } from '../../services/api';
 
-// Importações obrigatórias do Chart.js para o React
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,27 +12,25 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
-// Precisamos "registrar" os elementos do gráfico antes de usar
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function Rede() {
-  // Estados para guardar os dados da API
   const [dadosProducao, setDadosProducao] = useState([]);
   const [associacoes, setAssociacoes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 1. NOVO ESTADO: Controla se o Modal está aberto ou fechado
+  const [isModalAberta, setIsModalAberta] = useState(false);
 
-  // O useEffect roda automaticamente assim que o componente aparece na tela
-useEffect(() => {
+  useEffect(() => {
     async function carregarDados() {
       setIsLoading(true);
       try {
-        // 🆕 Fazemos as duas chamadas em paralelo para ser mais rápido
         const [respostaProducao, respostaAssoc] = await Promise.all([
           getProducao(2024),
           getAssociacoes()
         ]);
 
-        // Lógica do Gráfico
         let valoresMensais = new Array(12).fill(0);
         if (Array.isArray(respostaProducao)) {
           respostaProducao.forEach((item, index) => {
@@ -45,9 +42,7 @@ useEffect(() => {
           });
         }
         setDadosProducao(valoresMensais);
-
-        // 🆕 Lógica das Associações (pegamos apenas as 6 primeiras para não quebrar o layout)
-        setAssociacoes(respostaAssoc);
+        setAssociacoes(Array.isArray(respostaAssoc) ? respostaAssoc : []);
 
       } catch (error) {
         console.error("Erro ao carregar dados da Rede:", error);
@@ -59,15 +54,14 @@ useEffect(() => {
     carregarDados();
   }, []);
 
-  // Configuração visual do Gráfico
   const chartData = {
     labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
     datasets: [
       {
         label: 'Produção (kg)',
         data: dadosProducao,
-        backgroundColor: 'rgba(16, 185, 129, 0.8)', // Verde 500 do Tailwind
-        borderRadius: 4, // Deixa as barrinhas arredondadas em cima
+        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+        borderRadius: 4,
       },
     ],
   };
@@ -77,62 +71,169 @@ useEffect(() => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false, // Esconde a legenda que fica em cima
+        display: false,
       },
     },
   };
 
-  // Calcula o total para exibir no texto
   const totalKg = dadosProducao.reduce((acc, val) => acc + val, 0);
 
   return (
-    <section id="rede" className="max-w-7xl mx-auto py-16 px-6">
-      <div className="grid lg:grid-cols-2 gap-8">
-        
-{/* Lado Esquerdo: Associações (AGORA DINÂMICO! 🚀) */}
-        <div className="grid sm:grid-cols-2 gap-4">
-  {isLoading ? (
-    [1, 2, 3, 4].map(i => (
-      <div key={i} className="p-4 border rounded-xl bg-gray-50 animate-pulse h-24"></div>
-    ))
-  ) : (
-    // O .slice(1) pula o primeiro item da lista (a Rede de Catadores)
-    associacoes.slice(1).map((assoc) => (
-      <div key={assoc.id} className="p-4 border rounded-xl bg-white shadow-sm hover:border-green-300 transition-all hover:shadow-md">
-        <h4 className="font-bold text-green-700 uppercase text-sm mb-1">{assoc.nome}</h4>
-        <div className="text-xs text-gray-500 space-y-1">
-          <p><strong>CNPJ:</strong> {assoc.cnpj || 'Em processo'}</p>
-          <p><strong>Bairro:</strong> {assoc.bairro || 'Fortaleza'}</p>
-          {assoc.qtd_integrantes > 0 && (
-             <p className="text-green-600 font-semibold">
-               {assoc.qtd_integrantes} Integrantes
-             </p>
-          )}
-        </div>
-      </div>
-    ))
-  )}
-</div>
-
-        {/* Lado Direito: O Gráfico 🚀 */}
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h4 className="text-xl font-semibold text-green-700 mb-2">Produção (amostra 2024)</h4>
-          <p className="text-gray-700 mb-4">
-            Registros mensais da <strong>Rede</strong>, totalizando <strong>{totalKg.toLocaleString('pt-BR')} kg</strong>.
+    <>
+      <section id="rede" className="max-w-7xl mx-auto py-16 px-6 relative">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-green-800 mb-4">
+            A Força da Nossa Rede
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Conheça algumas das associações integradas que movem a reciclagem no Ceará e acompanhe o impacto real da nossa produção.
           </p>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
           
-          <div className="overflow-hidden rounded-xl border bg-neutral-50 p-4 h-[300px]">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full text-gray-500 animate-pulse">
-                Carregando dados da API...
+          {/* LADO ESQUERDO: Lista de Associações (Máx 6) */}
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <span className="bg-green-100 text-green-700 p-2 rounded-lg">🏢</span> 
+              Associações Parceiras
+            </h3>
+            
+            <div className="grid sm:grid-cols-2 gap-4">
+              {isLoading ? (
+                [1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="p-4 border border-gray-100 rounded-xl bg-gray-50 animate-pulse h-32"></div>
+                ))
+              ) : associacoes.length > 1 ? (
+                associacoes.slice(1, 7).map((assoc) => (
+                  <div key={assoc.id} className="flex flex-col justify-between p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:border-green-400 transition-all hover:shadow-md duration-300">
+                    <div>
+                      <h4 className="font-bold text-green-700 uppercase text-sm mb-2 line-clamp-2" title={assoc.nome}>
+                        {assoc.nome}
+                      </h4>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p><strong className="text-gray-800">CNPJ:</strong> {assoc.cnpj || 'Em processo'}</p>
+                        <p><strong className="text-gray-800">Bairro:</strong> {assoc.bairro || 'Não informado'}</p>
+                      </div>
+                    </div>
+                    {assoc.qtd_integrantes > 0 && (
+                      <div className="mt-3">
+                        <span className="text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                          {assoc.qtd_integrantes} Integrantes
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-2 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 bg-gray-50">
+                  <p>Nenhuma associação cadastrada no momento.</p>
+                </div>
+              )}
+            </div>
+
+            {/* 2. BOTÃO "VER TODAS" (Só aparece se tiver mais de 6 associações) */}
+            {!isLoading && associacoes.length > 7 && (
+              <div className="mt-6 text-center sm:text-left">
+                <button
+                  onClick={() => setIsModalAberta(true)}
+                  className="px-6 py-2.5 bg-green-50 text-green-700 font-semibold rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all"
+                >
+                  Ver todas as {associacoes.length - 1} Associações →
+                </button>
               </div>
-            ) : (
-              <Bar data={chartData} options={chartOptions} />
             )}
           </div>
-          
+
+          {/* LADO DIREITO: Gráfico */}
+          <div className="sticky top-8">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <span className="bg-green-100 text-green-700 p-2 rounded-lg">📈</span> 
+              Produção da Rede
+            </h3>
+            
+            <div className="rounded-2xl border bg-white p-6 shadow-sm">
+              <h4 className="text-lg font-semibold text-green-700 mb-1">Amostra de 2024</h4>
+              <p className="text-sm text-gray-600 mb-6">
+                Registros mensais acumulados, totalizando <strong className="text-gray-800 text-base">{totalKg.toLocaleString('pt-BR')} kg</strong> de material.
+              </p>
+              
+              <div className="overflow-hidden rounded-xl border bg-neutral-50 p-4 h-[320px]">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse space-y-2">
+                    <div className="w-8 h-8 border-4 border-green-200 border-t-green-500 rounded-full animate-spin"></div>
+                    <p className="text-sm">Carregando métricas...</p>
+                  </div>
+                ) : (
+                  <Bar data={chartData} options={chartOptions} />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* 3. O MODAL DE VER TODAS AS ASSOCIAÇÕES */}
+      {isModalAberta && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          
+          {/* Caixa do Modal */}
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            {/* Header do Modal */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Todas as Associações Parceiras</h3>
+                <p className="text-sm text-gray-500">Listagem completa da rede cadastrada.</p>
+              </div>
+              <button
+                onClick={() => setIsModalAberta(false)}
+                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors text-xl leading-none"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Corpo do Modal (Scrollável) */}
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Aqui renderizamos TODAS as associações, menos o índice 0 (a Rede em si) */}
+                {associacoes.slice(1).map((assoc) => (
+                  <div key={assoc.id} className="flex flex-col justify-between p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:border-green-400 transition-colors">
+                    <div>
+                      <h4 className="font-bold text-green-700 uppercase text-xs mb-2 line-clamp-2" title={assoc.nome}>
+                        {assoc.nome}
+                      </h4>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <p><strong className="text-gray-800">CNPJ:</strong> {assoc.cnpj || 'Não cadastrado'}</p>
+                        <p><strong className="text-gray-800">Bairro:</strong> {assoc.bairro || 'Não informado'}</p>
+                      </div>
+                    </div>
+                    {assoc.qtd_integrantes > 0 && (
+                      <div className="mt-3">
+                        <span className="text-[10px] font-semibold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100">
+                          {assoc.qtd_integrantes} Integrantes
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer do Modal */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
+              <button
+                onClick={() => setIsModalAberta(false)}
+                className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

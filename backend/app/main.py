@@ -1,7 +1,10 @@
 # backend/app/main.py
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from app.core.config import settings
 
 # Importar routers
 from .routers import (
@@ -12,6 +15,16 @@ from .routers import (
     municipios,
     afiliados
 )
+
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        # Define a porcentagem de transações capturadas para monitoramento de performance.
+        # 1.0 significa 100%. Em produção com muito tráfego, você pode reduzir isso (ex: 0.2).
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 # =============== CRIAR APP ===============
 app = FastAPI(
@@ -77,6 +90,10 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
 
 # =============== HANDLER GLOBAL PARA OPTIONS ===============
 # Captura QUALQUER rota OPTIONS que não foi tratada pelos routers
