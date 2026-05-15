@@ -20,11 +20,16 @@ app = FastAPI(
     version="1.0.1"
 )
 
+origins = [
+    "http://localhost:5173", # Para você desenvolver localmente
+    "https://projeto-gerenciamento-redes-catadores.onrender.com", # Substitua pela URL final do seu React
+]
+
 # =============== CORS MIDDLEWARE (ANTES DE TUDO) ===============
 # Usa "*" para desenvolvimento - substitua por URLs específicos em produção
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ← Permite QUALQUER origem (DEV ONLY)
+    allow_origins=origins,  # ← Permite origens específicas (DEV ONLY)
     allow_credentials=True,
     allow_methods=["*"],  # GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD
     allow_headers=["*"],  # Authorization, Content-Type, X-Requested-With, etc.

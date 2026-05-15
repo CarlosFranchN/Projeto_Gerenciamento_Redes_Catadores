@@ -1,68 +1,76 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Building2, Plus, Search, Edit, Trash2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { getAssociacoes, createAssociacao, updateAssociacao, deleteAssociacao } from '../../services/api';
 
+// IMPORTAÇÕES DA NOVA STACK
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+// 1. SCHEMA DE VALIDAÇÃO (ZOD)
+// Aqui aplicamos a inteligência para tratar os Foreign Keys (municipio_id e grupo_id)
+const associacaoSchema = z.object({
+  nome: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
+  cnpj: z.string().min(14, 'O CNPJ deve ter pelo menos 14 caracteres'),
+  lider: z.string().optional(),
+  telefone: z.string().optional(),
+  cep: z.string().optional(),
+  endereco: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  uf: z.string().max(2, 'Apenas 2 letras').toUpperCase().optional(),
+  status: z.string().default('ativo'),
+  
+  // Transformação Inteligente: Se for vazio ou 0, vira "null" para o banco de dados aceitar!
+  municipio_id: z.preprocess((val) => (val === "" || Number(val) === 0 ? null : Number(val)), z.number().nullable()),
+  grupo_id: z.preprocess((val) => (val === "" || Number(val) === 0 ? null : Number(val)), z.number().nullable()),
+  
+  qtd_integrantes: z.coerce.number().min(0, 'Não pode ser negativo'),
+  ativo: z.boolean()
+});
+
 export default function GestaoAssociacoes() {
-  const [associacoes, setAssociacoes] = useState([]);
   const [busca, setBusca] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
-  
-  // NOVO: Estado para saber se estamos editando um registro existente
   const [editandoId, setEditandoId] = useState(null);
+  
+  const queryClient = useQueryClient();
 
-  const estadoInicial = {
-    nome: '',
-    cnpj: '',
-    lider: '',
-    telefone: '',
-    cep: '', 
-    endereco: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
-    status: 'ativo',
-    municipio_id: '',
-    grupo_id: '',
-    qtd_integrantes: 0,
-    ativo: true
-  };
+  // 2. BUSCA DE DADOS (REACT QUERY)
+  const { data: associacoes = [], isLoading } = useQuery({
+    queryKey: ['associacoes'],
+    queryFn: getAssociacoes
+  });
 
-  const [formData, setFormData] = useState(estadoInicial);
+  const associacoesFiltradas = busca 
+    ? associacoes.filter(a => a.nome.toLowerCase().includes(busca.toLowerCase()) || a.cnpj.includes(busca)) 
+    : associacoes;
 
-  const carregarDados = async () => {
-    const dados = await getAssociacoes();
-    if (busca) {
-      setAssociacoes(dados.filter(a => 
-        a.nome?.toLowerCase().includes(busca.toLowerCase()) || 
-        a.cnpj?.includes(busca)
-      ));
-    } else {
-      setAssociacoes(dados);
+  // 3. FORMULÁRIO (REACT HOOK FORM)
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(associacaoSchema),
+    defaultValues: {
+      nome: '', cnpj: '', lider: '', telefone: '', cep: '', endereco: '', bairro: '', 
+      cidade: '', uf: '', status: 'ativo', municipio_id: 0, grupo_id: 0, qtd_integrantes: 0, ativo: true
     }
-  };
+  });
 
-  useEffect(() => {
-    carregarDados();
-  }, [busca]);
-
-  const handleBuscaCEP = async (cepDigitado) => {
+  // Função Mágica do CEP integrada com o React Hook Form (setValue)
+  const handleBuscaCEP = async (e) => {
+    const cepDigitado = e.target.value;
     const cepLimpo = cepDigitado.replace(/\D/g, '');
-    setFormData({ ...formData, cep: cepDigitado });
-
+    setValue('cep', cepDigitado); // Mantém o valor no input
+    
     if (cepLimpo.length === 8) {
       try {
         const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
         const data = await response.json();
         if (!data.erro) {
-          setFormData(prev => ({
-            ...prev,
-            endereco: data.logradouro,
-            bairro: data.bairro,
-            cidade: data.localidade,
-            uf: data.uf
-          }));
+          setValue('endereco', data.logradouro);
+          setValue('bairro', data.bairro);
+          setValue('cidade', data.localidade);
+          setValue('uf', data.uf);
         }
       } catch (err) {
         console.log("Erro ao buscar CEP", err);
@@ -70,84 +78,63 @@ export default function GestaoAssociacoes() {
     }
   };
 
-  // NOVO: Prepara o modal para Edição
+  // 4. MUTAÇÕES (SALVAR E EXCLUIR)
+  const mutationSalvar = useMutation({
+    mutationFn: (dados) => {
+      // O CEP não vai para o banco de dados, então nós o removemos aqui
+      const { cep, ...dadosLimpos } = dados;
+      return editandoId ? updateAssociacao(editandoId, dadosLimpos) : createAssociacao(dadosLimpos);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['associacoes']); 
+      fecharModal();
+      alert(`Associação ${editandoId ? 'atualizada' : 'cadastrada'} com sucesso!`);
+    },
+    onError: (error) => alert(error.message || 'Erro ao salvar associação.')
+  });
+
+  const mutationExcluir = useMutation({
+    mutationFn: deleteAssociacao,
+    onSuccess: () => queryClient.invalidateQueries(['associacoes'])
+  });
+
+  // AÇÕES DA INTERFACE
   const handleEditar = (assoc) => {
-    setFormData({
-      nome: assoc.nome || '',
-      cnpj: assoc.cnpj || '',
-      lider: assoc.lider || '',
-      telefone: assoc.telefone || '',
-      cep: '', // Fica vazio pois não salvamos CEP no banco
-      endereco: assoc.endereco || '',
-      bairro: assoc.bairro || '',
-      cidade: assoc.cidade || '',
-      uf: assoc.uf || '',
-      status: assoc.status || 'ativo',
-      municipio_id: assoc.municipio_id || '',
-      grupo_id: assoc.grupo_id || '',
-      qtd_integrantes: assoc.qtd_integrantes || 0,
-      ativo: assoc.ativo !== undefined ? assoc.ativo : true
-    });
     setEditandoId(assoc.id);
+    // Preenche o formulário para edição
+    setValue('nome', assoc.nome || '');
+    setValue('cnpj', assoc.cnpj || '');
+    setValue('lider', assoc.lider || '');
+    setValue('telefone', assoc.telefone || '');
+    setValue('endereco', assoc.endereco || '');
+    setValue('bairro', assoc.bairro || '');
+    setValue('cidade', assoc.cidade || '');
+    setValue('uf', assoc.uf || '');
+    setValue('status', assoc.status || 'ativo');
+    setValue('municipio_id', assoc.municipio_id || 0);
+    setValue('grupo_id', assoc.grupo_id || 0);
+    setValue('qtd_integrantes', assoc.qtd_integrantes || 0);
+    setValue('ativo', assoc.ativo !== undefined ? assoc.ativo : true);
     setShowModal(true);
   };
 
-  // NOVO: Função de Exclusão com confirmação
-  const handleExcluir = async (id, nome) => {
-    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir a associação "${nome}"?\n\nIsso apagará o registro do banco de dados.`)) {
-      const res = await deleteAssociacao(id);
-      if (res.success) {
-        alert("Associação excluída com sucesso!");
-        carregarDados(); // Atualiza a tabela
-      } else {
-        alert(`Erro ao excluir: ${res.error}`);
-      }
+  const handleExcluir = (id, nome) => {
+    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir a associação "${nome}"?\nIsto apagará o registo do banco de dados.`)) {
+      mutationExcluir.mutate(id);
     }
   };
 
-  // ATUALIZADO: Agora sabe diferenciar Criar e Atualizar
-  const handleSalvar = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMensagem({ texto: '', tipo: '' });
-
-    const { cep, ...dadosParaEnviar } = formData;
-    
-    // Tratamento para evitar quebra de Foreign Key
-    dadosParaEnviar.municipio_id = parseInt(dadosParaEnviar.municipio_id) || null;
-    dadosParaEnviar.grupo_id = parseInt(dadosParaEnviar.grupo_id) || null;
-    dadosParaEnviar.qtd_integrantes = parseInt(dadosParaEnviar.qtd_integrantes) || 0;
-
-    let res;
-    if (editandoId) {
-      // Se tiver ID de edição, atualiza
-      res = await updateAssociacao(editandoId, dadosParaEnviar);
-    } else {
-      // Se não, cria um novo
-      res = await createAssociacao(dadosParaEnviar);
-    }
-    
-    if (res.success) {
-      setMensagem({ texto: `Associação ${editandoId ? 'atualizada' : 'cadastrada'} com sucesso!`, tipo: 'sucesso' });
-      setTimeout(() => {
-        fecharModal();
-        carregarDados();
-      }, 1500);
-    } else {
-      setMensagem({ texto: res.error || 'Erro ao processar a requisição.', tipo: 'erro' });
-    }
-    setLoading(false);
-  };
+  const onSubmit = (dados) => mutationSalvar.mutate(dados);
 
   const fecharModal = () => {
     setShowModal(false);
-    setFormData(estadoInicial);
     setEditandoId(null);
-    setMensagem({ texto: '', tipo: '' });
+    reset();
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      
       {/* CABEÇALHO */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
         <div>
@@ -169,35 +156,32 @@ export default function GestaoAssociacoes() {
             />
           </div>
           <button 
-            onClick={() => {
-              setFormData(estadoInicial);
-              setEditandoId(null);
-              setShowModal(true);
-            }}
+            onClick={() => setShowModal(true)}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl shadow-lg shadow-green-200 flex items-center gap-2 transition-all font-bold"
           >
-            <Plus size={20} />
-            <span className="hidden md:inline">Nova Entidade</span>
+            <Plus size={20} /> Nova Entidade
           </button>
         </div>
       </div>
 
-      {/* TABELA DE ASSOCIAÇÕES */}
+      {/* TABELA */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50/80 text-gray-400 text-xs uppercase font-black tracking-widest border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-5">Entidade</th>
-                <th className="px-6 py-5">Localização</th>
-                <th className="px-6 py-5 text-center">Integrantes</th>
-                <th className="px-6 py-5 text-center">Status</th>
-                <th className="px-6 py-5 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {associacoes.length > 0 ? (
-                associacoes.map((assoc) => (
+        {isLoading ? (
+          <div className="p-10 text-center text-green-600 font-bold animate-pulse">Carregando entidades...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/80 text-gray-400 text-xs uppercase font-black tracking-widest border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-5">Entidade</th>
+                  <th className="px-6 py-5">Localização</th>
+                  <th className="px-6 py-5 text-center">Integrantes</th>
+                  <th className="px-6 py-5 text-center">Status</th>
+                  <th className="px-6 py-5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {associacoesFiltradas.length > 0 ? associacoesFiltradas.map((assoc) => (
                   <tr key={assoc.id} className="hover:bg-green-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="font-bold text-gray-800 text-base">{assoc.nome}</div>
@@ -210,52 +194,29 @@ export default function GestaoAssociacoes() {
                       <div className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{assoc.bairro}</div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-bold text-sm">
-                        {assoc.qtd_integrantes}
-                      </span>
+                      <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg font-bold text-sm">{assoc.qtd_integrantes}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       {assoc.ativo ? (
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black uppercase flex items-center justify-center gap-1 w-max mx-auto">
-                          <CheckCircle size={12} /> Ativo
-                        </span>
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black uppercase flex items-center justify-center gap-1 w-max mx-auto"><CheckCircle size={12} /> Ativo</span>
                       ) : (
-                        <span className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-xs font-black uppercase flex items-center justify-center gap-1 w-max mx-auto">
-                          <AlertCircle size={12} /> Inativo
-                        </span>
+                        <span className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-xs font-black uppercase flex items-center justify-center gap-1 w-max mx-auto"><AlertCircle size={12} /> Inativo</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {/* BOTÕES DE AÇÃO AGORA FUNCIONAM */}
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleEditar(assoc)}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                          title="Editar"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleExcluir(assoc.id, assoc.nome)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <button onClick={() => handleEditar(assoc)} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"><Edit size={18} /></button>
+                        <button onClick={() => handleExcluir(assoc.id, assoc.nome)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-6 py-16 text-center text-gray-400 italic font-medium">
-                    Nenhuma associação encontrada.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )) : (
+                  <tr><td colSpan="5" className="px-6 py-16 text-center text-gray-400 italic font-medium">Nenhuma associação encontrada.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* MODAL MISTO (CADASTRO/EDIÇÃO) */}
@@ -272,18 +233,11 @@ export default function GestaoAssociacoes() {
                   {editandoId ? 'Altere os dados institucionais abaixo.' : 'Preencha os dados institucionais e de localização.'}
                 </p>
               </div>
-              <button onClick={fecharModal} className="text-white/80 hover:text-white hover:rotate-90 transition-all">✕</button>
+              <button onClick={fecharModal} className="text-white/80 hover:text-white hover:rotate-90 transition-all text-xl">✕</button>
             </div>
             
             <div className="overflow-y-auto p-8">
-              {mensagem.texto && (
-                <div className={`p-4 rounded-xl mb-6 flex items-center gap-3 ${mensagem.tipo === 'erro' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                  <AlertCircle size={20} />
-                  <span className="font-bold">{mensagem.texto}</span>
-                </div>
-              )}
-
-              <form id="formAssociacao" onSubmit={handleSalvar} className="space-y-8">
+              <form id="formAssociacao" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 
                 {/* BLOCO 1: IDENTIFICAÇÃO */}
                 <div>
@@ -291,28 +245,31 @@ export default function GestaoAssociacoes() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1 md:col-span-2">
                       <label className="text-xs font-bold text-gray-600 uppercase">Nome da Associação *</label>
-                      <input required className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} />
+                      <input {...register('nome')} className={`w-full border-2 rounded-xl p-3 outline-none ${errors.nome ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-green-500'}`} />
+                      {errors.nome && <p className="text-red-500 text-xs font-bold">{errors.nome.message}</p>}
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">CNPJ *</label>
-                      <input required className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.cnpj} onChange={e => setFormData({...formData, cnpj: e.target.value})} />
+                      <input {...register('cnpj')} className={`w-full border-2 rounded-xl p-3 outline-none ${errors.cnpj ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-green-500'}`} />
+                      {errors.cnpj && <p className="text-red-500 text-xs font-bold">{errors.cnpj.message}</p>}
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Nome do Líder/Presidente</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.lider} onChange={e => setFormData({...formData, lider: e.target.value})} />
+                      <input {...register('lider')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Telefone de Contato</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} />
+                      <input {...register('telefone')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Qtd. de Integrantes</label>
-                      <input type="number" min="0" className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.qtd_integrantes} onChange={e => setFormData({...formData, qtd_integrantes: e.target.value})} />
+                      <input type="number" {...register('qtd_integrantes')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
+                      {errors.qtd_integrantes && <p className="text-red-500 text-xs font-bold">{errors.qtd_integrantes.message}</p>}
                     </div>
                   </div>
                 </div>
 
-                {/* BLOCO 2: ENDEREÇO */}
+                {/* BLOCO 2: ENDEREÇO COM BUSCA DE CEP */}
                 <div>
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 border-b pb-2 flex items-center justify-between">
                     Localização
@@ -321,23 +278,28 @@ export default function GestaoAssociacoes() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div className="space-y-1 md:col-span-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">CEP</label>
-                      <input className="w-full border-2 border-green-200 bg-green-50 rounded-xl p-3 outline-none font-bold text-green-800" placeholder="Opcional" maxLength="9" value={formData.cep} onChange={e => handleBuscaCEP(e.target.value)} />
+                      <input 
+                        {...register('cep')} 
+                        onChange={handleBuscaCEP} // Intercetamos a digitação para fazer o Auto-Completar
+                        className="w-full border-2 border-green-200 bg-green-50 rounded-xl p-3 outline-none font-bold text-green-800 focus:border-green-500" 
+                        maxLength="9" 
+                      />
                     </div>
                     <div className="space-y-1 md:col-span-3">
                       <label className="text-xs font-bold text-gray-600 uppercase">Logradouro / Rua</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.endereco} onChange={e => setFormData({...formData, endereco: e.target.value})} />
+                      <input {...register('endereco')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
                     </div>
                     <div className="space-y-1 md:col-span-2">
                       <label className="text-xs font-bold text-gray-600 uppercase">Bairro</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.bairro} onChange={e => setFormData({...formData, bairro: e.target.value})} />
+                      <input {...register('bairro')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
                     </div>
                     <div className="space-y-1 md:col-span-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Cidade</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" value={formData.cidade} onChange={e => setFormData({...formData, cidade: e.target.value})} />
+                      <input {...register('cidade')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
                     </div>
                     <div className="space-y-1 md:col-span-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">UF</label>
-                      <input className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none uppercase focus:border-green-500" maxLength="2" value={formData.uf} onChange={e => setFormData({...formData, uf: e.target.value.toUpperCase()})} />
+                      <input {...register('uf')} maxLength="2" className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none uppercase focus:border-green-500" />
                     </div>
                   </div>
                 </div>
@@ -346,18 +308,15 @@ export default function GestaoAssociacoes() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-gray-50 p-5 rounded-2xl border border-gray-100">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">ID Município</label>
-                    <input type="number" min="0" className="w-full border-2 border-white rounded-xl p-3 outline-none" value={formData.municipio_id} onChange={e => setFormData({...formData, municipio_id: e.target.value})} />
+                    <input type="number" {...register('municipio_id')} className="w-full border-2 border-white rounded-xl p-3 outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">ID Grupo</label>
-                    <input type="number" min="0" className="w-full border-2 border-white rounded-xl p-3 outline-none" value={formData.grupo_id} onChange={e => setFormData({...formData, grupo_id: e.target.value})} />
+                    <input type="number" {...register('grupo_id')} className="w-full border-2 border-white rounded-xl p-3 outline-none" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-600 uppercase">Status</label>
-                    <select className="w-full border-2 border-white rounded-xl p-3 outline-none font-bold" value={formData.ativo ? 'true' : 'false'} onChange={e => setFormData({...formData, ativo: e.target.value === 'true'})}>
-                      <option value="true">🟢 ATIVO</option>
-                      <option value="false">🔴 INATIVO</option>
-                    </select>
+                  <div className="space-y-1 pt-6 flex items-center gap-3">
+                    <input type="checkbox" id="ativo" {...register('ativo')} className="w-5 h-5 rounded text-green-600 focus:ring-green-500" />
+                    <label htmlFor="ativo" className="text-sm font-bold text-gray-700">A entidade está ativa?</label>
                   </div>
                 </div>
 
@@ -367,8 +326,8 @@ export default function GestaoAssociacoes() {
             {/* RODAPÉ */}
             <div className="p-6 border-t bg-gray-50 flex justify-end gap-3 shrink-0">
               <button type="button" onClick={fecharModal} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-all">Cancelar</button>
-              <button type="submit" form="formAssociacao" disabled={loading} className={`${editandoId ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'} text-white px-8 py-3 rounded-xl font-black shadow-lg transition-all disabled:opacity-50 flex items-center gap-2`}>
-                {loading ? 'Processando...' : editandoId ? 'Salvar Alterações' : 'Finalizar Cadastro'}
+              <button type="submit" form="formAssociacao" disabled={mutationSalvar.isPending} className={`${editandoId ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'} text-white px-8 py-3 rounded-xl font-black shadow-lg transition-all disabled:opacity-50 flex items-center gap-2`}>
+                {mutationSalvar.isPending ? 'Processando...' : editandoId ? 'Salvar Alterações' : 'Finalizar Cadastro'}
               </button>
             </div>
 
