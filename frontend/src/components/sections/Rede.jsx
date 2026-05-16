@@ -18,18 +18,35 @@ export default function Rede() {
   const [dadosProducao, setDadosProducao] = useState([]);
   const [associacoes, setAssociacoes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingGrafico, setIsLoadingGrafico] = useState(false); // Loading suave exclusivo para a troca de anos
   
-  // 1. NOVO ESTADO: Controla se o Modal está aberto ou fechado
+  // 1. NOVO ESTADO: Monitora o ano selecionado pelo usuário
+  const [anoSelecionado, setAnoSelecionado] = useState(2024);
   const [isModalAberta, setIsModalAberta] = useState(false);
 
+  // Lista de anos disponíveis no sistema para o filtro
+  const anosDisponiveis = [2024, 2025, 2026];
+
+  // Efeito 1: Carrega as associações apenas uma vez quando o componente monta
   useEffect(() => {
-    async function carregarDados() {
-      setIsLoading(true);
+    async function carregarAssoc() {
       try {
-        const [respostaProducao, respostaAssoc] = await Promise.all([
-          getProducao(2024),
-          getAssociacoes()
-        ]);
+        const respostaAssoc = await getAssociacoes();
+        setAssociacoes(Array.isArray(respostaAssoc) ? respostaAssoc : []);
+      } catch (error) {
+        console.error("Erro ao carregar associações:", error);
+      }
+    }
+    carregarAssoc();
+  }, []);
+
+  // 2. NOVO EFFECT VINCULADO AO ANO: Dispara toda vez que 'anoSelecionado' muda
+  useEffect(() => {
+    async function carregarMetricasAno() {
+      setIsLoadingGrafico(true);
+      try {
+        // Passamos o ano dinamicamente para a API do seu backend
+        const respostaProducao = await getProducao(anoSelecionado);
 
         let valoresMensais = new Array(12).fill(0);
         if (Array.isArray(respostaProducao)) {
@@ -42,17 +59,16 @@ export default function Rede() {
           });
         }
         setDadosProducao(valoresMensais);
-        setAssociacoes(Array.isArray(respostaAssoc) ? respostaAssoc : []);
-
       } catch (error) {
-        console.error("Erro ao carregar dados da Rede:", error);
+        console.error(`Erro ao carregar produção do ano ${anoSelecionado}:`, error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingGrafico(false);
+        setIsLoading(false); // Desativa o esqueleto inicial
       }
     }
 
-    carregarDados();
-  }, []);
+    carregarMetricasAno();
+  }, [anoSelecionado]); // <-- A mágica de UX está nessa dependência
 
   const chartData = {
     labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
@@ -92,7 +108,7 @@ export default function Rede() {
 
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           
-          {/* LADO ESQUERDO: Lista de Associações (Máx 6) */}
+          {/* LADO ESQUERDO: Lista de Associações (Mantido) */}
           <div>
             <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
               <span className="bg-green-100 text-green-700 p-2 rounded-lg">🏢</span> 
@@ -132,7 +148,6 @@ export default function Rede() {
               )}
             </div>
 
-            {/* 2. BOTÃO "VER TODAS" (Só aparece se tiver mais de 6 associações) */}
             {!isLoading && associacoes.length > 7 && (
               <div className="mt-6 text-center sm:text-left">
                 <button
@@ -145,24 +160,48 @@ export default function Rede() {
             )}
           </div>
 
-          {/* LADO DIREITO: Gráfico */}
+          {/* LADO DIREITO: Gráfico Dinâmico com Filtro */}
           <div className="sticky top-8">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
-              <span className="bg-green-100 text-green-700 p-2 rounded-lg">📈</span> 
-              Produção da Rede
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <span className="bg-green-100 text-green-700 p-2 rounded-lg">📈</span> 
+                Produção da Rede
+              </h3>
+              
+              {/* 3. COMPONENTE VISUAL DO SELECT */}
+              <div className="flex items-center gap-2 bg-neutral-100 px-3 py-1.5 rounded-xl border border-neutral-200 w-fit">
+                <label htmlFor="filtro-ano" className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ano:</label>
+                <select
+                  id="filtro-ano"
+                  value={anoSelecionado}
+                  onChange={(e) => setAnoSelecionado(parseInt(e.target.value))}
+                  className="bg-transparent text-sm font-bold text-green-800 outline-none pr-1 cursor-pointer"
+                >
+                  {anosDisponiveis.map(ano => (
+                    <option key={ano} value={ano}>{ano}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             
             <div className="rounded-2xl border bg-white p-6 shadow-sm">
-              <h4 className="text-lg font-semibold text-green-700 mb-1">Amostra de 2024</h4>
+              <h4 className="text-lg font-semibold text-green-700 mb-1">Amostra do Ano de {anoSelecionado}</h4>
               <p className="text-sm text-gray-600 mb-6">
-                Registros mensais acumulados, totalizando <strong className="text-gray-800 text-base">{totalKg.toLocaleString('pt-BR')} kg</strong> de material.
+                Registros mensais acumulados, totalizando <strong className="text-gray-800 text-base">{totalKg.toLocaleString('pt-BR')} kg</strong> de material coletado.
               </p>
               
-              <div className="overflow-hidden rounded-xl border bg-neutral-50 p-4 h-[320px]">
+              <div className="overflow-hidden rounded-xl border bg-neutral-50 p-4 h-[320px] relative">
+                {/* Loader exclusivo para quando o gráfico estiver recalculando */}
+                {isLoadingGrafico ? (
+                  <div className="absolute inset-0 bg-neutral-50/70 backdrop-blur-[1px] flex flex-col items-center justify-center text-green-700 space-y-2 z-10">
+                    <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                    <p className="text-xs font-medium">Atualizando gráfico...</p>
+                  </div>
+                ) : null}
+
                 {isLoading ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 animate-pulse space-y-2">
-                    <div className="w-8 h-8 border-4 border-green-200 border-t-green-500 rounded-full animate-spin"></div>
-                    <p className="text-sm">Carregando métricas...</p>
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    Carregando dados...
                   </div>
                 ) : (
                   <Bar data={chartData} options={chartOptions} />
@@ -173,14 +212,10 @@ export default function Rede() {
         </div>
       </section>
 
-      {/* 3. O MODAL DE VER TODAS AS ASSOCIAÇÕES */}
+      {/* MODAL DE VER TODAS AS ASSOCIAÇÕES (Mantido) */}
       {isModalAberta && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          
-          {/* Caixa do Modal */}
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            
-            {/* Header do Modal */}
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
                 <h3 className="text-xl font-bold text-gray-800">Todas as Associações Parceiras</h3>
@@ -189,16 +224,13 @@ export default function Rede() {
               <button
                 onClick={() => setIsModalAberta(false)}
                 className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors text-xl leading-none"
-                title="Fechar"
               >
                 ✕
               </button>
             </div>
 
-            {/* Corpo do Modal (Scrollável) */}
             <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {/* Aqui renderizamos TODAS as associações, menos o índice 0 (a Rede em si) */}
                 {associacoes.slice(1).map((assoc) => (
                   <div key={assoc.id} className="flex flex-col justify-between p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:border-green-400 transition-colors">
                     <div>
@@ -222,12 +254,8 @@ export default function Rede() {
               </div>
             </div>
 
-            {/* Footer do Modal */}
             <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
-              <button
-                onClick={() => setIsModalAberta(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-              >
+              <button onClick={() => setIsModalAberta(false)} className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
                 Fechar
               </button>
             </div>

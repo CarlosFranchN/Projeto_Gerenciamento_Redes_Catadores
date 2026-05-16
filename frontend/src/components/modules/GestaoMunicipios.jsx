@@ -8,7 +8,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// 1. CRIAR O SCHEMA DE VALIDAÇÃO (Regras de negócio blindadas)
+// 🔥 UTILITÁRIOS DO SEU PROJETO
+import { showWarning } from '../../utils/toast';
+import { normalizeString } from '../../utils/sanitizers';
+
+// 1. CRIAR O SCHEMA DE VALIDAÇÃO
 const municipioSchema = z.object({
   nome: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
   uf: z.string().length(2, 'A UF deve ter exatamente 2 letras').toUpperCase(),
@@ -21,20 +25,19 @@ export default function GestaoMunicipios() {
   const [showModal, setShowModal] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   
-  const queryClient = useQueryClient(); // Para manipular o cache
+  const queryClient = useQueryClient();
 
-  // 2. BUSCA DE DADOS COM REACT QUERY (Substitui o useEffect)
+  // 2. BUSCA DE DADOS COM REACT QUERY
   const { data: municipios = [], isLoading } = useQuery({
     queryKey: ['municipios'],
     queryFn: getMunicipios
   });
 
-  // Filtragem local baseada na busca
   const municipiosFiltrados = busca 
     ? municipios.filter(m => m.nome.toLowerCase().includes(busca.toLowerCase())) 
     : municipios;
 
-  // 3. CONFIGURAR O FORMULÁRIO (Substitui os states e onChanges)
+  // 3. CONFIGURAR O FORMULÁRIO
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(municipioSchema),
     defaultValues: {
@@ -45,26 +48,39 @@ export default function GestaoMunicipios() {
     }
   });
 
-  // 4. MUTAÇÕES DO REACT QUERY (Para Criar, Atualizar e Deletar)
+  // 4. MUTAÇÕES DO REACT QUERY
   const mutationSalvar = useMutation({
-    mutationFn: (dados) => editandoId ? updateMunicipio(editandoId, dados) : createMunicipio(dados),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['municipios']); // Manda o React Query baixar os dados novos!
-      fecharModal();
-      alert(`Município ${editandoId ? 'atualizado' : 'cadastrado'} com sucesso!`);
+    mutationFn: (dados) => {
+      // 🔥 NORMALIZAÇÃO DOS DADOS: Padroniza o texto antes de enviar para a API
+      const dadosNormalizados = {
+        ...dados,
+        nome: normalizeString(dados.nome),
+        uf: dados.uf.trim().toUpperCase()
+      };
+      
+      return editandoId ? updateMunicipio(editandoId, dadosNormalizados) : createMunicipio(dadosNormalizados);
     },
-    onError: (error) => alert(error.message || 'Erro ao salvar município.')
+    onSuccess: () => {
+      queryClient.invalidateQueries(['municipios']); 
+      fecharModal();
+      // 🔥 Feedback via Toast elegante
+      showWarning(`Município ${editandoId ? 'atualizado' : 'cadastrado'} com sucesso!`);
+    },
+    onError: (error) => showWarning(error.message || 'Erro ao salvar município.')
   });
 
   const mutationExcluir = useMutation({
     mutationFn: deleteMunicipio,
-    onSuccess: () => queryClient.invalidateQueries(['municipios'])
+    onSuccess: () => {
+      queryClient.invalidateQueries(['municipios']);
+      showWarning('Município removido da abrangência da rede.');
+    },
+    onError: (error) => showWarning(error.message || 'Erro ao excluir município.')
   });
 
   // Funções de interface
   const handleEditar = (municipio) => {
     setEditandoId(municipio.id);
-    // Preenche o formulário automaticamente
     setValue('nome', municipio.nome);
     setValue('uf', municipio.uf);
     setValue('qtd_integrantes', municipio.qtd_integrantes);
@@ -73,12 +89,11 @@ export default function GestaoMunicipios() {
   };
 
   const handleExcluir = (id, nome) => {
-    if (window.confirm(`Tem certeza que deseja excluir o município de ${nome}?`)) {
+    if (window.confirm(`Tem certeza que deseja excluir o município de ${nome}?\nIsso pode afetar as associações vinculadas a esta região.`)) {
       mutationExcluir.mutate(id);
     }
   };
 
-  // Esta função só roda se o Zod aprovar a validação!
   const onSubmit = (dados) => {
     mutationSalvar.mutate(dados);
   };
@@ -86,7 +101,7 @@ export default function GestaoMunicipios() {
   const fecharModal = () => {
     setShowModal(false);
     setEditandoId(null);
-    reset(); // Limpa o formulário instantaneamente
+    reset();
   };
 
   return (
@@ -107,7 +122,7 @@ export default function GestaoMunicipios() {
             <input 
               type="text"
               placeholder="Buscar município..."
-              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 outline-none transition-all"
+              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 outline-none transition-all font-medium"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
@@ -138,24 +153,30 @@ export default function GestaoMunicipios() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {municipiosFiltrados.map((m) => (
+                {municipiosFiltrados.length > 0 ? municipiosFiltrados.map((m) => (
                   <tr key={m.id} className="hover:bg-emerald-50/30 transition-colors group">
-                    <td className="px-6 py-4 font-bold text-gray-800">{m.nome}</td>
+                    <td className="px-6 py-4 font-bold text-gray-800 text-base">{m.nome}</td>
                     <td className="px-6 py-4">
                       <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg font-black text-xs">{m.uf}</span>
                     </td>
-                    <td className="px-6 py-4 text-center font-bold text-gray-700">{m.qtd_integrantes}</td>
+                    <td className="px-6 py-4 text-center font-bold text-gray-700 text-sm">{m.qtd_integrantes}</td>
                     <td className="px-6 py-4 text-center">
-                      {m.ativo ? <span className="text-emerald-600 flex items-center justify-center gap-1 font-black text-xs"><CheckCircle size={14}/> ATIVO</span> : <span className="text-red-400 flex items-center justify-center gap-1 font-black text-xs"><AlertCircle size={14}/> INATIVO</span>}
+                      {m.ativo ? (
+                        <span className="text-emerald-600 flex items-center justify-center gap-1 font-black text-xs uppercase"><CheckCircle size={14}/> ATIVO</span>
+                      ) : (
+                        <span className="text-red-400 flex items-center justify-center gap-1 font-black text-xs uppercase"><AlertCircle size={14}/> INATIVO</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEditar(m)} className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg"><Edit size={18} /></button>
-                        <button onClick={() => handleExcluir(m.id, m.nome)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg"><Trash2 size={18} /></button>
+                        <button onClick={() => handleEditar(m)} className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"><Edit size={18} /></button>
+                        <button onClick={() => handleExcluir(m.id, m.nome)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr><td colSpan="5" className="px-6 py-16 text-center text-gray-400 italic font-medium">Nenhum município encontrado.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -175,12 +196,10 @@ export default function GestaoMunicipios() {
               
               <div>
                 <label className="text-xs font-bold text-gray-400 uppercase">Nome do Município</label>
-                {/* Repare no {...register('nome')} - É assim que o hook form liga o input */}
                 <input 
                   {...register('nome')} 
                   className={`w-full border-2 rounded-xl p-3 outline-none font-medium ${errors.nome ? 'border-red-400 focus:border-red-500 bg-red-50' : 'border-gray-100 focus:border-emerald-500'}`} 
                 />
-                {/* Mensagem de erro automática do Zod */}
                 {errors.nome && <p className="text-red-500 text-xs font-bold mt-1">{errors.nome.message}</p>}
               </div>
 

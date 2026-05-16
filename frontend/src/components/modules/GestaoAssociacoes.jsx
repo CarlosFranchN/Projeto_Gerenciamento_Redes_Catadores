@@ -2,17 +2,21 @@ import { useState } from 'react';
 import { Building2, Plus, Search, Edit, Trash2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { getAssociacoes, createAssociacao, updateAssociacao, deleteAssociacao } from '../../services/api';
 
-// IMPORTAÇÕES DA NOVA STACK
+// IMPORTAÇÕES DA STACK DE DADOS e VALIDAÇÃO
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
+// 🔥 UTILITÁRIOS DO SEU PROJETO
+import { showWarning } from '../../utils/toast'; 
+import { sanitizeCNPJ, sanitizePhone } from '../../utils/sanitizers'; // Limpeza para o banco
+import { formatarCNPJ, formatarTelefone, formatarCEP } from '../../utils/masks'; // Formatação visual
+
 // 1. SCHEMA DE VALIDAÇÃO (ZOD)
-// Aqui aplicamos a inteligência para tratar os Foreign Keys (municipio_id e grupo_id)
 const associacaoSchema = z.object({
   nome: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
-  cnpj: z.string().min(14, 'O CNPJ deve ter pelo menos 14 caracteres'),
+  cnpj: z.string().min(18, 'O CNPJ deve estar completo'), // Conta os pontos e traços da máscara visual
   lider: z.string().optional(),
   telefone: z.string().optional(),
   cep: z.string().optional(),
@@ -22,7 +26,6 @@ const associacaoSchema = z.object({
   uf: z.string().max(2, 'Apenas 2 letras').toUpperCase().optional(),
   status: z.string().default('ativo'),
   
-  // Transformação Inteligente: Se for vazio ou 0, vira "null" para o banco de dados aceitar!
   municipio_id: z.preprocess((val) => (val === "" || Number(val) === 0 ? null : Number(val)), z.number().nullable()),
   grupo_id: z.preprocess((val) => (val === "" || Number(val) === 0 ? null : Number(val)), z.number().nullable()),
   
@@ -56,12 +59,13 @@ export default function GestaoAssociacoes() {
     }
   });
 
-  // Função Mágica do CEP integrada com o React Hook Form (setValue)
+  // Função para tratar a busca do CEP aplicando a máscara importada
   const handleBuscaCEP = async (e) => {
-    const cepDigitado = e.target.value;
-    const cepLimpo = cepDigitado.replace(/\D/g, '');
-    setValue('cep', cepDigitado); // Mantém o valor no input
+    const valorDigitado = e.target.value;
+    const cepFormatado = formatarCEP(valorDigitado);
+    setValue('cep', cepFormatado); // Atualiza visualmente no input
     
+    const cepLimpo = cepFormatado.replace(/\D/g, '');
     if (cepLimpo.length === 8) {
       try {
         const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
@@ -73,7 +77,7 @@ export default function GestaoAssociacoes() {
           setValue('uf', data.uf);
         }
       } catch (err) {
-        console.log("Erro ao buscar CEP", err);
+        console.error("Erro ao buscar CEP", err);
       }
     }
   };
@@ -81,31 +85,42 @@ export default function GestaoAssociacoes() {
   // 4. MUTAÇÕES (SALVAR E EXCLUIR)
   const mutationSalvar = useMutation({
     mutationFn: (dados) => {
-      // O CEP não vai para o banco de dados, então nós o removemos aqui
       const { cep, ...dadosLimpos } = dados;
+      
+      // 🔥 USANDO SEU ARQUIVO SANITIZERS.JS PARA SANEAR ANTES DE IR PRO BACKEND
+      dadosLimpos.cnpj = sanitizeCNPJ(dadosLimpos.cnpj);
+      if (dadosLimpos.telefone) {
+        dadosLimpos.telefone = sanitizePhone(dadosLimpos.telefone);
+      }
+
       return editandoId ? updateAssociacao(editandoId, dadosLimpos) : createAssociacao(dadosLimpos);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['associacoes']); 
       fecharModal();
-      alert(`Associação ${editandoId ? 'atualizada' : 'cadastrada'} com sucesso!`);
+      showWarning(`Associação ${editandoId ? 'atualizada' : 'cadastrada'} com sucesso!`);
     },
-    onError: (error) => alert(error.message || 'Erro ao salvar associação.')
+    onError: (error) => showWarning(error.message || 'Erro ao salvar associação.')
   });
 
   const mutationExcluir = useMutation({
     mutationFn: deleteAssociacao,
-    onSuccess: () => queryClient.invalidateQueries(['associacoes'])
+    onSuccess: () => {
+      queryClient.invalidateQueries(['associacoes']);
+      showWarning('Associação removida da rede.');
+    },
+    onError: (error) => showWarning(error.message || 'Erro ao excluir associação.')
   });
 
   // AÇÕES DA INTERFACE
   const handleEditar = (assoc) => {
     setEditandoId(assoc.id);
-    // Preenche o formulário para edição
+    
+    // 🔥 Ao abrir para edição, já aplicamos as máscaras nos dados vindos puros do banco
     setValue('nome', assoc.nome || '');
-    setValue('cnpj', assoc.cnpj || '');
+    setValue('cnpj', formatarCNPJ(assoc.cnpj || ''));
     setValue('lider', assoc.lider || '');
-    setValue('telefone', assoc.telefone || '');
+    setValue('telefone', formatarTelefone(assoc.telefone || ''));
     setValue('endereco', assoc.endereco || '');
     setValue('bairro', assoc.bairro || '');
     setValue('cidade', assoc.cidade || '');
@@ -119,7 +134,7 @@ export default function GestaoAssociacoes() {
   };
 
   const handleExcluir = (id, nome) => {
-    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir a associação "${nome}"?\nIsto apagará o registo do banco de dados.`)) {
+    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir a associação "${nome}"?\nIsto apagará o registro do banco de dados.`)) {
       mutationExcluir.mutate(id);
     }
   };
@@ -239,7 +254,7 @@ export default function GestaoAssociacoes() {
             <div className="overflow-y-auto p-8">
               <form id="formAssociacao" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 
-                {/* BLOCO 1: IDENTIFICAÇÃO */}
+                {/* IDENTIFICAÇÃO */}
                 <div>
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Identificação Principal</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -250,7 +265,12 @@ export default function GestaoAssociacoes() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">CNPJ *</label>
-                      <input {...register('cnpj')} className={`w-full border-2 rounded-xl p-3 outline-none ${errors.cnpj ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-green-500'}`} />
+                      <input 
+                        {...register('cnpj')} 
+                        onChange={(e) => setValue('cnpj', formatarCNPJ(e.target.value))} // 🔥 Aplica a máscara importada
+                        placeholder="00.000.000/0001-00"
+                        className={`w-full border-2 rounded-xl p-3 outline-none ${errors.cnpj ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-green-500'}`} 
+                      />
                       {errors.cnpj && <p className="text-red-500 text-xs font-bold">{errors.cnpj.message}</p>}
                     </div>
                     <div className="space-y-1">
@@ -259,7 +279,12 @@ export default function GestaoAssociacoes() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Telefone de Contato</label>
-                      <input {...register('telefone')} className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" />
+                      <input 
+                        {...register('telefone')} 
+                        onChange={(e) => setValue('telefone', formatarTelefone(e.target.value))} // 🔥 Aplica a máscara importada
+                        placeholder="(00) 00000-0000"
+                        className="w-full border-2 border-gray-200 rounded-xl p-3 outline-none focus:border-green-500" 
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Qtd. de Integrantes</label>
@@ -269,7 +294,7 @@ export default function GestaoAssociacoes() {
                   </div>
                 </div>
 
-                {/* BLOCO 2: ENDEREÇO COM BUSCA DE CEP */}
+                {/* ENDEREÇO COM BUSCA DE CEP */}
                 <div>
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 border-b pb-2 flex items-center justify-between">
                     Localização
@@ -280,7 +305,8 @@ export default function GestaoAssociacoes() {
                       <label className="text-xs font-bold text-gray-600 uppercase">CEP</label>
                       <input 
                         {...register('cep')} 
-                        onChange={handleBuscaCEP} // Intercetamos a digitação para fazer o Auto-Completar
+                        onChange={handleBuscaCEP} 
+                        placeholder="00000-000"
                         className="w-full border-2 border-green-200 bg-green-50 rounded-xl p-3 outline-none font-bold text-green-800 focus:border-green-500" 
                         maxLength="9" 
                       />
@@ -304,7 +330,7 @@ export default function GestaoAssociacoes() {
                   </div>
                 </div>
 
-                {/* BLOCO 3: ESTRUTURA SISTÊMICA & STATUS */}
+                {/* ESTRUTURA SISTÊMICA & STATUS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-gray-50 p-5 rounded-2xl border border-gray-100">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">ID Município</label>

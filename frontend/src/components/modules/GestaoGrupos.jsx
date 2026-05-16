@@ -8,6 +8,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
+// 🔥 UTILITÁRIOS DO SEU PROJETO
+import { showWarning } from '../../utils/toast';
+import { normalizeString } from '../../utils/sanitizers';
+
 // 1. SCHEMA DE VALIDAÇÃO (ZOD)
 const grupoSchema = z.object({
   nome: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
@@ -48,18 +52,33 @@ export default function GestaoGrupos() {
 
   // 4. MUTAÇÕES (SALVAR E EXCLUIR)
   const mutationSalvar = useMutation({
-    mutationFn: (dados) => editandoId ? updateGrupo(editandoId, dados) : createGrupo(dados),
+    mutationFn: (dados) => {
+      // 🔥 NORMALIZAÇÃO DOS DADOS: Deixa textos padronizados em caixa alta e sem acentos
+      const dadosNormalizados = {
+        ...dados,
+        nome: normalizeString(dados.nome),
+        cidade: normalizeString(dados.cidade),
+        uf: dados.uf.trim().toUpperCase()
+      };
+      
+      return editandoId ? updateGrupo(editandoId, dadosNormalizados) : createGrupo(dadosNormalizados);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['grupos']); 
       fecharModal();
-      alert(`Grupo ${editandoId ? 'atualizado' : 'cadastrado'} com sucesso!`);
+      // 🔥 Feedback elegante via Toast
+      showWarning(`Grupo ${editandoId ? 'atualizado' : 'cadastrado'} com sucesso!`);
     },
-    onError: (error) => alert(error.message || 'Erro ao salvar grupo.')
+    onError: (error) => showWarning(error.message || 'Erro ao salvar grupo.')
   });
 
   const mutationExcluir = useMutation({
     mutationFn: deleteGrupo,
-    onSuccess: () => queryClient.invalidateQueries(['grupos'])
+    onSuccess: () => {
+      queryClient.invalidateQueries(['grupos']);
+      showWarning('Grupo local removido com sucesso.');
+    },
+    onError: (error) => showWarning(error.message || 'Erro ao excluir grupo.')
   });
 
   // AÇÕES DA INTERFACE
@@ -74,7 +93,8 @@ export default function GestaoGrupos() {
   };
 
   const handleExcluir = (id, nome) => {
-    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir o grupo "${nome}"?`)) {
+    // Mantemos o confirm nativo apenas para travar a ação crítica de exclusão
+    if (window.confirm(`ATENÇÃO: Tem certeza que deseja excluir o grupo "${nome}"?\nIsso pode desvincular as associações ligadas a ele.`)) {
       mutationExcluir.mutate(id);
     }
   };
@@ -157,7 +177,7 @@ export default function GestaoGrupos() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => handleEditar(grupo)} className="p-2 hover:bg-blue-100 text-blue-600 rounded-lg"><Edit size={18} /></button>
-                        <button onClick={() => handleExcluir(grupo.id, grupo.nome)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg"><Trash2 size={18} /></button>
+                        <button onClick={() => handleExcluir(grupo.id, grupo.nome)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
