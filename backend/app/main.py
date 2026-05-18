@@ -35,7 +35,7 @@ app = FastAPI(
 
 origins = [
     "http://localhost:5173", # Para você desenvolver localmente
-    "https://redes-catador-ceara.vercel.app", # Substitua pela URL final do seu React
+    "https://redes-catadores-ceara.vercel.app", # Substitua pela URL final do seu React
 ]
 
 # =============== CORS MIDDLEWARE (ANTES DE TUDO) ===============
