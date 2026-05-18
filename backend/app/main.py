@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.database import engine, Base
 
 # Importar routers
 from .routers import (
@@ -37,6 +38,8 @@ origins = [
     "http://localhost:5173", # Para você desenvolver localmente
     "https://redes-catadores-ceara.vercel.app", # Substitua pela URL final do seu React
 ]
+
+Base.metadata.create_all(bind=engine)
 
 # =============== CORS MIDDLEWARE (ANTES DE TUDO) ===============
 # Usa "*" para desenvolvimento - substitua por URLs específicos em produção
