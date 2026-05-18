@@ -3,19 +3,23 @@ import { ASSOCIACOES, PRODUCAO_MENSAL } from '../data/index.js';
 import { showWarning } from '../utils/toast.js';
 
 // 1. Definição da URL
-const API_URL = window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8000/api/'
-  : 'https://projeto-gerenciamento-redes-catadores.onrender.com/';
+// const API_URL = window.location.hostname === 'localhost' || 
+//                 window.location.hostname === '127.0.0.1'
+//   ? 'http://127.0.0.1:8000/api/'
+//   : 'https://projeto-gerenciamento-redes-catadores.onrender.com/';
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // 2. Instância do Axios
-const api = axios.create({
-  baseURL: API_URL,
-  timeout: 5000,
-  // 🔥 MUDANÇA CRUCIAL: Avisa ao Axios para SEMPRE enviar os Cookies HttpOnly
-  withCredentials: true, 
+// const api = axios.create({
+//   baseURL: API_URL,
+//   timeout: 5000,
+//   // 🔥 MUDANÇA CRUCIAL: Avisa ao Axios para SEMPRE enviar os Cookies HttpOnly
+//   withCredentials: true, 
+// });
+export const api = axios.create({
+  baseURL: baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`, // 🔥 Garante o /api no final de qualquer forma!
+  withCredentials: true,
 });
-
 // ❌ O INTERCEPTADOR FOI REMOVIDO! 
 // O navegador agora anexa o Cookie automaticamente em cada requisição.
 
