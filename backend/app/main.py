@@ -35,14 +35,15 @@ app = FastAPI(
 
 origins = [
     "http://localhost:5173", # Para você desenvolver localmente
-    "https://projeto-gerenciamento-redes-catadores.onrender.com", # Substitua pela URL final do seu React
+    "https://redes-catador-ceara.vercel.app", # Substitua pela URL final do seu React
 ]
 
 # =============== CORS MIDDLEWARE (ANTES DE TUDO) ===============
 # Usa "*" para desenvolvimento - substitua por URLs específicos em produção
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app", 
     allow_credentials=True,
     allow_methods=["*"],  # GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD
     allow_headers=["*"],  # Authorization, Content-Type, X-Requested-With, etc.
