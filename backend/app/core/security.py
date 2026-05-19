@@ -3,7 +3,7 @@ from typing import Any, Union, Optional
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from app import models
+# from app import models
 from .config import settings
 import secrets
 
@@ -37,6 +37,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def create_refresh_token(db: Session, user_id: int, expires_delta: Optional[timedelta] = None) -> str:
     """Criar refresh token e salvar no banco"""
+    from app import models
     token = secrets.token_urlsafe(32)
     
     if expires_delta:
@@ -57,6 +58,7 @@ def create_refresh_token(db: Session, user_id: int, expires_delta: Optional[time
 
 def revoke_refresh_token(db: Session, token: str) -> bool:
     """Revogar refresh token"""
+    from app import models
     db_token = db.query(models.RefreshToken).filter(
         models.RefreshToken.token == token
     ).first()
@@ -71,6 +73,7 @@ def revoke_refresh_token(db: Session, token: str) -> bool:
 
 def authenticate_user(db: Session, username: str, password: str):
     """Autenticar usuário (login)"""
+    from app import models
     user = db.query(models.Usuario).filter(
         models.Usuario.username == username
     ).first()
@@ -85,6 +88,7 @@ def authenticate_user(db: Session, username: str, password: str):
 
 def get_current_user_from_token(token: str, db: Session):
     """Validar token e retornar usuário"""
+    from app import models
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")

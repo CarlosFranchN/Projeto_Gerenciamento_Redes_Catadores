@@ -7,6 +7,15 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ---
+## 🌐 Acesso ao Sistema (Ambiente de Produção)
+
+O projeto está hospedado em nuvem e totalmente funcional. Sinta-se à vontade para testar as funcionalidades usando as credenciais abaixo:
+
+* **Link da Aplicação:** [https://redes-catador-ceara.vercel.app](https://redes-catador-ceara.vercel.app)
+* **Usuário de Teste:** `admin`
+* **Senha:** `senha123`
+
+---
 
 ## 📖 Sobre o Projeto
 
