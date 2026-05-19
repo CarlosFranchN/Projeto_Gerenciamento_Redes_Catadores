@@ -11,7 +11,7 @@
 
 O projeto está hospedado em nuvem e totalmente funcional. Sinta-se à vontade para testar a interface ou consumir a API documentada:
 
-* **Link da Aplicação (Frontend):** [https://redes-catador-ceara.vercel.app](https://redes-catador-ceara.vercel.app)
+* **Link da Aplicação (Frontend):** [https://redes-catadores-ceara.vercel.app](https://redes-catadores-ceara.vercel.app)
 * **Documentação da API (Swagger):** [https://rede-catadores-api.onrender.com/docs](https://rede-catadores-api.onrender.com/docs)
 * **Usuário de Teste:** `admin`
 * **Senha:** `senha123`
