@@ -9,12 +9,14 @@
 ---
 ## 🌐 Acesso ao Sistema (Ambiente de Produção)
 
-O projeto está hospedado em nuvem e totalmente funcional. Sinta-se à vontade para testar as funcionalidades usando as credenciais abaixo:
+O projeto está hospedado em nuvem e totalmente funcional. Sinta-se à vontade para testar a interface ou consumir a API documentada:
 
-* **Link da Aplicação:** [https://redes-catador-ceara.vercel.app](https://redes-catador-ceara.vercel.app)
+* **Link da Aplicação (Frontend):** [https://redes-catador-ceara.vercel.app](https://redes-catador-ceara.vercel.app)
+* **Documentação da API (Swagger):** [https://rede-catadores-api.onrender.com/docs](https://rede-catadores-api.onrender.com/docs)
 * **Usuário de Teste:** `admin`
 * **Senha:** `senha123`
 
+> 💡 **Nota:** Para testar os endpoints privados diretamente no Swagger da API, clique no botão "Authorize" no canto superior direito e faça o login com as credenciais acima para injetar o token JWT.
 ---
 
 ## 📖 Sobre o Projeto
