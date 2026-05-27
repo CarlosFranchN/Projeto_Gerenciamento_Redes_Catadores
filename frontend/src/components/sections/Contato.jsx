@@ -20,7 +20,7 @@ export default function Contato() {
 
     setEnviando(true);
     try {
-      const response = await fetch("https://formspree.io/f/SEU_CODIGO_AQUI", {
+      const response = await fetch("https://formspree.io/f/xredrywo", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
