@@ -12,19 +12,37 @@ export default function Contato() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!aceitouTermos) return; // Segurança extra
+    if (!aceitouTermos) return; // Segurança extra da LGPD
 
     setEnviando(true);
     try {
-      // Aqui entraria a sua lógica de envio (Axios para o back ou serviço de e-mail)
-      console.log("Enviando mensagem de contato:", formData);
-      alert("Mensagem enviada com sucesso!");
-      setFormData({ nome: '', email: '', mensagem: '' });
-      setAceitouTermos(false);
+      // 🔥 TROQUE O LINK ABAIXO PELO SEU ENDPOINT DO FORMSPREE
+      const response = await fetch("https://formspree.io/f/xredrywo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          nome: formData.nome,
+          email: formData.email,
+          mensagem: formData.mensagem
+        })
+      });
+
+      if (response.ok) {
+        alert("Mensagem enviada com sucesso! Entraremos em contato em breve.");
+        setFormData({ nome: '', email: '', mensagem: '' });
+        setAceitouTermos(false);
+      } else {
+        alert("Ops! Ocorreu um erro ao enviar sua mensagem.");
+      }
+      
     } catch (error) {
       console.error("Erro ao enviar contato:", error);
+      alert("Erro de conexão. Tente novamente mais tarde.");
     } finally {
       setEnviando(false);
     }
