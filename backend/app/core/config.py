@@ -7,6 +7,7 @@ class Setting(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     SENTRY_DSN: str | None = None
+    ALLOWED_ORIGINS: str = "http://localhost:5173,https://redes-catadores-ceara.vercel.app"
     
     model_config = SettingsConfigDict(
         env_file=".env",

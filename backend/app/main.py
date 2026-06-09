@@ -34,10 +34,7 @@ app = FastAPI(
     version="1.0.1"
 )
 
-origins = [
-    "http://localhost:5173", # Para você desenvolver localmente
-    "https://redes-catadores-ceara.vercel.app", # Substitua pela URL final do seu React
-]
+origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
 Base.metadata.create_all(bind=engine)
 
