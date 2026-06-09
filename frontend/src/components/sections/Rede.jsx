@@ -18,16 +18,13 @@ export default function Rede() {
   const [dadosProducao, setDadosProducao] = useState([]);
   const [associacoes, setAssociacoes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingGrafico, setIsLoadingGrafico] = useState(false); // Loading suave exclusivo para a troca de anos
+  const [isLoadingGrafico, setIsLoadingGrafico] = useState(false);
   
-  // 1. NOVO ESTADO: Monitora o ano selecionado pelo usuário
   const [anoSelecionado, setAnoSelecionado] = useState(2024);
   const [isModalAberta, setIsModalAberta] = useState(false);
 
-  // Lista de anos disponíveis no sistema para o filtro
   const anosDisponiveis = [2024, 2025, 2026];
 
-  // Efeito 1: Carrega as associações apenas uma vez quando o componente monta
   useEffect(() => {
     async function carregarAssoc() {
       try {
@@ -40,12 +37,10 @@ export default function Rede() {
     carregarAssoc();
   }, []);
 
-  // 2. NOVO EFFECT VINCULADO AO ANO: Dispara toda vez que 'anoSelecionado' muda
   useEffect(() => {
     async function carregarMetricasAno() {
       setIsLoadingGrafico(true);
       try {
-        // Passamos o ano dinamicamente para a API do seu backend
         const respostaProducao = await getProducao(anoSelecionado);
 
         let valoresMensais = new Array(12).fill(0);
@@ -63,12 +58,12 @@ export default function Rede() {
         console.error(`Erro ao carregar produção do ano ${anoSelecionado}:`, error);
       } finally {
         setIsLoadingGrafico(false);
-        setIsLoading(false); // Desativa o esqueleto inicial
+        setIsLoading(false);
       }
     }
 
     carregarMetricasAno();
-  }, [anoSelecionado]); // <-- A mágica de UX está nessa dependência
+  }, [anoSelecionado]); 
 
   const chartData = {
     labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
@@ -96,19 +91,21 @@ export default function Rede() {
 
   return (
     <>
-      <section id="rede" className="max-w-7xl mx-auto py-16 px-6 relative">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-green-800 mb-4">
+      {/* Ajuste de padding: menor no celular (py-12, px-4), maior no desktop */}
+      <section id="rede" className="max-w-7xl mx-auto py-12 sm:py-16 px-4 sm:px-6 relative">
+        <div className="text-center mb-10 sm:mb-12">
+          {/* Tipografia adaptável */}
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-green-800 mb-4">
             A Força da Nossa Rede
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
             Conheça algumas das associações integradas que movem a reciclagem no Ceará e acompanhe o impacto real da nossa produção.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-start">
           
-          {/* LADO ESQUERDO: Lista de Associações (Mantido) */}
+          {/* LADO ESQUERDO: Lista de Associações */}
           <div>
             <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
               <span className="bg-green-100 text-green-700 p-2 rounded-lg">🏢</span> 
@@ -142,17 +139,18 @@ export default function Rede() {
                   </div>
                 ))
               ) : (
-                <div className="col-span-2 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 bg-gray-50">
-                  <p>Nenhuma associação cadastrada no momento.</p>
+                <div className="col-span-1 sm:col-span-2 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 bg-gray-50">
+                  <p className="text-center">Nenhuma associação cadastrada no momento.</p>
                 </div>
               )}
             </div>
 
             {!isLoading && associacoes.length > 7 && (
               <div className="mt-6 text-center sm:text-left">
+                {/* Botão em largura 100% no celular, largura automática no desktop */}
                 <button
                   onClick={() => setIsModalAberta(true)}
-                  className="px-6 py-2.5 bg-green-50 text-green-700 font-semibold rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all"
+                  className="w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-green-50 text-green-700 font-semibold rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all"
                 >
                   Ver todas as {associacoes.length - 1} Associações →
                 </button>
@@ -160,15 +158,15 @@ export default function Rede() {
             )}
           </div>
 
-          {/* LADO DIREITO: Gráfico Dinâmico com Filtro */}
-          <div className="sticky top-8">
+          {/* LADO DIREITO: Gráfico Dinâmico */}
+          {/* 🔥 CORREÇÃO: lg:sticky faz o gráfico grudar APENAS no monitor, liberando o scroll no celular */}
+          <div className="lg:sticky lg:top-24">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                 <span className="bg-green-100 text-green-700 p-2 rounded-lg">📈</span> 
                 Produção da Rede
               </h3>
               
-              {/* 3. COMPONENTE VISUAL DO SELECT */}
               <div className="flex items-center gap-2 bg-neutral-100 px-3 py-1.5 rounded-xl border border-neutral-200 w-fit">
                 <label htmlFor="filtro-ano" className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ano:</label>
                 <select
@@ -184,14 +182,14 @@ export default function Rede() {
               </div>
             </div>
             
-            <div className="rounded-2xl border bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border bg-white p-4 sm:p-6 shadow-sm">
               <h4 className="text-lg font-semibold text-green-700 mb-1">Amostra do Ano de {anoSelecionado}</h4>
               <p className="text-sm text-gray-600 mb-6">
                 Registros mensais acumulados, totalizando <strong className="text-gray-800 text-base">{totalKg.toLocaleString('pt-BR')} kg</strong> de material coletado.
               </p>
               
-              <div className="overflow-hidden rounded-xl border bg-neutral-50 p-4 h-[320px] relative">
-                {/* Loader exclusivo para quando o gráfico estiver recalculando */}
+              {/* 🔥 CORREÇÃO: Altura menor no celular (h-[280px]) e maior no desktop (sm:h-[320px]) */}
+              <div className="overflow-hidden rounded-xl border bg-neutral-50 p-2 sm:p-4 h-[280px] sm:h-[320px] relative w-full">
                 {isLoadingGrafico ? (
                   <div className="absolute inset-0 bg-neutral-50/70 backdrop-blur-[1px] flex flex-col items-center justify-center text-green-700 space-y-2 z-10">
                     <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
@@ -200,7 +198,7 @@ export default function Rede() {
                 ) : null}
 
                 {isLoading ? (
-                  <div className="flex items-center justify-center h-full text-gray-400">
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                     Carregando dados...
                   </div>
                 ) : (
@@ -212,25 +210,27 @@ export default function Rede() {
         </div>
       </section>
 
-      {/* MODAL DE VER TODAS AS ASSOCIAÇÕES (Mantido) */}
+      {/* MODAL DE VER TODAS AS ASSOCIAÇÕES */}
       {isModalAberta && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex justify-between items-start sm:items-center bg-gray-50 gap-4">
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Todas as Associações Parceiras</h3>
-                <p className="text-sm text-gray-500">Listagem completa da rede cadastrada.</p>
+                {/* Título responsivo na modal */}
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800">Todas as Associações Parceiras</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">Listagem completa da rede cadastrada.</p>
               </div>
               <button
                 onClick={() => setIsModalAberta(false)}
-                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors text-xl leading-none"
+                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-3 -mr-2 sm:mr-0 rounded-lg transition-colors text-xl leading-none flex-shrink-0"
+                aria-label="Fechar"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-gray-50/50 overscroll-contain">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {associacoes.slice(1).map((assoc) => (
                   <div key={assoc.id} className="flex flex-col justify-between p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:border-green-400 transition-colors">
                     <div>
@@ -254,8 +254,11 @@ export default function Rede() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
-              <button onClick={() => setIsModalAberta(false)} className="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
+              <button 
+                onClick={() => setIsModalAberta(false)} 
+                className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-gray-100 text-gray-700 font-bold sm:font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
                 Fechar
               </button>
             </div>

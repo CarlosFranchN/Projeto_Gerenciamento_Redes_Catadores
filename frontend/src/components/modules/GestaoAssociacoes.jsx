@@ -332,14 +332,14 @@ export default function GestaoAssociacoes() {
 
                 {/* ESTRUTURA SISTÊMICA & STATUS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                  <div className="space-y-1">
+                  {/* <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">ID Município</label>
                     <input type="number" {...register('municipio_id')} className="w-full border-2 border-white rounded-xl p-3 outline-none" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-600 uppercase">ID Grupo</label>
                     <input type="number" {...register('grupo_id')} className="w-full border-2 border-white rounded-xl p-3 outline-none" />
-                  </div>
+                  </div> */}
                   <div className="space-y-1 pt-6 flex items-center gap-3">
                     <input type="checkbox" id="ativo" {...register('ativo')} className="w-5 h-5 rounded text-green-600 focus:ring-green-500" />
                     <label htmlFor="ativo" className="text-sm font-bold text-gray-700">A entidade está ativa?</label>
